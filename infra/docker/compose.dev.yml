@@ -1,0 +1,56 @@
+# COOPECA — Docker Compose de DÉVELOPPEMENT LOCAL
+# ---------------------------------------------------------------------
+# Usage : docker compose -f infra/docker/compose.dev.yml up
+#
+# Règles :
+# - PostgreSQL n'est exposé QUE sur localhost (127.0.0.1) ;
+# - volume persistant pour conserver les données entre redémarrages ;
+# - healthcheck PostgreSQL pour démarrer l'API seulement quand la base est prête ;
+# - aucun secret réel ici : les identifiants de développement ci-dessous
+#   sont publics et SONT SÉPARÉS des secrets de production, injectés via
+#   le gestionnaire de secrets du déploiement.
+# - ne jamais pointer cette configuration vers une base de production.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: coopeca-postgres-dev
+    restart: unless-stopped
+    environment:
+      # Identifiants de DÉVELOPPEMENT uniquement — à remplacer localement
+      # par des valeurs issues de backend/.env (jamais versionnées).
+      POSTGRES_DB: ${POSTGRES_DB:-coopeca}
+      POSTGRES_USER: ${POSTGRES_USER:-coopeca}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-coopeca_dev_password}
+    ports:
+      # Exposition locale uniquement. Ne jamais publier ce port en production.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - coopeca_pgdata_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: coopeca-api-dev
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      # Pointée vers le service « postgres » du réseau Compose, pas localhost.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-coopeca}:${POSTGRES_PASSWORD:-coopeca_dev_password}@postgres:5432/${POSTGRES_DB:-coopeca}?schema=public&sslmode=disable
+    ports:
+      - "127.0.0.1:3000:3000"
+
+volumes:
+  coopeca_pgdata_dev:
+    name: coopeca_pgdata_dev

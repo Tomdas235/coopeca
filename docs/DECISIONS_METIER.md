@@ -2,7 +2,7 @@
 
 **Projet :** COOPECA
 
-**Statut :** base d’arbitrage métier retenue pour validation finale. Les principes ci-dessous ne valent pas validation finale ; les détails marqués **À VALIDER** restent ouverts.
+**Statut :** registre des décisions métier et techniques de cadrage. Les règles explicitement marquées **Validé** ci-dessous sont approuvées ; les propositions plus anciennes encore présentées comme base d’arbitrage et les détails **À VALIDER** ne le sont pas.
 
 **Périmètre :** cadrage uniquement. Ce document ne modifie pas le schéma SQL et ne crée aucun module applicatif.
 
@@ -16,7 +16,7 @@
 - [App Flow v1.1](./COOPECA_App_Flow_Flux_Applicatif_v1.1.docx), y compris son annexe de décisions mises à jour.
 - [Schéma backend v1.1](./COOPECA_Backend_Schema_v1.1.sql), référence technique existante qui n’est pas modifiée par ce document.
 
-Les documents n’ont pas tous le même statut. Les huit principes détaillés dans la section 3 sont la base d’arbitrage retenue pour validation finale et ne sont pas présentés comme des décisions métier définitivement approuvées. Les règles déjà non négociables dans `AGENT.md` demeurent la référence de cadrage. Une recommandation sur un point ouvert ne vaut pas approbation. Les divergences avec le schéma SQL devront être résolues avant de définir une évolution technique.
+Les documents n’ont pas tous le même statut. Les règles de référence déjà établies dans `AGENT.md` restent applicables. Les décisions explicitement marquées **Validé** intègrent les arbitrages confirmés ; les autres propositions de cadrage antérieures restent une base d’arbitrage, sauf mention contraire. Une recommandation sur un point ouvert ne vaut pas approbation. Les divergences avec le schéma SQL devront être résolues avant de définir une évolution technique.
 
 ## 2. Règles de référence déjà établies
 
@@ -31,31 +31,36 @@ Les règles de cette section sont les références de cadrage du MVP.
 7. **Montants.** Les montants financiers sont des nombres entiers en XAF ; aucun montant ni calcul financier n’utilise de nombre flottant.
 8. **Multi-agences.** Les autorisations d’accès aux agences sont contrôlées côté serveur pour chaque requête. L’agence fournie par un client ne constitue jamais une preuve d’autorisation.
 
-## 3. Base d’arbitrage retenue pour validation finale
+## 3. Principes arbitrés et décisions validées
 
-Les huit arbitrages demandés ci-dessous sont retenus comme base d’arbitrage pour validation finale. **À VALIDER** désigne un détail métier ou technique qui n’est pas tranché. Les impacts techniques décrivent le travail futur à examiner ; ils n’autorisent ni modification SQL, ni choix de bibliothèque, ni implémentation.
+Cette section rassemble les principes précédemment soumis à arbitrage et les précisions désormais approuvées. Les lignes **Validé** sont des décisions ; les autres principes restent une base de cadrage et **À VALIDER** désigne un détail métier ou technique qui n’est pas tranché. Les impacts techniques décrivent le travail futur à examiner ; ils n’autorisent ni modification SQL, ni choix de bibliothèque, ni implémentation.
 
 ### 3.1 Dossier de tontine distinct du client
 
-- **Principe retenu :** un client peut posséder plusieurs dossiers ; le dossier est distinct du client et chaque collecte référence explicitement le dossier concerné.
+- **Validé :** un client peut posséder plusieurs dossiers ; le dossier est distinct du client et chaque collecte référence explicitement un seul dossier concerné.
 - **À VALIDER :** champs définitifs, cycle de vie, règles d’affectation à un agent, unicité de référence et traitement des collectes historiques ambiguës.
 - **Impact documentaire :** intégrer ce modèle dans les références de données et d’API, en signalant l’écart au SQL v1.1.
 - **Impact technique futur :** concevoir les relations, contraintes d’agence, stratégie de compatibilité et migration additive après inventaire. Aucun schéma ou migration n’est créé ici.
 
 ### 3.2 États exacts des collectes, remises et clôtures
 
-- **Principe retenu :** distinguer l’état de synchronisation, l’état métier de la collecte et l’état de remise. Une collecte synchronisée n’est pas automatiquement une remise reçue par la caisse.
+- **Validé :** distinguer l’état de synchronisation, l’état métier de la collecte et l’état de remise. Une collecte synchronisée n’est pas automatiquement une remise reçue par la caisse.
+- **Validé :** l’état d’impression est également distinct des états de synchronisation et métier. Une réimpression porte sur le même reçu et la même collecte ; elle ne crée pas d’opération.
 - **États connus dans les documents :** les états locaux comprennent `PENDING_SYNC`, `SYNCED` et un état de revue/conflit nommé `REJECTED_REVIEW` ou `REQUIRES_REVIEW` selon le document. Le SQL définit `collection_status` (`RECORDED`, `REVERSED`), `remittance_status` (`DRAFT`, `SUBMITTED`, `RECEIVED`, `PARTIAL`, `DISPUTED`, `CANCELLED`), `closure_status` (`DRAFT`, `SUBMITTED`, `REVIEWED`, `REOPENED`) et `sync_status` (`RECEIVED`, `APPLIED`, `REJECTED`). La conception emploie aussi `CONFIRMED`, `VALIDATED` et `CLOSED`.
-- **À VALIDER :** correspondance des vocabulaires, transitions permises, autorisations, confirmation métier après synchronisation, traitement des rejets et règles d’annulation/révocation. Les noms cités sont des états déjà documentés, pas une proposition de nouvel enum définitif.
+- **À VALIDER :** correspondance des vocabulaires, transitions permises, autorisations, confirmation métier après synchronisation, traitement des rejets et règles d’annulation/révocation, ainsi que les états d’impression à exposer. Les noms cités sont des états déjà documentés, pas une proposition de nouvel enum définitif.
 - **Impact documentaire :** maintenir les états de transport distincts des états métier et harmoniser glossaire, flux, API et critères d’acceptation après arbitrage.
 - **Impact technique futur :** examiner les enums SQL existants, le stockage de l’état local et les transitions transactionnelles/audit. Ne créer aucun enum ni transition avant validation.
 
 ### 3.3 Référence locale du reçu et numéro officiel
 
-- **Principe retenu :** une collecte hors ligne reçoit une référence provisoire locale stable et unique, et porte la mention **« EN ATTENTE DE SYNCHRONISATION »**. Après acceptation par le serveur, celui-ci attribue le numéro officiel et conserve la correspondance. Une tentative répétée reprend le même identifiant et la même clé d’idempotence ; une réimpression ne crée pas d’opération.
-- **À VALIDER :** formats lisibles, mentions légales, contenu du reçu, statut du reçu papier avant synchronisation et traitement d’un rejet définitif.
+- **Validé — référence provisoire :** une référence lisible liée à l’agence, stable et unique. Elle est distincte de l’identifiant technique complet de l’opération. Le format exact reste **À VALIDER**.
+- **Validé — numéro officiel :** attribué par le serveur à l’acceptation, dans le périmètre de numérotation de l’agence. L’unicité et l’allocation atomique doivent être garanties. Le format et la séquence restent **À VALIDER**.
+- **Validé — reçu hors ligne :** la collecte porte la mention **« EN ATTENTE DE SYNCHRONISATION »**. Après synchronisation acceptée, les futurs exemplaires affichent la référence provisoire et le numéro officiel.
+- **Validé — idempotence et impression :** une nouvelle tentative reprend le même identifiant technique et la même clé d’idempotence ; la même clé avec un contenu différent constitue un conflit, pas un succès équivalent. Une réimpression ne crée jamais une nouvelle collecte.
+- **Validé — rejet définitif :** conserver le reçu et l’opération, afficher le motif du rejet et empêcher les répétitions automatiques. Le parcours de résolution doit être explicite.
+- **À VALIDER :** formats exacts, composants et périmètre d’unicité de l’identifiant technique, mentions légales, contenu et valeur probante du reçu, distinction visuelle après rejet, ainsi que le parcours précis de résolution (rôles, correction, éventuelle nouvelle opération et audit).
 - **Impact documentaire :** distinguer systématiquement référence locale provisoire et numéro officiel dans les reçus, flux et exemples API.
-- **Impact technique futur :** vérifier les champs et contraintes d’unicité, l’attribution serveur atomique avant insertion et la réponse idempotente. Le SQL actuel exige `client_receipt_no` dès l’insertion ; le mécanisme d’allocation au moment de la synchronisation n’y est pas spécifié. Voir [REÇUS_ET_DATE_METIER.md](./REÇUS_ET_DATE_METIER.md).
+- **Impact technique futur :** comparer sans présélectionner les options d’allocation qui respectent `collections.client_receipt_no NOT NULL UNIQUE`, le périmètre agence, l’idempotence et l’historique. Le schéma SQL ne définit pas le moment d’allocation ni la correspondance avec la référence provisoire. Voir [REÇUS_ET_DATE_METIER.md](./REÇUS_ET_DATE_METIER.md) et [IMPACTS_SCHEMA_SQL.md](./IMPACTS_SCHEMA_SQL.md).
 - Les règles détaillées et les questions de date associées figurent dans [REÇUS_ET_DATE_METIER.md](./REÇUS_ET_DATE_METIER.md).
 
 ### 3.4 Chiffrement de la base locale mobile
@@ -67,15 +72,15 @@ Les huit arbitrages demandés ci-dessous sont retenus comme base d’arbitrage p
 
 ### 3.5 Date métier et fuseau horaire
 
-- **Principe retenu :** journée civile de 00 h 00 à 23 h 59 dans `Africa/Ndjamena`. Les instants techniques sont conservés comme des instants ; le calcul de date métier doit être cohérent côté serveur.
-- **À VALIDER :** précision et implémentation de la frontière ; aucun calendrier spécial n’est établi.
+- **Validé :** fuseau `Africa/Ndjamena` et journée civile représentée par l’intervalle **[début du jour, début du jour suivant)**. Les instants techniques restent conservés comme des instants ; aucun calendrier spécial n’est introduit.
+- **À VALIDER :** source temporelle exacte et règle complète de dérivation de la date métier en cas d’horloge incohérente, ainsi que son application aux corrections supervisées.
 - **Impact documentaire :** employer le fuseau et le principe de journée civile de manière cohérente dans les règles de reçus, clôtures, rapports et API.
-- **Impact technique futur :** calculer la date métier de façon déterministe côté serveur à partir de l’instant déclaré selon la règle validée ; préserver l’instant de réception serveur séparément.
+- **Impact technique futur :** calculer la date métier de façon déterministe côté serveur selon la source temporelle qui sera validée, sans utiliser automatiquement la date de synchronisation ; préserver l’heure déclarée et l’instant de réception séparément.
 
 ### 3.5.1 Collectes hors ligne tardives et horloges
 
-- **Principe retenu :** conserver date/heure déclarée de la collecte et instant de réception serveur séparément ; ne pas remplacer automatiquement la date déclarée par la date de synchronisation. Prévoir contrôle d’horloges incohérentes et correction supervisée avec motif et audit.
-- **À VALIDER :** écart d’horloge admissible, règles de détection/alerte, habilitations et séquence de correction.
+- **Validé :** conserver l’heure déclarée d’origine et l’instant de réception serveur séparément ; ne pas remplacer automatiquement la date métier par la date de synchronisation. Signaler une horloge incohérente et conserver les éléments utiles à son examen.
+- **À VALIDER :** seuils d’incohérence, éléments précis à conserver, destinataires du signalement et processus/habilitations de correction supervisée avec motif et audit.
 - **Impact documentaire :** décrire séparément collecte déclarée, réception serveur, date métier et correction dans les flux et rapports.
 - **Impact technique futur :** préserver les valeurs originales, dériver la date métier côté serveur et tracer toute correction sans écraser la déclaration d’origine.
 
@@ -120,9 +125,9 @@ Les huit arbitrages demandés ci-dessous sont retenus comme base d’arbitrage p
 ## 4. Autres décisions encore ouvertes
 
 - **À VALIDER :** champs obligatoires et unicité de référence des dossiers, règles de création/doublons client, événements de collecte sur dossier inactif et données historiques ambiguës.
-- **À VALIDER :** transitions et permissions exactes des collectes, remises, clôtures, annulations et réouvertures ; les noms d’états connus ne fixent pas de nouveaux enums.
-- **À VALIDER :** format des références de reçu, mentions légales et traitement d’un rejet définitif.
-- **À VALIDER :** seuil d’écart d’horloge et procédure exacte de correction supervisée ; le calendrier spécial n’est pas défini.
+- **À VALIDER :** transitions et permissions exactes des collectes, remises, clôtures, annulations et réouvertures ; les noms d’états connus ne fixent pas de nouveaux enums. Définir aussi les états d’impression sans les confondre avec les états métier ou de synchronisation.
+- **À VALIDER :** formats exacts de la référence provisoire lisible, de l’identifiant technique et du numéro officiel ; séquence d’allocation, mentions légales et parcours de résolution d’un rejet définitif.
+- **À VALIDER :** seuils et éléments de détection d’horloge incohérente, date métier à appliquer après correction et procédure exacte de correction supervisée.
 - **À VALIDER :** bibliothèque/stratégie de chiffrement, gestion des clés, durée de session, verrouillage et procédure de récupération d’un appareil perdu.
 - **À VALIDER :** rôles de réception et validation de caisse, seuils d’approbation, états des écarts et possibilité de réaffecter une collecte après annulation d’une remise.
 - **À VALIDER :** framework Web, appareils Android, imprimante, RPO/RTO, disponibilité, conservation et conformité réglementaire.
@@ -133,6 +138,6 @@ Les huit arbitrages demandés ci-dessous sont retenus comme base d’arbitrage p
 - **[Implementation Plan v1.0](./COOPECA_Implementation_Plan_v1.0.docx) :** confirme la stack et prévoit la revue du schéma en phase 2. Il n’énonce pas les choix détaillés de dossier et de date civile retenus ici ; ils devront être pris en compte dans les livrables de cette phase.
 - **[TRD v1.0](./COOPECA_TRD_Technique_Reference_Document_v1.0.docx) :** cohérent sur la stack, l’idempotence, l’offline-first et les reçus provisoires. Il cite `Africa/Ndjamena` dans un exemple, mais la règle de journée civile et l’organisation distincte des états ne sont pas spécifiées au même niveau.
 - **[App Flow v1.1](./COOPECA_App_Flow_Flux_Applicatif_v1.1.docx) :** son annexe met à jour les parcours client provisoire, remise par collectes sélectionnées et clôture hors ligne. Elle reste à harmoniser avec le modèle de dossier, les trois couches d’état et la politique de session/chiffrement.
-- **[Schéma SQL v1.1](./COOPECA_Backend_Schema_v1.1.sql) :** n’inclut pas de table dossier ; exige `client_receipt_no` dès l’insertion sans spécifier son allocation serveur dans le flux de synchronisation ; n’a pas de champ explicite de date/heure déclarée sur l’appareil distinct de l’instant `TIMESTAMPTZ` ; et ses enums ne représentent pas l’état local de synchronisation. `remittances` porte déclaration et réception sur une même ligne avec des champs/états, alors que le principe retenu distingue les confirmations agent et caisse. Ces écarts de représentation et de contrat sont détaillés dans [IMPACTS_SCHEMA_SQL.md](./IMPACTS_SCHEMA_SQL.md) et [REÇUS_ET_DATE_METIER.md](./REÇUS_ET_DATE_METIER.md).
+- **[Schéma SQL v1.1](./COOPECA_Backend_Schema_v1.1.sql) :** n’inclut pas de table dossier ; impose `client_receipt_no` dès l’insertion avec unicité globale, sans spécifier son allocation serveur à l’acceptation dans le périmètre agence ; n’a pas de champ explicite de date/heure déclarée sur l’appareil distinct de l’instant `TIMESTAMPTZ` ; et ses enums ne représentent pas les trois axes d’état (synchronisation, métier, impression). `remittances` porte déclaration et réception sur une même ligne avec des champs/états, alors que le principe retenu distingue les confirmations agent et caisse. Ces écarts sont détaillés dans [IMPACTS_SCHEMA_SQL.md](./IMPACTS_SCHEMA_SQL.md) et [REÇUS_ET_DATE_METIER.md](./REÇUS_ET_DATE_METIER.md).
 
-Aucun des constats ci-dessus ne modifie les documents d’origine. Les huit principes sont une base pour validation finale, non une autorisation de modifier le SQL, de créer `schema.prisma`, de migrer ou de commencer l’implémentation.
+Aucun des constats ci-dessus ne modifie les documents d’origine. Les décisions explicitement validées sont consignées comme telles ; les autres points restent ouverts. Ce document n’autorise pas à modifier le SQL, créer `schema.prisma`, lancer une migration ou commencer l’implémentation.

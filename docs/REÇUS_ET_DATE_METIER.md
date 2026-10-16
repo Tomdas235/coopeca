@@ -1,75 +1,97 @@
 # Références de reçu et date métier
 
-**Statut :** principes retenus comme base d’arbitrage pour validation finale ; les détails marqués **À VALIDER** restent ouverts. Ce document ne modifie ni le schéma SQL ni les contrats d’API existants.
+**Statut :** règles validées, avec formats et modalités opérationnelles encore **À VALIDER**. Ce document décrit les exigences métier sans modifier le schéma SQL ni définir un contrat d’API final.
 
-## 1. Références de reçu
+## 1. Références, synchronisation et impression
 
-### Principes retenus pour validation finale
+### Règles validées
 
-- Une collecte créée hors ligne reçoit une **référence provisoire locale**, stable et unique.
-- Les tentatives répétées de synchronisation réutilisent le même identifiant d’opération et la même clé d’idempotence. La répétition ne crée pas une seconde collecte.
-- À l’acceptation de la synchronisation, le serveur attribue un **numéro officiel** et conserve le lien entre ce numéro et la référence provisoire locale.
-- Le reçu hors ligne porte la mention **« EN ATTENTE DE SYNCHRONISATION »**. Cette mention ne signifie pas que le serveur a reçu ou confirmé l’opération.
-- Une réimpression correspond au même reçu et à la même collecte ; elle ne crée pas une opération financière.
+- Une collecte créée hors ligne reçoit une référence provisoire **lisible**, liée à l’agence, stable et unique. Cette référence affichable est distincte de l’identifiant technique complet de l’opération. Son format exact reste **À VALIDER**.
+- À l’acceptation de l’opération, le serveur attribue le numéro officiel dans le périmètre de numérotation de l’agence. L’unicité et l’allocation atomique sont obligatoires ; le format et la séquence restent **À VALIDER**.
+- Le reçu hors ligne porte la mention **« EN ATTENTE DE SYNCHRONISATION »**. À l’acceptation serveur, les exemplaires futurs affichent la référence provisoire et le numéro officiel.
+- Le mobile persiste l’opération, l’identifiant technique, la référence provisoire et la clé d’idempotence avant envoi. Toute répétition reprend les mêmes identifiants.
+- Pour une même clé d’idempotence et un contenu identique, le serveur retourne le résultat existant, y compris le numéro officiel déjà attribué. Une même clé avec un contenu différent constitue un **conflit** et ne doit pas être traitée comme un succès équivalent.
+- Une réimpression utilise les mêmes références et ne crée jamais une nouvelle collecte.
+- L’état d’impression est distinct de l’état de synchronisation et de l’état métier de la collecte. L’impression ou son échec ne vaut ni acceptation serveur ni confirmation métier.
+- Après rejet définitif, conserver l’opération et le reçu, afficher le motif et empêcher toute répétition automatique. Un parcours explicite de résolution est requis.
+- Conserver l’audit des tentatives, de la décision serveur, de l’attribution du numéro officiel, des rejets et de leur résolution.
 
-### Invariants de synchronisation
+### Scénario de synchronisation et d’attribution
 
-1. Le mobile persiste l’opération et sa référence avant l’envoi.
-2. Chaque nouvelle tentative reprend les identifiants existants ; elle ne génère pas un nouveau numéro de reçu ni une nouvelle clé d’opération.
-3. Pour une opération déjà appliquée, le serveur retourne le résultat et le numéro officiel existants.
-4. Si une même clé d’idempotence est présentée avec un contenu différent, la requête ne doit pas être considérée comme un succès équivalent. Le code d’erreur et le parcours de résolution restent **À VALIDER**.
-5. Le mobile ne marque la collecte comme synchronisée qu’après une réponse explicite et vérifiable du serveur.
-6. Une erreur temporaire conserve la collecte et sa référence dans la file locale ; un conflit reste visible et ne supprime pas l’opération.
+Le serveur doit garantir qu’une seule attribution officielle effective est associée à l’opération acceptée, y compris en cas de requêtes concurrentes ou répétées. Une répétition idempotente ne réserve pas un second numéro et restitue le numéro déjà attribué. Une clé réutilisée avec un contenu différent doit produire un conflit traçable ; le code API et l’action utilisateur exacte restent à concevoir.
+
+Le statut `REJECTED` du SQL concerne les événements de synchronisation et le rejet définitif demandé ici porte sur l’opération/reçu : leur correspondance et leur éventuelle persistance durable restent à définir, sans inventer de nouvel enum.
 
 ### Détails à valider
 
-- **À VALIDER :** format lisible, longueur et alphabet de la référence provisoire ; composants possibles (identifiant d’appareil, UUID ou autre) et exigences de confidentialité.
-- **À VALIDER :** format, règles d’unicité et mode d’attribution du numéro officiel serveur.
-- **À VALIDER :** affichage conjoint des deux références après synchronisation et gestion d’un reçu déjà imprimé avant l’attribution officielle.
-- **À VALIDER :** mentions légales, identité et agence imprimées, champs obligatoires, valeur probante du reçu papier hors ligne et éventuel QR code.
-- **À VALIDER :** comportement exact lorsqu’une opération est refusée définitivement par le serveur après émission du reçu local.
+- **À VALIDER :** format, alphabet, longueur, composition et règle de stabilité de la référence lisible par agence ; lien ou non avec l’identifiant technique complet et règles de confidentialité de ce dernier.
+- **À VALIDER :** format et séquence du numéro officiel, inclusion éventuelle d’un identifiant d’agence, renouvellement de séquence, gestion de concurrence, des pannes et des numéros non utilisés.
+- **À VALIDER :** mentions légales, champs imprimés, identité/agence, QR code éventuel et valeur probante du reçu avant synchronisation.
+- **À VALIDER :** rendu après acceptation, état visuel d’un reçu rejeté, comportement d’une réimpression après changement de statut et nombre/durée de conservation des exemplaires/audits.
+- **À VALIDER :** parcours de résolution d’un rejet définitif : rôles, correction autorisée, nouvelle soumission éventuelle sous nouvelle opération, prévention d’un doublon financier et audit.
+- **À VALIDER :** contrat de conflit pour clé idempotente avec contenu différent (code, affichage, résolution) et portée exacte de l’unicité de la clé.
 
-Le schéma SQL v1.1 contient `collections.local_receipt_no` nullable et `collections.client_receipt_no` obligatoire et unique. Cette contrainte reste compatible avec le principe retenu si le serveur attribue le numéro officiel avant l’insertion de la collecte pendant le traitement de synchronisation. Le schéma ne précise ni cette séquence, ni l’allocation atomique, ni la correspondance conservée ; ces détails sont à valider avant toute évolution. Aucune modification de colonne ou stratégie de migration n’est décidée ici.
+## 2. Incompatibilité de numérotation avec le SQL v1.1
 
-## 2. Temps de collecte et date métier
+Le schéma [COOPECA_Backend_Schema_v1.1.sql](./COOPECA_Backend_Schema_v1.1.sql) définit `collections.client_receipt_no VARCHAR(80) NOT NULL UNIQUE` et `collections.local_receipt_no VARCHAR(100)` nullable. Il exige donc une valeur pour `client_receipt_no` lors de l’insertion et son unicité est globale, tandis que la règle métier attribue le numéro officiel à l’acceptation par le serveur et garantit son unicité dans le périmètre agence. Le schéma ne précise pas si `client_receipt_no` est bien le numéro officiel, comment son attribution est liée à l’acceptation, ni comment est conservée la référence provisoire.
 
-### Fuseau et frontière de journée retenus pour validation finale
+Les options suivantes sont à comparer ; **aucune n’est sélectionnée** :
 
-Le fuseau IANA de référence de la date métier est **`Africa/Ndjamena`**. Le principe retenu est la journée civile de **00 h 00 à 23 h 59** dans ce fuseau. Pour un calcul technique sans ambiguïté, le serveur doit appliquer une frontière déterministe allant du début civil du jour au début civil du jour suivant ; la précision et la convention exacte de représentation restent à formaliser. Aucun calendrier spécial (jours non ouvrés, jours fériés ou période particulière) n’est introduit ici.
+| Option à étudier | Compatibilité possible | Conséquences et points de vigilance |
+|---|---|---|
+| Attribuer le numéro officiel côté serveur à l’étape d’acceptation, puis insérer la collecte avec ce numéro dans la même unité transactionnelle. | Peut satisfaire `NOT NULL` et `UNIQUE` sans rendre le numéro disponible avant l’acceptation. | Garantir l’atomicité entre acceptation, allocation et insertion ; une contrainte d’unicité globale reste plus stricte qu’une unicité par agence, sauf si le format lui-même évite les collisions entre agences. Préciser le traitement des reprises, des pannes et des numéros réservés/non utilisés. |
+| Faire évoluer le stockage afin que le numéro officiel puisse être absent avant acceptation, puis l’enregistrer à l’acceptation. | Représente directement le cycle de vie si la collecte existe en base avant son acceptation. | Change l’obligation et/ou la contrainte d’unicité du champ existant ; nécessite une stratégie de compatibilité des lignes existantes, des consommateurs et des index. Déterminer où appliquer alors l’unicité d’agence. |
+| Représenter l’attribution officielle séparément (par exemple par une relation ou un registre de numérotation) et maintenir `client_receipt_no` pendant une période de compatibilité selon une sémantique clarifiée. | Peut séparer les identifiants historiques et l’attribution officielle. | Ajoute une relation à maintenir idempotemment et atomiquement ; il faut définir la valeur toujours requise dans le champ historique, son unicité et la transition des API/rapports sans ambiguïté. |
 
-Les instants techniques sont conservés comme des instants, indépendamment du fuseau d’affichage. La date métier est déterminée de façon cohérente côté serveur selon le fuseau et la règle approuvés.
+Avant choix, préciser le moment où la collecte est persistée par rapport à son acceptation, la sémantique du champ SQL historique, le périmètre réel des collisions à prévenir et la compatibilité requise avec les données/consommateurs. Ne pas modifier le SQL ni générer de migration dans le cadre de ce document.
 
-### Valeurs temporelles à distinguer
+## 3. Temps de collecte et date métier
 
-- **Heure déclarée sur l’appareil** : heure à laquelle l’agent indique avoir réalisé la collecte. Elle peut être disponible hors ligne et dépend de l’horloge du téléphone ; elle ne prouve pas à elle seule l’heure réelle.
-- **Heure de réception serveur** : instant attribué côté serveur lorsque la requête ou la collecte est reçue. Il sert à tracer l’arrivée et ne remplace pas l’heure déclarée de l’opération.
-- **Date métier** : date civile utilisée pour les totaux, clôtures et rapports, déterminée côté serveur dans le fuseau `Africa/Ndjamena`. Selon le principe retenu, elle ne doit pas être remplacée automatiquement par la date de synchronisation.
+### Fuseau, frontière et instants
 
-Le schéma SQL v1.1 prévoit `collections.collected_at TIMESTAMPTZ`, `collections.sync_received_at TIMESTAMPTZ` et `collections.business_date DATE`. Ces colonnes correspondent partiellement aux notions ci-dessus, mais les documents ne fixent pas entièrement leur sémantique ni la façon de conserver séparément une heure déclarée par l’appareil et un instant normalisé. Les noms SQL ne valent pas à eux seuls définition de contrat.
+Le fuseau métier est **`Africa/Ndjamena`**. Une journée civile est l’intervalle **[début du jour à 00 h 00, début du jour suivant à 00 h 00)** dans ce fuseau : la borne de début est incluse et celle du jour suivant exclue. Aucun calendrier spécial n’est introduit.
 
-### Collectes hors ligne tardives
+Les instants techniques sont conservés comme des instants, indépendamment de leur affichage local. Les règles de calcul correspondantes doivent être appliquées de façon cohérente côté serveur.
 
-- Conserver l’heure/date déclarée de la collecte et l’instant de réception serveur de manière distincte.
-- Ne pas remplacer automatiquement la date de collecte déclarée par la date à laquelle l’opération est synchronisée.
-- Prévoir le contrôle des horloges incohérentes et une correction supervisée avec motif et audit.
+### Temps distincts
 
-**À VALIDER :** écart d’horloge admissible, signalement, personne habilitée, séquence et effets exacts de la correction ; règles de modification a posteriori de la date métier. Le principe ne fixe pas de calendrier spécial.
+- **Heure/date déclarée d’origine :** valeur fournie par l’appareil pour le moment de collecte. Pour une collecte hors ligne tardive, elle est conservée sans remplacement automatique par la date/heure de synchronisation. Les informations utiles à l’examen d’une horloge incohérente doivent être conservées.
+- **Instant de réception serveur :** instant attribué par le serveur à la réception de l’opération ; il trace l’arrivée et ne remplace pas l’heure déclarée.
+- **Date métier :** date civile utilisée pour totaux, clôtures et rapports dans `Africa/Ndjamena`. Elle ne doit pas être automatiquement remplacée par la date de synchronisation.
 
-### Autres détails à valider
+Le schéma SQL v1.1 prévoit `collections.collected_at TIMESTAMPTZ`, `collections.sync_received_at TIMESTAMPTZ` et `collections.business_date DATE`. Il ne définit pas explicitement les champs/conventions permettant de distinguer la valeur déclarée d’origine de l’instant reçu ou de calculer la date métier en présence d’une horloge incohérente. Les noms de colonnes ne suffisent pas à définir le contrat.
 
-- **À VALIDER :** précision et convention technique de la frontière du jour civil côté serveur, sans changer le principe 00 h 00–23 h 59.
-- **À VALIDER :** format lisible, longueur et alphabet de la référence provisoire ainsi que format, unicité et allocation du numéro officiel.
-- **À VALIDER :** affichage des deux références après acceptation serveur et mise à jour d’un reçu déjà imprimé hors ligne.
-- **À VALIDER :** mentions légales, identité/agence, contenu et valeur probante du reçu papier avant synchronisation, QR code éventuel.
-- **À VALIDER :** traitement d’un rejet définitif après émission d’un reçu local.
+### Horloges incohérentes et corrections
 
-Les calculs de date métier doivent être reproductibles et cohérents côté serveur dans `Africa/Ndjamena`. Le serveur doit conserver les valeurs déclarées d’origine et l’instant de réception pour permettre l’audit ; toute correction est supervisée, motivée et auditée.
+Signaler une horloge jugée incohérente et préserver les éléments utiles à son examen. Toute correction éventuelle doit être supervisée, motivée et auditée, sans écraser silencieusement la valeur déclarée d’origine. Les seuils, éléments à conserver, habilitations, effets sur la date métier et déroulement précis de la correction restent **À VALIDER**.
 
-## 3. Références et écarts connus
+### Points temporels à valider
 
-- [DECISIONS_METIER.md](./DECISIONS_METIER.md) consigne la base d’arbitrage retenue pour validation finale ; elle ne présente pas les détails ouverts comme approuvés.
-- [IMPACTS_SCHEMA_SQL.md](./IMPACTS_SCHEMA_SQL.md) recense les impacts à analyser avant l’évolution du modèle Prisma/SQL.
-- Le [schéma backend v1.1](./COOPECA_Backend_Schema_v1.1.sql) prévoit actuellement le numéro `client_receipt_no` obligatoire et unique à l’insertion, une référence `local_receipt_no` optionnelle et les instants `collected_at`/`sync_received_at` ainsi que `business_date`. Il ne décrit pas l’allocation du numéro officiel dans le flux de synchronisation, une valeur distincte pour l’heure déclarée sur l’appareil ou la règle côté serveur calculant `business_date` dans `Africa/Ndjamena`. L’allocation avant insertion peut respecter la contrainte existante, mais son ordre et son atomicité restent à cadrer ; le SQL n’est pas modifié ici.
-- L’[Implementation Plan v1.0](./COOPECA_Implementation_Plan_v1.0.docx), le [TRD v1.0](./COOPECA_TRD_Technique_Reference_Document_v1.0.docx) et l’[App Flow v1.1](./COOPECA_App_Flow_Flux_Applicatif_v1.1.docx) demandent des références stables, une synchronisation sans doublon et des reçus dont le statut reflète réellement la confirmation serveur. Ils ne règlent pas tous le format de la référence ni les détails calendaires ci-dessus.
+- **À VALIDER :** règle complète de dérivation de la date métier à partir de la valeur déclarée et traitement d’une correction autorisée.
+- **À VALIDER :** seuils d’horloge incohérente, données utiles à l’examen et destinataires des alertes.
+- **À VALIDER :** précision et représentation des heures sur le reçu, sans modifier la frontière civile validée.
 
-Les divergences doivent être résolues dans la conception et documentées avant toute modification du schéma ou contrat API. Aucune modification du SQL, migration ou initialisation technique n’est autorisée par le présent cadrage.
+## 4. Tests d’acceptation à prévoir
+
+Ces cas sont des exigences documentaires pour la conception/tests futurs ; ils n’ont pas été exécutés comme tests applicatifs dans le cadre de cette mise à jour.
+
+1. Répéter une requête acceptée avec la même clé et le même contenu retourne la même opération et le même numéro officiel, sans créer de collecte ni numéro supplémentaire.
+2. Envoyer simultanément plusieurs tentatives identiques ne produit qu’une acceptation et une attribution officielle effective.
+3. Réutiliser la même clé avec un contenu différent produit un conflit explicite, traçable, sans écrasement ni succès trompeur.
+4. Deux opérations concurrentes ne reçoivent pas le même numéro officiel dans le périmètre d’une agence ; l’isolement entre agences respecte le format/séquence décidés.
+5. Une référence provisoire demeure stable et liée à l’agence pendant la durée de vie de l’opération ; elle reste distinguable de l’identifiant technique complet.
+6. Une collecte tardive conserve l’heure déclarée d’origine et l’instant de réception serveur ; sa date métier n’est pas remplacée automatiquement par la date de synchronisation.
+7. Les instants autour de minuit sont classés avec la frontière semi-ouverte de la journée civile dans `Africa/Ndjamena`.
+8. Une horloge incohérente déclenche le signalement attendu et préserve les données d’examen ; une correction éventuelle laisse un audit et la valeur initiale consultable.
+9. Un rejet définitif conserve le reçu et l’opération, présente son motif et bloque la répétition automatique ; la résolution suit un parcours explicite.
+10. Réimprimer avant ou après synchronisation ne crée pas de collecte ; après acceptation, un nouvel exemplaire montre les références provisoire et officielle.
+11. Un échec d’impression n’altère ni l’état de synchronisation ni l’état métier ; un envoi accepté ne vaut pas à lui seul confirmation de remise caisse.
+12. L’autorisation d’accès à une opération ou à un numéro est vérifiée côté serveur pour l’agence ; la valeur d’agence fournie par le client ne permet pas un accès inter-agences.
+
+## 5. Références et cohérence
+
+- [DECISIONS_METIER.md](./DECISIONS_METIER.md) consigne les décisions validées et leurs détails ouverts.
+- [IMPACTS_SCHEMA_SQL.md](./IMPACTS_SCHEMA_SQL.md) décrit les impacts à examiner sur SQL, Prisma, API et les tests futurs.
+- L’[Implementation Plan v1.0](./COOPECA_Implementation_Plan_v1.0.docx), le [TRD v1.0](./COOPECA_TRD_Technique_Reference_Document_v1.0.docx) et l’[App Flow v1.1](./COOPECA_App_Flow_Flux_Applicatif_v1.1.docx) demandent des références stables, une synchronisation sans doublon et des reçus reflétant l’état réel de confirmation ; les précisions d’allocation par agence, conflit de clé, rejet définitif et frontière semi-ouverte sont consolidées ici.
+
+Aucune modification du SQL, migration, accès à une base, implémentation ou initialisation technique n’est autorisée par ce cadrage.

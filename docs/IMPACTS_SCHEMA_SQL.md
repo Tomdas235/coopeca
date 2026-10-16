@@ -1,10 +1,10 @@
-# Impacts métier et techniques — dossier de tontine
+# Impacts métier et techniques — dossier, synchronisation et reçus
 
-**Statut :** analyse de cadrage fondée sur la base d’arbitrage métier retenue pour validation finale. Ce document ne modifie pas le schéma SQL v1.1, ne définit pas le schéma Prisma final et ne prescrit aucune migration exécutable.
+**Statut :** analyse de cadrage fondée sur les règles métier validées et les détails encore ouverts. Ce document ne modifie pas le schéma SQL v1.1, ne définit pas le schéma Prisma final et ne prescrit aucune migration exécutable.
 
 ## 1. Décision et objectif
 
-**Principe retenu pour validation finale :** un dossier de tontine est une entité distincte du client ; un client peut en posséder plusieurs ; chaque collecte doit être rattachée explicitement à un dossier précis. Ce principe est consigné dans [DECISIONS_METIER.md](./DECISIONS_METIER.md).
+**Principe validé :** un dossier de tontine est une entité distincte du client ; un client peut en posséder plusieurs ; chaque collecte doit être rattachée explicitement à un seul dossier précis. Ce principe est consigné dans [DECISIONS_METIER.md](./DECISIONS_METIER.md).
 
 La conception détaillée décrit déjà des dossiers `tontine_accounts` avec notamment une référence, un client, un agent affecté, un montant journalier, des dates, un statut et une version de règles. En revanche, le [schéma SQL v1.1](./COOPECA_Backend_Schema_v1.1.sql) ne définit aucune table de dossier : `collections` contient aujourd’hui un `client_id` direct.
 
@@ -20,7 +20,7 @@ Chaque collecte appartient à un seul dossier
 
 Le dossier porte les informations contractuelles/périodiques qui ne sont pas des attributs de l’identité du client. La collecte reste l’événement financier réel (montant, agent, horodatages, reçu et statut) et référence le dossier concerné. Le client propriétaire d’une collecte se déduit du dossier.
 
-Cette cardinalité ne décide pas si un client doit obligatoirement posséder un dossier, si un dossier peut changer d’agent ou si un agent peut collecter sur un dossier affecté à un autre agent : ces règles restent **À VALIDER**. La décision est retenue pour validation finale ; elle n’approuve pas chaque champ ou chaque contrainte du modèle. La suppression physique des clients, dossiers ou collectes liés à des opérations financières n’est pas envisagée.
+Cette cardinalité ne décide pas si un client doit obligatoirement posséder un dossier, si un dossier peut changer d’agent ou si un agent peut collecter sur un dossier affecté à un autre agent : ces règles restent **À VALIDER**. Le principe relationnel est validé, sans approbation implicite des champs ou contraintes du modèle. La suppression physique des clients, dossiers ou collectes liés à des opérations financières n’est pas envisagée.
 
 ## 3. Éléments SQL à analyser avant de concevoir une évolution
 
@@ -87,20 +87,34 @@ Ces choix doivent tenir compte de l’existence de la contrainte SQL actuelle qu
 
 ### 5.2 États, horodatages, reçus et remises
 
-**Principes métier retenus pour validation finale :**
+**Principes métier validés :**
 
-- distinguer l’état de synchronisation local, l’état métier de la collecte et l’état de remise ; la synchronisation d’une collecte ne signifie pas réception caisse ;
-- conserver l’heure/date déclarée de la collecte et l’instant de réception serveur séparément ; ne pas remplacer automatiquement la date de collecte par celle de synchronisation ;
-- appliquer la journée civile de 00 h 00 à 23 h 59 dans `Africa/Ndjamena`, avec calcul cohérent côté serveur ;
-- une collecte hors ligne porte une référence locale provisoire stable ; après acceptation, le serveur attribue un numéro officiel et conserve la correspondance ; les reprises réutilisent identifiant et clé idempotente ;
+- distinguer les états de synchronisation, métier et impression ; la synchronisation d’une collecte ne signifie pas réception caisse ;
+- conserver l’heure/date déclarée de la collecte et l’instant de réception serveur séparément ; ne pas remplacer automatiquement la date métier par la date de synchronisation ;
+- appliquer la journée civile semi-ouverte [début du jour, début du jour suivant) dans `Africa/Ndjamena`, avec calcul cohérent côté serveur ;
+- une collecte hors ligne porte une référence provisoire lisible, stable, unique et liée à l’agence, distincte de l’identifiant technique ; après acceptation, le serveur attribue atomiquement un numéro officiel unique dans le périmètre agence et conserve la correspondance ;
+- les reprises idempotentes réutilisent les mêmes identifiants et clés ; même clé avec contenu différent = conflit ;
+- un rejet définitif conserve l’opération et le reçu, affiche le motif et bloque les reprises automatiques ; la résolution doit être explicite ;
+- après acceptation, les futurs reçus affichent les deux références ; une réimpression ne crée pas une collecte ;
+- les horloges incohérentes sont signalées et leurs éléments utiles conservés ; corrections supervisées, motivées et auditées ;
 - session hors ligne limitée, verrouillage après inactivité et révocation appliquée au prochain contact serveur ; l’expiration ne supprime pas les opérations locales en attente, qui doivent être conservées de manière sécurisée ;
 - une remise sélectionne des collectes entières ; une collecte n’est pas fractionnée entre plusieurs remises. Les écarts de remise doivent être traçables, motivés et validés selon les habilitations.
 
-**À VALIDER :** transitions, permissions et règles d’annulation ; format des reçus et mentions légales ; frontière calendaire de calcul côté serveur et seuil/procédure de correction d’horloge ; durées de session et mécanisme précis de révocation ; rôles, seuils et pouvoirs d’approbation d’un écart ; réaffectation éventuelle d’une collecte après annulation d’une remise. Aucun nouvel enum définitif n’est proposé.
+**À VALIDER :** transitions, permissions et règles d’annulation ; états exacts et correspondance SQL des trois axes (sans nouvel enum définitif implicite) ; formats et séquence des références, mentions légales et parcours de rejet/résolution ; source temporelle/date métier en cas d’horloge incohérente, seuils et données d’examen ; durées de session et mécanisme précis de révocation ; rôles, seuils et pouvoirs d’approbation d’un écart ; réaffectation éventuelle d’une collecte après annulation d’une remise.
 
 **Impact documentaire :** utiliser une terminologie cohérente dans les états, API, reçus, flux de caisse, clôtures et audits. Ces principes sont détaillés dans [DECISIONS_METIER.md](./DECISIONS_METIER.md) et [REÇUS_ET_DATE_METIER.md](./REÇUS_ET_DATE_METIER.md).
 
 **Impact technique futur :** analyser la séparation logique entre état client de synchronisation et statuts métier serveur ; la persistance des temps déclarés et reçus ; le calcul serveur de `business_date` ; les références de reçu provisoire/officiel ; la conservation sécurisée de la file locale ; les transitions et audits de déclaration, réception et écart. Toute représentation SQL/API reste à concevoir après validation des détails.
+
+#### Références de reçu : options SQL à comparer
+
+Le SQL impose actuellement `collections.client_receipt_no VARCHAR(80) NOT NULL UNIQUE` à l’insertion, avec unicité globale, tandis que le numéro officiel doit être attribué par le serveur à l’acceptation dans le périmètre d’une agence. Il définit aussi `local_receipt_no` nullable, sans définir la relation entre ces colonnes et l’identifiant technique complet. Les options sont comparées sans décision ni migration :
+
+1. **Attribution à l’acceptation avant insertion :** le serveur alloue le numéro puis insère la collecte avec la valeur requise dans la même unité transactionnelle. Cela peut garder `NOT NULL`, mais l’unicité globale peut être plus stricte que l’unicité agence, sauf si le format empêche toute collision entre agences. Il faut concevoir l’atomicité, les reprises, les pannes et les numéros réservés/non utilisés.
+2. **Attribution après persistance préalable :** rendre possible l’absence du numéro officiel avant acceptation et l’enregistrer ensuite. Cela correspond au cycle si une collecte est stockée avant acceptation, mais change le contrat de nullabilité/unicité et exige compatibilité historique et consommateurs.
+3. **Registre ou relation séparée d’attribution :** conserver un lien explicite entre opération, référence provisoire et numéro officiel, éventuellement avec coexistence temporaire du champ historique. Cela sépare les rôles mais ajoute une relation transactionnelle à maintenir idempotemment ; la valeur et le sens de `client_receipt_no` doivent quand même être définis.
+
+**Aucune option n’est retenue ici.** À décider après clarification de la sémantique historique de `client_receipt_no`, du moment de persistance de la collecte, de l’unicité agence attendue, du format et de la séquence, et des attentes de compatibilité.
 
 ### 5.3 Prisma et migrations
 
@@ -115,7 +129,12 @@ Ces choix doivent tenir compte de l’existence de la contrainte SQL actuelle qu
 - Les contrats de collecte devront identifier le dossier, ou permettre à l’API de le résoudre sans ambiguïté ; un identifiant de client seul ne suffit plus si plusieurs dossiers sont possibles.
 - Les données de démarrage/synchronisation mobile devront inclure seulement les dossiers accessibles à l’agent selon les règles d’agence et d’affectation approuvées.
 - L’API doit vérifier côté serveur le lien dossier-client-agence et l’état/éligibilité du dossier avant d’accepter une collecte.
-- L’identifiant stable de l’opération et la clé d’idempotence doivent rester constants lors des tentatives. Une répétition avec une charge identique retourne le résultat existant ; une même clé avec des données incompatibles est rejetée ou placée en conflit selon un contrat à définir.
+- L’autorisation de l’agence doit être vérifiée côté serveur à chaque requête ; une agence déclarée par le client ne donne aucun droit.
+- L’identifiant technique complet, la référence provisoire lisible et la clé d’idempotence sont des valeurs distinctes à relier explicitement. Elles restent constantes lors des tentatives. Une répétition identique retourne le résultat existant ; une même clé avec un contenu différent retourne un conflit explicite, selon un contrat à définir.
+- L’API doit allouer le numéro officiel de façon atomique dans l’espace de numérotation de l’agence à l’acceptation, conserver le lien de référence et inclure les deux numéros dans les réponses idempotentes ultérieures.
+- Le contrat de rejet définitif doit préserver l’opération et son reçu, retourner un motif affichable et empêcher les nouvelles tentatives automatiques ; la voie de résolution et ses autorisations sont à définir.
+- Les contrats de reçu et d’impression doivent séparer les états de synchronisation, métier et impression. La réimpression lit le même reçu et ne crée pas une nouvelle collecte.
+- Les données d’horloge incohérente et les corrections supervisées doivent préserver la déclaration d’origine, l’instant serveur, le motif et l’audit selon les règles de conservation à valider.
 - Les réponses de synchronisation et les erreurs métier doivent permettre au mobile de conserver et afficher les collectes en conflit sans les perdre.
 - Les changements d’API ne doivent pas casser silencieusement des consommateurs existants ; définir une stratégie de compatibilité et de versionnement avant de retirer ou rendre facultatif l’ancien `client_id`.
 
@@ -128,6 +147,13 @@ Ces choix doivent tenir compte de l’existence de la contrainte SQL actuelle qu
 - Un même événement de collecte conserve séparément l’heure déclarée et l’instant de réception serveur ; les reprises tardives ne remplacent pas automatiquement la date métier.
 - Les limites de journée sont cohérentes côté serveur dans `Africa/Ndjamena` ; les horloges incohérentes suivent le processus supervisé validé.
 - Répéter la synchronisation ne crée ni seconde collecte ni seconde correspondance ; réutiliser une clé avec une charge différente ne produit pas de succès trompeur.
+- Une seule allocation officielle est effective sous concurrence et reprise ; l’unicité suit le périmètre agence retenu et est contrôlée côté serveur.
+- Une réponse idempotente restitue toujours le même numéro officiel ; le lien entre identifiant technique, référence provisoire, agence et numéro officiel est vérifiable.
+- Un rejet définitif conserve l’opération et le reçu, affiche le motif, désactive la reprise automatique et n’autorise la résolution que par le parcours/habilitation approuvé.
+- Une impression réussie ou échouée ne modifie ni l’état de synchronisation ni l’état métier ; réimprimer avant/après acceptation n’ajoute aucune collecte et, après acceptation, montre les deux références.
+- Les horodatages autour des bornes du jour respectent [début, début du jour suivant) dans `Africa/Ndjamena`, sans changement de date métier induit par une synchronisation tardive.
+- Une heure d’appareil incohérente est signalée, les éléments d’examen sont conservés et une correction autorisée conserve valeur d’origine, motif, auteur et audit.
+- Les identifiants d’opération et reçus d’une autre agence ne peuvent pas être consultés ou modifiés en forgeant un identifiant ou une agence côté client.
 - Une collecte ne peut pas être fractionnée ni affectée à deux remises ; les montants des lignes et collectes restent égaux.
 - Expirer une session ou verrouiller l’application ne supprime pas les opérations locales en attente ; la révocation prend effet lors du contact serveur selon la politique validée.
 - Les déclarations, réceptions caisse et écarts restent distincts et auditables ; aucun statut n’est déduit du seul état de synchronisation.
@@ -137,9 +163,9 @@ Ces choix doivent tenir compte de l’existence de la contrainte SQL actuelle qu
 
 ## 6. Divergences documentaires
 
-- La conception détaillée et le cahier des charges présentent un dossier `tontine_accounts`, et le principe d’un client possédant plusieurs dossiers est retenu pour validation finale ; le SQL v1.1 ne contient pas cette entité et référence directement `clients` depuis `collections`.
+- La conception détaillée et le cahier des charges présentent un dossier `tontine_accounts`, et le principe validé d’un client possédant plusieurs dossiers ne figure pas dans le SQL v1.1, qui référence directement `clients` depuis `collections`.
 - Le SQL v1.1 utilise des noms et états différents de la conception (`collections` plutôt que `payments`, et aucun statut SQL `CONFIRMED`). Cette divergence doit être résolue dans le modèle et les contrats, pas par une substitution implicite de vocabulaire.
-- Le SQL impose actuellement un `client_receipt_no` obligatoire et unique dès l’insertion, tandis que le principe retenu attribue le numéro officiel serveur lors de la synchronisation. Ce n’est pas nécessairement incompatible si le serveur attribue ce numéro avant l’insertion de la collecte dans la transaction de synchronisation ; le moment d’allocation, son atomicité et la correspondance avec la référence locale ne sont toutefois pas définis par le schéma ou les documents. À clarifier avant migration, sans casser l’unicité ni l’historique.
+- Le SQL impose `client_receipt_no` obligatoire et unique globalement dès l’insertion ; la règle validée exige un numéro officiel serveur attribué à l’acceptation et unique dans le périmètre agence. Plusieurs options restent à comparer (attribution avant insertion, numéro différé, registre séparé) : aucune n’est tranchée. Voir la comparaison ci-dessus et [REÇUS_ET_DATE_METIER.md](./REÇUS_ET_DATE_METIER.md).
 - Le SQL définit `collection_status` avec `RECORDED`/`REVERSED`, `remittance_status` avec `DRAFT`/`SUBMITTED`/`RECEIVED`/`PARTIAL`/`DISPUTED`/`CANCELLED`, `closure_status` avec `DRAFT`/`SUBMITTED`/`REVIEWED`/`REOPENED`, et `sync_status` avec `RECEIVED`/`APPLIED`/`REJECTED` pour les événements de synchronisation. Les états documentaires `PENDING_SYNC`, `SYNCED`, `REQUIRES_REVIEW`, `CONFIRMED`, `VALIDATED` et `CLOSED` ne sont pas tous équivalents ni des enums SQL approuvés. La séparation et les transitions restent à concevoir ; ne pas inventer de nouveaux enums définitifs.
 - Le SQL enregistre déclaration et réception de remise sur `remittances` (colonnes de montant reçu, acteur et date) et n’impose pas à lui seul un objet distinct pour chaque confirmation. Il faut vérifier comment exprimer les confirmations agent/caissier et les écarts audités sans confondre réception et synchronisation.
 - Le SQL définit `collected_at TIMESTAMPTZ`, `sync_received_at TIMESTAMPTZ` et `business_date DATE`, mais pas de valeur explicite distincte pour date/heure déclarée sur l’appareil ni de règle de calcul explicitement liée au fuseau `Africa/Ndjamena`. Les instants doivent rester des instants ; la journée civile et le contrôle d’horloge doivent être appliqués de façon cohérente côté serveur.
@@ -156,8 +182,8 @@ Ces constats identifient le travail de conception requis ; ils ne modifient pas 
 
 ## 8. Prochaines étapes documentaires
 
-1. Faire valider les principes et détails ouverts consignés dans [DECISIONS_METIER.md](./DECISIONS_METIER.md).
-2. Élaborer une matrice relationnelle et une stratégie de compatibilité des données et API.
-3. Examiner ensemble les contraintes SQL v1.1, le modèle Prisma envisagé et le contrat d’API avant toute migration.
-4. Faire approuver des scénarios de tests de données historiques et d’isolement multi-agences.
-5. Attendre l’accord explicite de COOPECA avant l’initialisation technique ou la génération d’une migration.
+1. Faire valider les détails ouverts de [DECISIONS_METIER.md](./DECISIONS_METIER.md) et les règles de numérotation/rejet.
+2. Choisir, après comparaison, une stratégie compatible avec le champ historique `client_receipt_no`, l’allocation par agence et les consommateurs existants.
+3. Élaborer une matrice relationnelle dossier/collecte et une stratégie de compatibilité des données et API.
+4. Définir les tests d’acceptation recensés ici et dans [REÇUS_ET_DATE_METIER.md](./REÇUS_ET_DATE_METIER.md), notamment idempotence concurrente, heures limites et isolement inter-agences.
+5. Examiner ensemble les contraintes SQL v1.1, le modèle Prisma envisagé et les contrats d’API ; attendre un accord explicite avant toute initialisation technique ou migration.
