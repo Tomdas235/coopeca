@@ -74,14 +74,13 @@ Règle stricte : **aucune requête SQL dans les écrans** — uniquement via
 - L'affichage des montants passe par `src/utils/montants.ts` et n'utilise que
   des nombres entiers XAF.
 
-## Vérifications antérieures
+## Vérifications de cette étape
 
 | Commande | Résultat |
 | --- | --- |
-| `npx expo-doctor` | ✅ 20/20 contrôles |
 | `npm run typecheck` (strict) | ✅ 0 erreur |
-| `npm test` | ✅ 23/23 tests, 2 suites |
-| `npx expo export --platform android` | ✅ bundle Hermes 2,5 Mo |
+| `npm test -- --runInBand` | ✅ 29/29 tests, 2 suites |
+| `npx expo export --platform android` | ✅ bundle Android généré |
 
 ## Ce qui n'est PAS implémenté (volontairement)
 
