@@ -17,6 +17,7 @@ n'est implémentée à ce stade.
 cd backend
 cp .env.example .env        # puis renseigner les valeurs locales si besoin
 npm install
+npm run prisma:generate     # génère le client Prisma (requis avant les tests e2e)
 npm run build
 npm test                    # tests unitaires
 npm run test:e2e            # tests end-to-end (health check)

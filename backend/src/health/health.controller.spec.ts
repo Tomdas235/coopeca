@@ -1,3 +1,4 @@
+import { ServiceUnavailableException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { HealthController } from './health.controller';
 import { HealthService, HealthStatus } from './health.service';
@@ -41,9 +42,13 @@ describe('HealthController', () => {
     };
     serviceMock.getHealth.mockResolvedValue(health);
 
-    await expect(controller.check()).rejects.toMatchObject({
-      status: 503,
-      message: health,
-    });
+    const rejection = await controller.check().catch((error: unknown) => error);
+
+    // Contrat vérifié : exception HTTP 503 dont le corps de réponse est
+    // exactement l'objet de santé (et non une chaîne générique).
+    expect(rejection).toBeInstanceOf(ServiceUnavailableException);
+    const exception = rejection as ServiceUnavailableException;
+    expect(exception.getStatus()).toBe(503);
+    expect(exception.getResponse()).toEqual(health);
   });
 });
