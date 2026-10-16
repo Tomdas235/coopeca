@@ -1,4 +1,4 @@
-import { ScreenPlaceholder } from '../../src/components/ScreenPlaceholder';
+import { FeatureScreen } from '../../src/components/FeatureScreen';
 
 /**
  * Clôture journalière — squelette uniquement.
@@ -9,9 +9,10 @@ import { ScreenPlaceholder } from '../../src/components/ScreenPlaceholder';
  */
 export default function ClotureScreen() {
   return (
-    <ScreenPlaceholder
-      titre="Clôture"
-      description="Clôture journalière non implémentée (squelette). Clôture hors ligne et réouverture supervisée : à venir après validation du modèle de données."
+    <FeatureScreen
+      title="Clôture journalière"
+      description="Préparez le récapitulatif de fin de journée de l’agent."
+      nextStep="Le calcul et l’enregistrement de la clôture ne sont pas encore disponibles. Une clôture hors ligne devra rester identifiable comme non synchronisée."
     />
   );
 }

@@ -1,4 +1,4 @@
-import { ScreenPlaceholder } from '../../src/components/ScreenPlaceholder';
+import { FeatureScreen } from '../../src/components/FeatureScreen';
 
 /**
  * Collectes — squelette uniquement.
@@ -10,9 +10,10 @@ import { ScreenPlaceholder } from '../../src/components/ScreenPlaceholder';
  */
 export default function CollectesScreen() {
   return (
-    <ScreenPlaceholder
-      titre="Collectes"
-      description="Collectes journalières non implémentées (squelette). Enregistrement hors ligne et date déclarée : à venir après validation du modèle de données."
+    <FeatureScreen
+      title="Collectes"
+      description="Suivez les collectes journalières rattachées à un client et à un dossier."
+      nextStep="La saisie, l’enregistrement local et la génération de reçu ne sont pas encore disponibles. Les montants seront conservés en entiers XAF."
     />
   );
 }

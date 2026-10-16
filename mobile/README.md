@@ -1,8 +1,9 @@
 # COOPECA — Mobile (React Native / Expo)
 
-**Étape : squelette uniquement.** Navigation minimale, configuration
-TypeScript strict et tests de base. **Aucune fonctionnalité métier n'est
-implémentée** : chaque écran affiche explicitement son état « squelette ».
+**Étape : première interface visuelle.** Navigation Expo Router, tableau de
+bord agent, accès aux principaux parcours et composants visuels réutilisables.
+Les parcours métier, l'authentification et la synchronisation ne sont pas
+implémentés.
 
 ## Stack (versions réellement installées, vérifiées par `expo-doctor` 20/20)
 
@@ -42,13 +43,14 @@ mobile/
     (tabs)/collectes.tsx
     (tabs)/remises.tsx
     (tabs)/cloture.tsx
+    (tabs)/dossiers.tsx       # route accessible depuis l'accueil
     recus/[id].tsx
   src/
     features/                # auth, clients, dossiers, collectes, recus,
                              # remises, synchronisation, clotures (non implémentés)
     database/                # schema.ts, migrations/ versionnées, repositories/
     services/                # api.ts, printer.ts, sync.ts (non implémentés)
-    components/              # ScreenPlaceholder (cartouche « squelette »)
+    components/              # layout, cartes, statuts et écrans de parcours
     utils/                   # montants.ts (entiers XAF)
     types/                   # types partagés (MontantXAF)
   assets/                    # PNG provisoires (voir assets/README.md)
@@ -58,7 +60,21 @@ mobile/
 Règle stricte : **aucune requête SQL dans les écrans** — uniquement via
 `src/database/repositories` (non implémentés à ce stade).
 
-## Vérifications exécutées (état réel, pas annoncé)
+## Interface et limites de cette étape
+
+- Les chiffres du tableau de bord et les quatre états réseau/synchronisation
+  sont des exemples explicitement marqués comme démonstration.
+- Aucun état réseau n'est mesuré ; aucune synchronisation, authentification,
+  collecte, remise, clôture ou opération métier n'est exécutée.
+- Les routes Clients, Dossiers, Collectes, Reversements et Clôture sont
+  accessibles, mais affichent un état « module en préparation ».
+- La palette d'interface est provisoire et utilise notamment le bleu déjà
+  présent dans la configuration Android ; elle ne constitue pas une charte
+  officielle. Les couleurs et le logo restent à confirmer avec les maquettes.
+- L'affichage des montants passe par `src/utils/montants.ts` et n'utilise que
+  des nombres entiers XAF.
+
+## Vérifications antérieures
 
 | Commande | Résultat |
 | --- | --- |

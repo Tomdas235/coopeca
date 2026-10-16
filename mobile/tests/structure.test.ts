@@ -17,6 +17,7 @@ const routesRequises = [
   'app/(tabs)/collectes.tsx',
   'app/(tabs)/remises.tsx',
   'app/(tabs)/cloture.tsx',
+  'app/(tabs)/dossiers.tsx',
   'app/recus/[id].tsx',
 ];
 
@@ -26,6 +27,11 @@ const modulesRequis = [
   'src/services/printer.ts',
   'src/services/sync.ts',
   'src/components/ScreenPlaceholder.tsx',
+  'src/components/AppScreen.tsx',
+  'src/components/ActionCard.tsx',
+  'src/components/MetricCard.tsx',
+  'src/components/StatusPill.tsx',
+  'src/components/FeatureScreen.tsx',
   'src/utils/montants.ts',
   'src/types/index.ts',
 ];

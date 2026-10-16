@@ -1,4 +1,4 @@
-import { ScreenPlaceholder } from '../../src/components/ScreenPlaceholder';
+import { FeatureScreen } from '../../src/components/FeatureScreen';
 
 /**
  * Clients — squelette uniquement.
@@ -8,9 +8,10 @@ import { ScreenPlaceholder } from '../../src/components/ScreenPlaceholder';
  */
 export default function ClientsScreen() {
   return (
-    <ScreenPlaceholder
-      titre="Clients"
-      description="Gestion des clients non implémentée (squelette). Création hors ligne et statut PROVISOIRE : à venir après validation du modèle de données."
+    <FeatureScreen
+      title="Clients"
+      description="Retrouvez les informations des clients et leur statut."
+      nextStep="La recherche, la consultation et la création hors ligne avec statut PROVISOIRE seront développées après validation du modèle."
     />
   );
 }

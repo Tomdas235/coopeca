@@ -1,4 +1,4 @@
-import { ScreenPlaceholder } from '../../src/components/ScreenPlaceholder';
+import { FeatureScreen } from '../../src/components/FeatureScreen';
 
 /**
  * Remises — squelette uniquement.
@@ -9,9 +9,10 @@ import { ScreenPlaceholder } from '../../src/components/ScreenPlaceholder';
  */
 export default function RemisesScreen() {
   return (
-    <ScreenPlaceholder
-      titre="Remises"
-      description="Déclaration de remise par l'agent non implémentée (squelette). La réception caisse est une confirmation distincte, jamais active à ce stade."
+    <FeatureScreen
+      title="Reversements"
+      description="Suivez les remises de fonds déclarées par l’agent."
+      nextStep="La déclaration par l’agent et la confirmation de réception par le caissier resteront deux étapes distinctes. Aucun reversement n’est enregistré dans cette version."
     />
   );
 }
