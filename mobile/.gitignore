@@ -1,0 +1,21 @@
+# DÉPENDANCES
+node_modules/
+
+# EXPO
+.expo/
+dist/
+expo-build-properties/
+
+# ENVIRONNEMENT — jamais de secret dans le dépôt
+.env
+.env.*
+
+# LOGS
+*.log
+npm-debug.log*
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
