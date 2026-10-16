@@ -69,13 +69,12 @@ export class LoginController {
 
     this.update({ isSubmitting: true, fieldErrors: {}, serviceError: null });
 
+    let session: AuthSession;
     try {
-      const session = await this.service.authenticate({
+      session = await this.service.authenticate({
         identifier: this.snapshot.identifier,
         password: this.snapshot.password,
       });
-      this.update({ password: '' });
-      onAuthenticated(session);
     } catch (error) {
       this.update({
         serviceError:
@@ -83,9 +82,13 @@ export class LoginController {
             ? "La connexion réelle n'est pas disponible : le service d'authentification n'est pas configuré. Aucune session n'a été ouverte."
             : 'Impossible de vérifier les identifiants. Vérifiez votre connexion et réessayez.',
       });
-    } finally {
       this.update({ isSubmitting: false });
+      return;
     }
+
+    this.update({ password: '' });
+    this.update({ isSubmitting: false });
+    onAuthenticated(session);
   }
 
   private update(changes: Partial<LoginSnapshot>): void {

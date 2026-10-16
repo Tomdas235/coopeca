@@ -118,6 +118,12 @@ export default function AccueilScreen() {
           symbol="✓"
           onPress={() => router.push('/(tabs)/cloture')}
         />
+        <ActionCard
+          title="Session et profil"
+          description="Consulter le compte et se déconnecter"
+          symbol="•"
+          onPress={() => router.push('/(auth)/session')}
+        />
       </View>
     </AppScreen>
   );

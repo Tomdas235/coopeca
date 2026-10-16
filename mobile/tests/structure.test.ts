@@ -11,6 +11,7 @@ const racineMobile = path.join(__dirname, '..');
 const routesRequises = [
   'app/_layout.tsx',
   'app/(auth)/login.tsx',
+  'app/(auth)/session.tsx',
   'app/(tabs)/_layout.tsx',
   'app/(tabs)/index.tsx',
   'app/(tabs)/clients.tsx',
@@ -32,6 +33,10 @@ const modulesRequis = [
   'src/components/MetricCard.tsx',
   'src/components/StatusPill.tsx',
   'src/components/FeatureScreen.tsx',
+  'src/features/auth/LoginController.ts',
+  'src/features/auth/SessionController.ts',
+  'src/features/auth/validation.ts',
+  'src/features/auth/auth.test.ts',
   'src/utils/montants.ts',
   'src/types/index.ts',
 ];
