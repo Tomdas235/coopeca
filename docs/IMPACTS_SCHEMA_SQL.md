@@ -4,7 +4,7 @@
 
 ## 1. Décision et objectif
 
-**Principe validé :** un dossier de tontine est une entité distincte du client ; un client peut en posséder plusieurs ; chaque collecte doit être rattachée explicitement à un seul dossier précis. Ce principe est consigné dans [DECISIONS_METIER.md](./DECISIONS_METIER.md).
+**Principe validé :** un dossier de tontine est une entité distincte du client ; un client peut en posséder plusieurs ; chaque collecte doit être rattachée explicitement à un seul dossier précis. Ce principe est consigné dans [DECISIONS_METIER.md](./DECISIONS_METIER.md). Les règles complémentaires de création hors ligne, d’unicité du dossier ouvert, de fermeture, de conflits explicites et d’historique sont consignées sous les identifiants **D-LOT-001 à D-LOT-005** dans [DECISIONS_METIER.md](./DECISIONS_METIER.md) §3.12, sans modification du présent document ni du SQL v1.1.
 
 La conception détaillée décrit déjà des dossiers `tontine_accounts` avec notamment une référence, un client, un agent affecté, un montant journalier, des dates, un statut et une version de règles. En revanche, le [schéma SQL v1.1](./COOPECA_Backend_Schema_v1.1.sql) ne définit aucune table de dossier : `collections` contient aujourd’hui un `client_id` direct.
 

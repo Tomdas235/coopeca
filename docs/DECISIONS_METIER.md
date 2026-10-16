@@ -39,6 +39,7 @@ Cette section rassemble les principes précédemment soumis à arbitrage et les 
 
 - **Validé :** un client peut posséder plusieurs dossiers ; le dossier est distinct du client et chaque collecte référence explicitement un seul dossier concerné.
 - **À VALIDER :** champs définitifs, cycle de vie, règles d’affectation à un agent, unicité de référence et traitement des collectes historiques ambiguës.
+- **Complément (voir §3.12) :** les décisions **D-LOT-001 à D-LOT-005** précisent désormais la création hors ligne, l’unicité du dossier ouvert par client et par agence, la fermeture, les conflits explicites et le rattachement des collectes ; les points qu’ils ne tranchent pas restent ouverts ci-dessus.
 - **Impact documentaire :** intégrer ce modèle dans les références de données et d’API, en signalant l’écart au SQL v1.1.
 - **Impact technique futur :** concevoir les relations, contraintes d’agence, stratégie de compatibilité et migration additive après inventaire. Aucun schéma ou migration n’est créé ici.
 
@@ -122,9 +123,22 @@ Cette section rassemble les principes précédemment soumis à arbitrage et les 
 - **Risque :** conserver trop longtemps des données personnelles ou des journaux, ou exporter des données sans contrôle, peut créer un risque juridique et opérationnel.
 - **Option recommandée — À VALIDER :** faire valider par COOPECA et ses conseils compétents les durées de conservation, droits d’accès, modalités d’export, suppression/archivage et exigences réglementaires avant la production. Ne pas traiter les propositions techniques des documents comme une validation juridique.
 
+### 3.12 Dossiers de tontine — décisions D-LOT-001 à D-LOT-005
+
+**Statut : choix de principe retenus ; détails techniques à valider.** Ces décisions complètent §3.1 sans la remplacer.
+
+- **Validé — D-LOT-001 Création :** un agent autorisé peut créer un dossier de tontine hors connexion. Le dossier reçoit un identifiant technique stable sur le mobile. Sa création reste en attente jusqu’à son traitement par le serveur. La synchronisation doit être idempotente. Le serveur demeure l’autorité pour l’unicité et l’acceptation du dossier.
+- **Validé — D-LOT-002 Unicité :** un client ne peut avoir qu’un seul dossier ouvert par agence. Un client peut avoir plusieurs dossiers successifs dans une même agence, à condition qu’un seul soit ouvert à un instant donné. La règle est indépendante entre agences, sous réserve des autorisations d’accès et des règles de rattachement du client. La base serveur doit garantir cette unicité de façon atomique.
+- **Validé — D-LOT-003 Fermeture :** la fermeture d’un dossier interdit toute nouvelle collecte sur ce dossier. Les données historiques restent consultables selon les droits d’accès. Les corrections sont soumises à autorisation et doivent être auditées. Aucune opération historique ne doit être effacée ou modifiée silencieusement.
+- **Validé — D-LOT-004 Synchronisation et conflits :** les états métier et les états de synchronisation sont distincts. Une création concurrente incompatible avec l’unicité est traitée comme un conflit explicite ; aucune seconde ouverture ne doit être acceptée. Les opérations locales en attente ne doivent pas être supprimées automatiquement à la suite d’un conflit ou d’un rejet.
+- **Validé — D-LOT-005 Historique :** chaque nouvelle collecte doit être associée à un dossier précis. Les collectes historiques ne sont pas rattachées arbitrairement à un dossier lorsque leur rattachement ne peut être établi.
+- **À VALIDER (points ouverts associés) :** traitement des créations concurrentes et résolution des conflits ; possibilité et autorité de fermeture hors connexion ; motif obligatoire, réouverture et transitions d’état ; traitement des collectes créées avant la fermeture et synchronisées après ; champs obligatoires et numérotation des dossiers ; stratégie de rapprochement des collectes historiques.
+- **Impact technique futur :** la garantie atomique d’unicité du dossier ouvert (D-LOT-002), les conflits explicites de création et la fermeture sans effacement d’historique devront être exprimés par des contraintes et transitions lors de la conception du modèle. Aucune table, contrainte, `schema.prisma`, migration ni implémentation n’est autorisé à ce stade ; le SQL v1.1 n’est pas modifié.
+
 ## 4. Autres décisions encore ouvertes
 
 - **À VALIDER :** champs obligatoires et unicité de référence des dossiers, règles de création/doublons client, événements de collecte sur dossier inactif et données historiques ambiguës.
+- **À VALIDER (suite D-LOT — §3.12) :** traitement des créations concurrentes et résolution des conflits ; possibilité et autorité de fermeture hors connexion ; motif obligatoire, réouverture et transitions d’état ; traitement des collectes créées avant la fermeture et synchronisées après ; champs obligatoires et numérotation des dossiers ; stratégie de rapprochement des collectes historiques.
 - **À VALIDER :** transitions et permissions exactes des collectes, remises, clôtures, annulations et réouvertures ; les noms d’états connus ne fixent pas de nouveaux enums. Définir aussi les états d’impression sans les confondre avec les états métier ou de synchronisation.
 - **À VALIDER :** formats exacts de la référence provisoire lisible, de l’identifiant technique et du numéro officiel ; séquence d’allocation, mentions légales et parcours de résolution d’un rejet définitif.
 - **À VALIDER :** seuils et éléments de détection d’horloge incohérente, date métier à appliquer après correction et procédure exacte de correction supervisée.
