@@ -3,6 +3,7 @@ import { AppScreen } from '../../src/components/AppScreen';
 import { InputTexte } from '../../src/components/InputTexte';
 import { InputNumerique } from '../../src/components/InputNumerique';
 import { InputRecherche } from '../../src/components/InputRecherche';
+import { SelecteurSimple } from '../../src/components/SelecteurSimple';
 import { colors } from '../../src/components/theme';
 
 /**
@@ -54,6 +55,20 @@ export default function ComposantsScreen() {
         <InputRecherche
           placeholder="Chercher un client…"
           accessibilityLabel="Recherche de client"
+        />
+      </View>
+
+      <View style={styles.exampleCard}>
+        <SelecteurSimple
+          label="Agence"
+          value={null}
+          options={[
+            { label: 'Agence Centre', value: 'centre' },
+            { label: 'Agence Nord', value: 'nord' },
+            { label: 'Agence Sud', value: 'sud' },
+          ]}
+          onValueChange={() => {}}
+          accessibilityLabel="Sélecteur d'agence"
         />
       </View>
 
