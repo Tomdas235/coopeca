@@ -46,6 +46,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
+      JWT_SECRET: ${JWT_SECRET:-replace-this-development-secret-with-a-random-value}
       # Pointée vers le service « postgres » du réseau Compose, pas localhost.
       DATABASE_URL: postgresql://${POSTGRES_USER:-coopeca}:${POSTGRES_PASSWORD:-coopeca_dev_password}@postgres:5432/${POSTGRES_DB:-coopeca}?schema=public&sslmode=disable
     ports:

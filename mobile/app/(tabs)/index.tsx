@@ -1,5 +1,7 @@
-import { useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { useRouter, useState } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { InputMontantXAF } from '../../src/components/InputMontantXAF';
+import { DialogConfirmation } from '../../src/components/DialogConfirmation';
 import { ActionCard } from '../../src/components/ActionCard';
 import { AppScreen } from '../../src/components/AppScreen';
 import { MetricCard } from '../../src/components/MetricCard';
@@ -10,6 +12,9 @@ import { formatMontantXAF } from '../../src/utils/montants';
 
 export default function AccueilScreen() {
   const router = useRouter();
+  const [montantSaisie, setMontantSaisie] = useState<string>('');
+  const [showDialog, setShowDialog] = useState<boolean>(false);
+  const [actionResult, setActionResult] = useState<string | null>(null);
 
   return (
     <AppScreen>
@@ -87,6 +92,40 @@ export default function AccueilScreen() {
       </View>
 
       <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Saisie de montant (démo)</Text>
+        <InputMontantXAF
+          label="Montant à collecter"
+          value={montantSaisie}
+          onChangeText={setMontantSaisie}
+          placeholder="0"
+        />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Confirmation d’action (démo)</Text>
+        <Pressable
+          style={styles.demoButton}
+          onPress={() => {
+            setActionResult(null);
+            setShowDialog(true);
+          }}
+        >
+          <Text style={styles.demoButtonText}>Clôturer la journée (démo)</Text>
+        </Pressable>
+        {actionResult ? (
+          <AppNotice
+            title={actionResult === 'confirmé' ? 'Action confirmée' : 'Action annulée'}
+            body={
+              actionResult === 'confirmé'
+                ? 'La clôture a été enregistrée (démonstration).'
+                : 'L’opération a été annulée par l’utilisateur.'
+            }
+            kind={actionResult === 'confirmé' ? 'success' : 'info'}
+          />
+        ) : null}
+      </View>
+
+      <View style={styles.section}>
         <Text style={styles.sectionTitle}>Accès rapides</Text>
         <ActionCard
           title="Clients"
@@ -124,7 +163,30 @@ export default function AccueilScreen() {
           symbol="•"
           onPress={() => router.push('/(auth)/session')}
         />
+        <ActionCard
+          title="Composants UI"
+          description="Vitrine des composants de l'interface"
+          symbol="🧩"
+          onPress={() => router.push('/(tabs)/composants')}
+        />
       </View>
+
+      <DialogConfirmation
+        visible={showDialog}
+        title="Clôturer la journée ?"
+        message="Cette action est irréversible en démonstration."
+        confirmLabel="Oui, clôturer"
+        cancelLabel="Non, annuler"
+        destructive
+        onConfirm={() => {
+          setActionResult('confirmé');
+          setShowDialog(false);
+        }}
+        onCancel={() => {
+          setActionResult('annulé');
+          setShowDialog(false);
+        }}
+      />
     </AppScreen>
   );
 }
@@ -224,5 +286,16 @@ const styles = StyleSheet.create({
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.border,
+  },
+  demoButton: {
+    backgroundColor: colors.accent,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  demoButtonText: {
+    color: colors.surface,
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

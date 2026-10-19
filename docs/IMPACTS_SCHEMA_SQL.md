@@ -2,9 +2,11 @@
 
 **Statut :** analyse de cadrage fondée sur les règles métier validées et les détails encore ouverts. Ce document ne modifie pas le schéma SQL v1.1, ne définit pas le schéma Prisma final et ne prescrit aucune migration exécutable.
 
+Le brouillon de modèle cible à examiner est [CONCEPTION_MODELE_DONNEES.md](./CONCEPTION_MODELE_DONNEES.md). Le présent fichier décrit les écarts et impacts ; le brouillon ne lève pas à lui seul les validations métier/techniques restantes.
+
 ## 1. Décision et objectif
 
-**Principe validé :** un dossier de tontine est une entité distincte du client ; un client peut en posséder plusieurs ; chaque collecte doit être rattachée explicitement à un seul dossier précis. Ce principe est consigné dans [DECISIONS_METIER.md](./DECISIONS_METIER.md). Les règles complémentaires de création hors ligne, d’unicité du dossier ouvert, de fermeture, de conflits explicites et d’historique sont consignées sous les identifiants **D-LOT-001 à D-LOT-005** dans [DECISIONS_METIER.md](./DECISIONS_METIER.md) §3.12, sans modification du présent document ni du SQL v1.1.
+**Principe validé :** un dossier de tontine est une entité distincte du client ; un client peut en posséder plusieurs ; toute nouvelle collecte est rattachée à un dossier précis, dont le client est dérivé. Les règles complémentaires de création hors ligne, d’unicité du dossier ouvert, de fermeture, de conflits explicites et d’historique sont consignées sous les identifiants **D-LOT-001 à D-LOT-005** dans [DECISIONS_METIER.md](./DECISIONS_METIER.md) §3.12-3.13. Les arbitrages transversaux du 19/10 sont consignés en §3.14. Le présent document et le SQL v1.1 restent inchangés en structure.
 
 La conception détaillée décrit déjà des dossiers `tontine_accounts` avec notamment une référence, un client, un agent affecté, un montant journalier, des dates, un statut et une version de règles. En revanche, le [schéma SQL v1.1](./COOPECA_Backend_Schema_v1.1.sql) ne définit aucune table de dossier : `collections` contient aujourd’hui un `client_id` direct.
 
@@ -18,7 +20,7 @@ Dossier 1 ─── 0..n Collectes
 Chaque collecte appartient à un seul dossier
 ```
 
-Le dossier porte les informations contractuelles/périodiques qui ne sont pas des attributs de l’identité du client. La collecte reste l’événement financier réel (montant, agent, horodatages, reçu et statut) et référence le dossier concerné. Le client propriétaire d’une collecte se déduit du dossier.
+Le dossier porte les informations contractuelles/périodiques qui ne sont pas des attributs de l’identité du client. La collecte reste l’événement financier réel (montant, agent, horodatages, reçu et statut) et référence obligatoirement le dossier concerné pour toute nouvelle opération. Le client propriétaire se déduit du dossier ; un éventuel champ `client_id` conservé pour compatibilité ne constitue pas une source indépendante et doit rester cohérent. Les collectes historiques suivent la procédure distincte de §3.13 point 6 du registre.
 
 Cette cardinalité ne décide pas si un client doit obligatoirement posséder un dossier, si un dossier peut changer d’agent ou si un agent peut collecter sur un dossier affecté à un autre agent : ces règles restent **À VALIDER**. Le principe relationnel est validé, sans approbation implicite des champs ou contraintes du modèle. La suppression physique des clients, dossiers ou collectes liés à des opérations financières n’est pas envisagée.
 
@@ -28,7 +30,7 @@ Cette cardinalité ne décide pas si un client doit obligatoirement posséder un
 
 - **`clients`** : table propriétaire actuelle des attributs d’identité et de l’agence (`branch_id`). Le nouveau dossier devrait avoir une référence à son client.
 - **Nouvelle entité de dossier** : ses champs définitifs ne sont pas décidés. L’exemple documentaire `tontine_accounts` propose une clé UUID, un code, une référence client, un agent affecté, un montant journalier XAF, des dates, un statut et une version des règles. Cet inventaire est un point de départ, pas une approbation de chaque colonne.
-- **`collections`** : contient actuellement `client_id NOT NULL REFERENCES clients(id)`. Une référence au dossier doit devenir le moyen non ambigu de rattacher chaque nouvelle collecte à son dossier.
+- **`collections`** : contient actuellement `client_id NOT NULL REFERENCES clients(id)`. Le modèle cible rattache chaque nouvelle collecte au dossier ; si `client_id` est conservé pour compatibilité, il doit correspondre au client propriétaire du dossier.
 - **`remittance_items`** : référence une collecte par `collection_id`. La relation à la collecte et la contrainte d’une seule affectation par collecte doivent rester intactes, indépendamment du changement de rattachement de la collecte au dossier.
 - **`daily_closures`** : ses agrégats et rapports doivent continuer à pouvoir être rapprochés des collectes et des remises par agent, agence et date métier.
 - **`audit_logs`, `sync_events` et `closure_reopen_events`** : vérifier les références et les données d’audit/synchronisation qui identifient l’entité concernée ; ne pas réinterpréter ni effacer l’historique lors d’un changement de modèle.
@@ -65,7 +67,7 @@ Ne pas fabriquer une affectation de dossier à partir du seul client si un clien
 
 ### 5.1 Modèle et intégrité
 
-**Principe métier retenu :** entité dossier distincte ; client éventuellement associé à plusieurs dossiers ; collecte rattachée à un dossier précis.
+**Principe métier retenu :** entité dossier distincte ; client éventuellement associé à plusieurs dossiers ; toute nouvelle collecte rattachée à un dossier précis, dont le client est dérivé. L’historique non rattaché n’est permis que selon le statut explicite et le processus audité du registre.
 
 **Conséquences nécessaires à examiner dans le modèle cible :**
 
@@ -77,7 +79,7 @@ Ne pas fabriquer une affectation de dossier à partir du seul client si un clien
 
 **Options à valider avant de figer les tables et contraintes :**
 
-- conserver `collections.client_id` comme donnée redondante, ou le remplacer dans le modèle cible par un rattachement au dossier ; si la relation directe est conservée, définir une contrainte empêchant tout désaccord entre le client et celui du dossier ;
+- conserver temporairement `collections.client_id` pour compatibilité ou le remplacer dans le modèle cible par un rattachement au dossier ; ce choix technique ne change pas la source métier du client. Si les deux liens coexistent, leur cohérence doit être garantie ;
 - rendre la référence de dossier unique globalement ou dans le périmètre d’une agence ;
 - inclure `branch_id` directement dans la table de dossiers pour faciliter l’isolement et les index, ou la déduire du client ; si elle est dupliquée, imposer la cohérence ;
 - les champs, statuts, dates de validité, attribution à un agent et versionnement des règles du dossier ;
@@ -100,7 +102,9 @@ Ces choix doivent tenir compte de l’existence de la contrainte SQL actuelle qu
 - session hors ligne limitée, verrouillage après inactivité et révocation appliquée au prochain contact serveur ; l’expiration ne supprime pas les opérations locales en attente, qui doivent être conservées de manière sécurisée ;
 - une remise sélectionne des collectes entières ; une collecte n’est pas fractionnée entre plusieurs remises. Les écarts de remise doivent être traçables, motivés et validés selon les habilitations.
 
-**À VALIDER :** transitions, permissions et règles d’annulation ; états exacts et correspondance SQL des trois axes (sans nouvel enum définitif implicite) ; formats et séquence des références, mentions légales et parcours de rejet/résolution ; source temporelle/date métier en cas d’horloge incohérente, seuils et données d’examen ; durées de session et mécanisme précis de révocation ; rôles, seuils et pouvoirs d’approbation d’un écart ; réaffectation éventuelle d’une collecte après annulation d’une remise.
+**Déjà arbitré dans `DECISIONS_METIER.md` §3.8 et §3.14 :** matrice de base des rôles, fusion supervisée de doublons par alias sans réécriture financière, collecte nouvelle obligatoirement liée au dossier, allocation atomique du numéro officiel à l’acceptation, clôture locale hors ligne avec rapprochement différé, résolution des écarts par superviseur et revue humaine des horloges incohérentes.
+
+**À VALIDER :** transitions et règles détaillées d’annulation ; états exacts et correspondance SQL des trois axes (sans nouvel enum définitif implicite) ; formats/séquence des références, mentions légales et parcours de rejet/résolution ; seuils d’horloge et données d’examen ; durées de session et mécanisme précis de révocation ; permissions fines, délégations, champs et seuils d’écart ; réaffectation après annulation ; règles détaillées de normalisation des doublons et correction d’une fusion erronée.
 
 **Impact documentaire :** utiliser une terminologie cohérente dans les états, API, reçus, flux de caisse, clôtures et audits. Ces principes sont détaillés dans [DECISIONS_METIER.md](./DECISIONS_METIER.md) et [REÇUS_ET_DATE_METIER.md](./REÇUS_ET_DATE_METIER.md).
 
@@ -108,13 +112,13 @@ Ces choix doivent tenir compte de l’existence de la contrainte SQL actuelle qu
 
 #### Références de reçu : options SQL à comparer
 
-Le SQL impose actuellement `collections.client_receipt_no VARCHAR(80) NOT NULL UNIQUE` à l’insertion, avec unicité globale, tandis que le numéro officiel doit être attribué par le serveur à l’acceptation dans le périmètre d’une agence. Il définit aussi `local_receipt_no` nullable, sans définir la relation entre ces colonnes et l’identifiant technique complet. Les options sont comparées sans décision ni migration :
+Le SQL impose actuellement `collections.client_receipt_no VARCHAR(80) NOT NULL UNIQUE` à l’insertion, avec unicité globale. La décision du 19/10/2026 exige une allocation officielle atomique à l’acceptation, unique dans le périmètre d’une agence. Il définit aussi `local_receipt_no` nullable, sans définir la relation entre ces colonnes et l’identifiant technique complet. Le principe métier est décidé ; les variantes ci-dessous restent à étudier pour la compatibilité, sans rouvrir ce principe :
 
-1. **Attribution à l’acceptation avant insertion :** le serveur alloue le numéro puis insère la collecte avec la valeur requise dans la même unité transactionnelle. Cela peut garder `NOT NULL`, mais l’unicité globale peut être plus stricte que l’unicité agence, sauf si le format empêche toute collision entre agences. Il faut concevoir l’atomicité, les reprises, les pannes et les numéros réservés/non utilisés.
+1. **Attribution à l’acceptation avant insertion — option de référence métier :** le serveur alloue le numéro puis insère la collecte avec la valeur requise dans la même unité transactionnelle. Cela peut garder `NOT NULL`, mais l’unicité globale peut être plus stricte que l’unicité agence, sauf si le format empêche toute collision entre agences. Il faut concevoir l’atomicité, les reprises, les pannes et les numéros réservés/non utilisés.
 2. **Attribution après persistance préalable :** rendre possible l’absence du numéro officiel avant acceptation et l’enregistrer ensuite. Cela correspond au cycle si une collecte est stockée avant acceptation, mais change le contrat de nullabilité/unicité et exige compatibilité historique et consommateurs.
 3. **Registre ou relation séparée d’attribution :** conserver un lien explicite entre opération, référence provisoire et numéro officiel, éventuellement avec coexistence temporaire du champ historique. Cela sépare les rôles mais ajoute une relation transactionnelle à maintenir idempotemment ; la valeur et le sens de `client_receipt_no` doivent quand même être définis.
 
-**Aucune option n’est retenue ici.** À décider après clarification de la sémantique historique de `client_receipt_no`, du moment de persistance de la collecte, de l’unicité agence attendue, du format et de la séquence, et des attentes de compatibilité.
+**Décision :** le principe de l’option 1 est retenu : allocation atomique à l’acceptation avant insertion/persistance. La sémantique historique de `client_receipt_no`, la portée de l’unicité SQL globale, le format/séquence et la compatibilité restent à concevoir. Le SQL v1.1 n’est pas modifié par cette décision.
 
 ### 5.3 Prisma et migrations
 

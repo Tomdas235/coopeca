@@ -18,6 +18,7 @@ describe('HealthController (e2e)', () => {
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     process.env.PORT = '3000';
+    process.env.JWT_SECRET = 'test-only-secret-with-at-least-32-characters';
     process.env.DATABASE_URL =
       process.env.DATABASE_URL ??
       'postgresql://coopeca:coopeca_dev_password@127.0.0.1:5499/coopeca?schema=public&sslmode=disable';

@@ -1,8 +1,10 @@
 # Propositions d’arbitrage — six points ouverts D-LOT (dossiers de tontine)
 
-**Statut : propositions NON VALIDÉES.** Ce document analyse séparément les six points ouverts des décisions D-LOT-001 à D-LOT-005 ([DECISIONS_METIER.md](./DECISIONS_METIER.md) §3.12 et §4). Aucune recommandation n’y figure comme approuvée : seule une ligne explicitement marquée **Validé** dans le registre fait autorité. Ce fichier ne modifie ni le registre, ni le schéma SQL v1.1, ni `schema.prisma` ; il ne crée aucune migration et n’autorise aucun `prisma db push`.
+**Statut : analyse historique de propositions.** Ce document analyse les six points D-LOT dans leur état de cadrage initial ; depuis le 16/10, les décisions métier retenues sont consignées en **Validé** dans [DECISIONS_METIER.md](./DECISIONS_METIER.md) §3.13, complétées par les arbitrages du 19/10 en §3.8 et §3.14. Les propositions et tableaux ci-dessous ne constituent pas l’état courant lorsqu’ils divergent du registre canonique. Ce fichier ne modifie ni le schéma SQL v1.1 ni `schema.prisma` ; il ne crée aucune migration et n’autorise aucun `prisma db push`.
 
 **Mise à jour du 16/10/2026 :** les six propositions des sections 1 à 6 ont fait l’objet d’une **validation explicite** lors de l’étape d’intégration et sont désormais consignées comme **Validé** dans [DECISIONS_METIER.md](./DECISIONS_METIER.md) §3.13, avec rappel des détails que la source marquait « À VALIDER » (ils restent ouverts). Le présent document conserve intégralement son analyse d’origine.
+
+**Addendum du 19/10/2026 :** les arbitrages transversaux (doublons/fusion client, client dérivé du dossier pour les nouvelles collectes, numérotation officielle des reçus, rôles, remises/écarts, clôture hors ligne et horloges incohérentes) sont consignés dans [DECISIONS_METIER.md](./DECISIONS_METIER.md) §3.8 et §3.14. Les tableaux et ambiguïtés ci-dessous reflètent l’état au 16/10/2026 et sont historiques ; en cas de divergence, le registre canonique prévaut. Le SQL v1.1 reste inchangé.
 
 **Références employées :** AGENTS.md (anciennement AGENT.md), DECISIONS_METIER.md, IMPACTS_SCHEMA_SQL.md, REÇUS_ET_DATE_METIER.md, COOPECA_Backend_Schema_v1.1.sql (dont les règles de service A à J).
 
@@ -296,7 +298,7 @@ Socle transversal commun à toutes les propositions : idempotence par clé + `pa
 
 # Partie C — Préparation de la phase suivante
 
-## Tableau 1 — Décisions à valider (état au 16/10/2026)
+## Tableau 1 — État historique des décisions (16/10/2026, supersédé en partie)
 
 | # | Objet | Type dominant | Bloque le modèle de données ? | Dépend de | Ordre proposé |
 | --- | --- | --- | --- | --- | --- |
@@ -307,7 +309,7 @@ Socle transversal commun à toutes les propositions : idempotence par clé + `pa
 | 4 | Collectes avant fermeture synchronisées après | **Métier** (règle d’activité) | Non structurellement (colonnes couvertes par 2+3+§3.5) | 2, 3, horloges | 5 |
 | 6 | Rapprochement des collectes historiques | **Métier** (stratégie, rôles) + technique (nullable + état de lien) | **Oui** (nullabilité contrôlée de `collections.dossier_id`) | 5, §3.8 | 6 |
 
-## Tableau 2 — Décisions métier vs choix techniques
+## Tableau 2 — Décisions métier vs choix techniques (instantané du 16/10/2026)
 
 | Domaine | Décision métier (arbitrage humain requis) | Choix technique (après arbitrage, à concevoir) |
 | --- | --- | --- |
@@ -331,18 +333,18 @@ Socle transversal commun à toutes les propositions : idempotence par clé + `pa
 | Aucun état métier existant modifié | ✅ `DECISIONS_METIER.md` (registre) et `IMPACTS_SCHEMA_SQL.md` intouchés à cette étape |
 | Modifications locales écrasées | ✅ aucune (renommage `AGENTS.md` de l’utilisateur préservé) |
 
-## Ambiguïtés restantes
+## Ambiguïtés restantes (état historique au 16/10/2026)
 
 1. **Glossaire des états (§3.2)** non tranché : tout vocabulaire d’état dossier (`OUVERT`/`FERMÉ`, état de conflit, état de revue) doit attendre l’harmonisation ; collision nominale possible avec `closure_status.REOPENED`.
 2. **§3.8 — doublons client** non résolu : condition préalable aux points 1 et 6 (unicité et rattachement reposent sur une identité client stable).
 3. **Instant d’effet de la fermeture** : déclaré (appareil) ou accepté (serveur) — la proposition retient le serveur, l’arbitrage n’est pas fait.
 4. **Réouverture hors ligne** : proposée interdite, symétrie avec la fermeture à deux temps discutable.
 5. **Périmètre d’unicité du numéro de dossier** (global comme `client_receipt_no` vs par agence) : écart connu avec les reçus, à trancher explicitement.
-6. **Propriétaire d’une collecte** : « client déduit du dossier » (IMPACTS §2) vs `client_id` direct (v1.1) — divergences à clarifier avant le point 6.
+6. **Propriétaire d’une collecte (question historique, résolue le 19/10/2026)** : le registre §3.14 tranche que, pour toute nouvelle collecte, le client est dérivé du dossier ; le `client_id` du SQL v1.1 ne peut rester qu’un lien de compatibilité cohérent. Voir aussi `DECISIONS_METIER.md` et `IMPACTS_SCHEMA_SQL.md`.
 7. **Audition des `.docx`** (Implementation Plan, TRD, App Flow) impossible en texte brut : d’éventuelles références à AGENT.md dans ces binaires restent non vérifiées.
 8. **12 références obsolètes** à `AGENT.md` restent en place (voir rapport) — correction proposée, non appliquée.
 
-## Prochaine action recommandée
+## Prochaine action recommandée (état historique au 16/10/2026)
 
 1. **Session d’arbitrage** sur les points **5 puis 3** (bloquants du modèle de données), en s’appuyant sur ce document ; consigner chaque décision comme **Validé/À VALIDER** dans `DECISIONS_METIER.md` §3.12/§4.
 2. **Sous réserve de votre autorisation** : (a) appliquer la correction des 12 références `AGENT.md` → `AGENTS.md` (liste complète dans le rapport de l’étape) et (b) commetter ce fichier `PROPOSITIONS_DLOT.md` avec elle — **aucun commit n’a été fait à cette étape**.

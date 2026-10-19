@@ -5,6 +5,7 @@ describe('validateEnv (configuration)', () => {
     NODE_ENV: 'test',
     PORT: '3000',
     DATABASE_URL: 'postgresql://user:pass@localhost:5432/coopeca?schema=public',
+    JWT_SECRET: 'test-only-secret-with-at-least-32-characters',
   };
 
   it('accepte une configuration valide', () => {
@@ -31,6 +32,10 @@ describe('validateEnv (configuration)', () => {
     expect(() => validateEnv({ ...base, DATABASE_URL: 'mysql://x' })).toThrow(
       /DATABASE_URL/,
     );
+  });
+
+  it('refuse un secret JWT trop court', () => {
+    expect(() => validateEnv({ ...base, JWT_SECRET: 'short' })).toThrow(/JWT_SECRET/);
   });
 
   it('refuse un PORT hors plage valide', () => {

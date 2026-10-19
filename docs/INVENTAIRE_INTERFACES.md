@@ -74,16 +74,16 @@
 - **Rôle :** agent autorisé. **Objectif :** enregistrer sans connexion (statut `PROVISOIRE`, identifiant stable).
 - **Actions :** saisir champs requis ; validation locale ; enregistrement durable.
 - **États :** hors ligne (local explicite) ; validation champ par champ ; conflit/rejet ultérieur (MOB-005/MOB-019).
-- **Dépendances :** MOB-004 ; doublons §3.8 (non tranchées) ; backend `clients`. **Source :** Documentée (AGENTS.md §3, APP_FLOW §5, UX §7). **Statut :** À concevoir. **Origine :** Documentée. **Note :** écran ou modal — compté une fois.
+- **Dépendances :** MOB-004 ; revue des doublons §3.8 (téléphone normalisé + nom/prénom, sans fusion automatique) ; backend `clients`. **Source :** Documentée (AGENTS.md §3, APP_FLOW §5, UX §7). **Statut :** À concevoir. **Origine :** Documentée. **Note :** écran ou modal — compté une fois.
 
 ### WEB-003 — Clients (liste et recherche)
 - **Rôle :** superviseur, comptable/contrôleur, admin (lecture selon périmètre). **Objectif :** consulter clients et statut de validation/duplication.
-- **Actions :** rechercher, filtrer par agence/statut ; ouvrir le détail ; (à trancher) rapprocher doublons.
+- **Actions :** rechercher, filtrer par agence/statut ; ouvrir le détail ; examiner les doublons potentiels et, pour un superviseur habilité, décider une fusion auditée en conservant la fiche source comme alias.
 - **États :** chargement ; vide ; erreur ; accès refusé. **Dépendances :** WEB-004, backend `clients`. **Source :** Documentée (APP_FLOW §12). **Statut :** À concevoir. **Origine :** Documentée.
 
 ### WEB-004 — Détail d'un client (Web)
 - **Rôle :** superviseur, comptable/contrôleur. **Objectif :** historique client : dossiers successifs, collectes, statut.
-- **Actions :** parcourir dossiers et opérations ; (à trancher) rapprochement.
+- **Actions :** parcourir dossiers et opérations ; consulter les alias et l’historique de fusion selon les droits.
 - **États :** chargement ; vide partiel ; accès refusé. **Dépendances :** WEB-003, WEB-006. **Source :** Déduite (complément de WEB-003, non nommée). **Statut :** À concevoir. **Origine :** Déduite.
 
 ## 4. Dossiers de tontine
@@ -162,7 +162,7 @@
 
 ### MOB-015 — Détail d'une remise (côté agent)
 - **Rôle :** agent. **Objectif :** collectes incluses, total, déclaration — et, sans la confondre, réception caissier et écarts.
-- **Actions :** consulter ; (à trancher) annuler/modifier selon droits et workflow d'écarts.
+- **Actions :** consulter ; après synchronisation, demander une annulation motivée et auditée ou une opération compensatrice autorisée (pas de modification directe).
 - **États :** en attente de réception ; écart documenté ; rejet ; hors ligne.
 - **Dépendances :** MOB-013/MOB-014. **Source :** Déduite (UX §10 « détail et total, distinguer déclaration/confirmation »). **Statut :** À concevoir. **Origine :** Déduite. **Note :** aucune route existante.
 
@@ -174,15 +174,15 @@
 ### WEB-010 — Réception de caisse (confirmation)
 - **Rôle réservé :** caissier (et habilités explicites). **Objectif :** vérifier fonds reçus, confirmer réception ou signaler écart — acte distinct de la déclaration.
 - **Actions :** confirmer réception ; déclarer un écart (constatés vs attendus) ; pièce jointe (à trancher).
-- **États :** écart (workflow à valider) ; accès refusé (non-caissier) ; erreur.
+- **États :** écart constaté par le caissier, résolution en attente de validation superviseur ; accès refusé (non-caissier) ; erreur.
 - **Dépendances :** WEB-009, backend `remises`, audit. **Source :** Documentée (APP_FLOW §9 étapes 6–8, AGENTS.md §3–4, registre r4). **Statut :** À concevoir. **Origine :** Documentée. **Note :** écran réservé, non dupliqué avec WEB-009.
 
 ## 7. Clôtures journalières
 
 ### MOB-016 — Clôture journalière (saisie et suivi)
 - **Rôle :** agent. **Objectif :** enregistrer sa clôture hors ligne (récapitulatif, en attente signalées) et suivre son acceptation.
-- **Actions :** voir récapitulatif (calculs à valider) ; soumettre ; voir statut.
-- **États :** hors ligne (locale en attente) ; en attente signalées ; rejet avec motif ; réouverture (lecture seule côté agent).
+- **Actions :** voir le récapitulatif ; déclarer même hors ligne ; consulter le statut de rapprochement et les opérations manquantes.
+- **États :** déclaration locale en attente ; rapprochement serveur différé si des opérations ne sont pas synchronisées ; rejet avec motif ; réouverture (lecture seule côté agent).
 - **Dépendances :** MOB-010, MOB-013, MOB-019, backend `clotures`. **Source :** Documentée (APP_FLOW §10, UX §10, AGENTS.md §3) + Squelette (`(tabs)/cloture.tsx`). **Statut :** À concevoir. **Origine :** Documentée + Squelette.
 
 ### MOB-017 — Historique des clôtures (mobile)
@@ -210,14 +210,14 @@
 - **Dépendances :** tous modules métier ; `src/services/sync.ts` (squelette) ; backend `synchronisation`. **Source :** Documentée (APP_FLOW §11, UX §4 « bannière + composants »). **Statut :** À concevoir. **Origine :** Documentée. **Note :** aucune route existante — à trancher : écran dédié vs bannière + centre.
 
 ### MOB-019 — Résolution des conflits et rejets (mobile)
-- **Rôle :** agent (escalade superviseur à trancher). **Objectif :** expliquer chaque conflit/rejet (motif conservé), annulation motivée ou succession, sans purge automatique.
+- **Rôle :** agent pour consulter et initier la résolution autorisée ; superviseur habilité pour décider une fusion client ou un arbitrage nécessitant une autorisation. **Objectif :** expliquer chaque conflit/rejet (motif conservé), annulation motivée ou succession, sans purge automatique.
 - **Actions :** lire le motif ; annuler avec motif / proposer succession ; marquer résolu après acceptation serveur.
 - **États :** conflit (`DOSSIER_DEJA_OUVERT`, doublon client) ; rejet définitif (parcours à valider) ; hors ligne (conservé jusqu'à résolution explicite).
 - **Dépendances :** MOB-018, MOB-005/MOB-008, D-LOT-004, backend `synchronisation`. **Source :** Documentée (APP_FLOW §5/§11, UX §4, D-LOT-004). **Statut :** À concevoir. **Origine :** Documentée. **Note :** aucune route existante.
 
 ### WEB-013 — Conflits et rejets de synchronisation (suivi)
-- **Rôle :** superviseur, comptable/contrôleur. **Objectif :** traiter la file : doublons clients, secondes ouvertures, rejets définitifs.
-- **Actions :** filtrer par type/agence ; arbitrer (rôles exacts à trancher) ; tracer en audit.
+- **Rôle :** superviseur pour les décisions ; comptable/contrôleur en consultation et rapprochement selon ses droits. **Objectif :** suivre la file : doublons clients, secondes ouvertures, rejets définitifs.
+- **Actions :** filtrer par type/agence ; faire traiter les conflits selon la matrice de base de [DECISIONS_METIER.md](./DECISIONS_METIER.md) §3.14 ; tracer les décisions en audit.
 - **États :** vide ; accès refusé ; erreur. **Dépendances :** WEB-003/005/007, WEB-017, backend `synchronisation`. **Source :** Documentée (APP_FLOW §12). **Statut :** À concevoir. **Origine :** Documentée.
 
 ## 9. Agences et utilisateurs

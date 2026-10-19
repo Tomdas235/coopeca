@@ -35,15 +35,15 @@ Le statut `REJECTED` du SQL concerne les événements de synchronisation et le r
 
 Le schéma [COOPECA_Backend_Schema_v1.1.sql](./COOPECA_Backend_Schema_v1.1.sql) définit `collections.client_receipt_no VARCHAR(80) NOT NULL UNIQUE` et `collections.local_receipt_no VARCHAR(100)` nullable. Il exige donc une valeur pour `client_receipt_no` lors de l’insertion et son unicité est globale, tandis que la règle métier attribue le numéro officiel à l’acceptation par le serveur et garantit son unicité dans le périmètre agence. Le schéma ne précise pas si `client_receipt_no` est bien le numéro officiel, comment son attribution est liée à l’acceptation, ni comment est conservée la référence provisoire.
 
-Les options suivantes sont à comparer ; **aucune n’est sélectionnée** :
+Le principe métier validé le 19/10/2026 est l’allocation officielle atomique à l’acceptation, avant insertion/persistance de la collecte. Les variantes suivantes restent à examiner pour la compatibilité avec le SQL et les consommateurs ; elles ne rouvrent pas ce choix métier :
 
 | Option à étudier | Compatibilité possible | Conséquences et points de vigilance |
 |---|---|---|
-| Attribuer le numéro officiel côté serveur à l’étape d’acceptation, puis insérer la collecte avec ce numéro dans la même unité transactionnelle. | Peut satisfaire `NOT NULL` et `UNIQUE` sans rendre le numéro disponible avant l’acceptation. | Garantir l’atomicité entre acceptation, allocation et insertion ; une contrainte d’unicité globale reste plus stricte qu’une unicité par agence, sauf si le format lui-même évite les collisions entre agences. Préciser le traitement des reprises, des pannes et des numéros réservés/non utilisés. |
+| **Référence métier :** attribuer le numéro officiel côté serveur à l’étape d’acceptation, puis insérer la collecte avec ce numéro dans la même unité transactionnelle. | Peut satisfaire `NOT NULL` et `UNIQUE` sans rendre le numéro disponible avant l’acceptation. | Garantir l’atomicité entre acceptation, allocation et insertion ; une contrainte d’unicité globale reste plus stricte qu’une unicité par agence, sauf si le format lui-même évite les collisions entre agences. Préciser le traitement des reprises, des pannes et des numéros réservés/non utilisés. |
 | Faire évoluer le stockage afin que le numéro officiel puisse être absent avant acceptation, puis l’enregistrer à l’acceptation. | Représente directement le cycle de vie si la collecte existe en base avant son acceptation. | Change l’obligation et/ou la contrainte d’unicité du champ existant ; nécessite une stratégie de compatibilité des lignes existantes, des consommateurs et des index. Déterminer où appliquer alors l’unicité d’agence. |
 | Représenter l’attribution officielle séparément (par exemple par une relation ou un registre de numérotation) et maintenir `client_receipt_no` pendant une période de compatibilité selon une sémantique clarifiée. | Peut séparer les identifiants historiques et l’attribution officielle. | Ajoute une relation à maintenir idempotemment et atomiquement ; il faut définir la valeur toujours requise dans le champ historique, son unicité et la transition des API/rapports sans ambiguïté. |
 
-Avant choix, préciser le moment où la collecte est persistée par rapport à son acceptation, la sémantique du champ SQL historique, le périmètre réel des collisions à prévenir et la compatibilité requise avec les données/consommateurs. Ne pas modifier le SQL ni générer de migration dans le cadre de ce document.
+Le moment d’allocation et de persistance est décidé : allocation atomique à l’acceptation. Restent à préciser la sémantique du champ SQL historique, le périmètre des collisions à prévenir, le format/séquence et la compatibilité avec les données/consommateurs. Ne pas modifier le SQL ni générer de migration dans le cadre de ce document.
 
 ## 3. Temps de collecte et date métier
 
@@ -63,7 +63,7 @@ Le schéma SQL v1.1 prévoit `collections.collected_at TIMESTAMPTZ`, `collection
 
 ### Horloges incohérentes et corrections
 
-Signaler une horloge jugée incohérente et préserver les éléments utiles à son examen. Toute correction éventuelle doit être supervisée, motivée et auditée, sans écraser silencieusement la valeur déclarée d’origine. Les seuils, éléments à conserver, habilitations, effets sur la date métier et déroulement précis de la correction restent **À VALIDER**.
+Une collecte dont l’horloge est jugée incohérente n’est pas acceptée automatiquement ; elle est conservée pour revue humaine. Préserver les éléments utiles à son examen et l’heure déclarée d’origine. Toute correction éventuelle doit être supervisée, motivée et auditée, sans écraser silencieusement cette valeur. Les seuils, éléments à conserver, habilitations, effets sur la date métier et déroulement précis de la correction restent **À VALIDER**.
 
 ### Points temporels à valider
 

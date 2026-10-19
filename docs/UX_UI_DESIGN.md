@@ -117,7 +117,7 @@ Les libellés définitifs doivent être cohérents entre les listes, détails, r
 - Ne pas proposer de suppression silencieuse.
 - Rendre visible l'état fermé d'un dossier et empêcher les actions interdites.
 
-Les options exactes de résolution dépendent des décisions métier encore ouvertes.
+Pour les doublons, une correspondance téléphone normalisé + nom/prénom dans la même agence déclenche une revue ; seul un superviseur habilité peut décider une fusion, conservée comme alias sans réécriture des liens financiers. Les conflits de dossiers restent conservés et sont résolus explicitement. Voir [DECISIONS_METIER.md](./DECISIONS_METIER.md) §3.8, §3.13 et §3.14. Les libellés définitifs et les détails d’interface restent à concevoir.
 
 ## 9. Collectes et reçus
 
@@ -140,7 +140,9 @@ Les options exactes de résolution dépendent des décisions métier encore ouve
 - Pour toute action sensible, expliquer les conséquences et demander une confirmation adaptée.
 - Rendre les corrections et réouvertures traçables.
 
-**À confirmer :** champs, calculs, droits et workflow exacts.
+La déclaration de remise synchronisée n’est pas modifiable directement. Le caissier constate les écarts et le superviseur habilité en valide la résolution avec motif et audit. La clôture peut être déclarée hors ligne, mais n’est pas rapprochée côté serveur tant que des opérations attendent la synchronisation. Voir [DECISIONS_METIER.md](./DECISIONS_METIER.md) §3.14.
+
+**À confirmer :** détails des calculs, seuils, statuts d’affichage, pièces justificatives et exceptions de permissions.
 
 ## 11. Tableau de bord web
 

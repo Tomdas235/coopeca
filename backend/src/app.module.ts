@@ -5,6 +5,7 @@ import { validateEnv } from './config/env.validation';
 import { CommonModule } from './common/common.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
+import { AuthModule } from './auth/auth.module';
 
 /**
  * Module racine de l'API COOPECA.
@@ -26,6 +27,7 @@ import { HealthModule } from './health/health.module';
     CommonModule,
     DatabaseModule,
     HealthModule,
+    AuthModule,
   ],
 })
 export class AppModule {}

@@ -23,13 +23,13 @@ Principes structurants :
 | Rôle | Responsabilités générales |
 |---|---|
 | Agent | Gérer les clients et dossiers autorisés, enregistrer les collectes, déclarer les remises et effectuer sa clôture |
-| Superviseur | Superviser l'activité et autoriser les actions exceptionnelles prévues |
-| Caissier | Vérifier les fonds remis et confirmer leur réception |
-| Comptable / contrôleur | Contrôler les opérations et rapprochements |
-| Administrateur | Administrer les comptes, rôles et paramètres autorisés |
-| Direction / auditeur | Consulter les rapports et la piste d'audit |
+| Superviseur | Superviser l'agence, traiter les conflits/fusions habilités, valider les écarts et rouvrir les clôtures |
+| Caissier | Vérifier les fonds remis, confirmer leur réception et constater les écarts |
+| Comptable / contrôleur | Consulter et rapprocher les opérations, sans les modifier directement |
+| Administrateur | Administrer comptes, rôles et paramètres ; accès multi-agence seulement s'il est explicitement accordé |
+| Direction / auditeur | Consulter les rapports et la piste d'audit en lecture seule |
 
-**À valider :** permissions exactes de chaque rôle et séparation des tâches.
+Les permissions sont toujours limitées aux agences attribuées, sauf autorisation multi-agence explicite. Cette matrice de base est validée dans [DECISIONS_METIER.md](./DECISIONS_METIER.md) §3.14 ; les exceptions et délégations fines restent à préciser.
 
 ## 3. Navigation mobile
 
@@ -73,7 +73,7 @@ La présence de ces fichiers ne signifie pas que les fonctions sont déjà impl�
 6. Le serveur valide l'opération et renvoie son résultat.
 7. En cas de conflit ou de rejet, l'application affiche une explication et conserve les informations nécessaires à la résolution.
 
-**À valider :** champs obligatoires, détection des doublons et procédure de rapprochement.
+Une correspondance du téléphone normalisé et du nom/prénom dans la même agence signale un doublon potentiel, sans bloquer automatiquement la création ni fusionner les fiches. Un superviseur habilité peut décider une fusion après revue ; la fiche source est conservée comme alias, les liens financiers historiques ne sont pas réécrits et la décision est auditée. Les champs obligatoires, règles détaillées de normalisation, attribution de `client_code` et corrections d'une fusion erronée restent à valider.
 
 ## 6. Parcours dossiers
 
@@ -96,17 +96,11 @@ Décisions métier déjà consignées :
 4. À la synchronisation, le serveur vérifie les règles métier et l'unicité.
 5. Si une création concurrente est détectée, l'application présente un conflit explicite.
 
-**Décisions à valider :**
-- résolution des créations concurrentes ;
-- autorité de clôture hors ligne ;
-- motif et autorisation de réouverture ;
-- traitement des collectes enregistrées avant clôture mais synchronisées après ;
-- champs obligatoires et numérotation des dossiers ;
-- rapprochement des collectes historiques.
+Les règles de création concurrente, fermeture en deux temps, réouverture en ligne, traitement des collectes en vol, champs minimaux et rapprochement historique sont arbitrées dans [DECISIONS_METIER.md](./DECISIONS_METIER.md) §3.13. Les codes de conflit, seuils d'horloge, références exactes et rôles du rapprochement historique restent à préciser.
 
 ## 7. Parcours de collecte
 
-1. L'agent sélectionne un client et un dossier précis.
+1. L'agent sélectionne un dossier précis ; le client associé est affiché à partir de ce dossier.
 2. L'application vérifie l'état connu du dossier.
 3. L'agent saisit le montant en XAF et les champs requis.
 4. L'application valide la saisie.
@@ -122,17 +116,17 @@ Règles :
 - Une collecte ne peut pas être fractionnée entre plusieurs remises.
 - Les corrections et annulations doivent être autorisées et auditées.
 
-**À valider :** champs requis, seuils d'horloge incorrecte, procédure de correction et règles d'annulation.
+Une collecte dont l'horloge est jugée incohérente n'est pas acceptée automatiquement et est conservée pour revue humaine. Les heures déclarée et reçue par le serveur restent distinctes. Les seuils, procédure de correction et règles détaillées d'annulation restent à valider.
 
 ## 8. Reçus
 
 - Une référence locale stable permet de retrouver un reçu provisoire.
-- Le serveur attribue le numéro officiel à l'acceptation de l'opération.
+- L'acceptation, l'attribution atomique du numéro officiel et la persistance de la collecte sont réalisées ensemble côté serveur ; une reprise idempotente retourne le même numéro.
 - Après synchronisation, la référence provisoire et le numéro officiel peuvent être affichés ensemble.
 - Les copies et réimpressions doivent conserver la traçabilité.
 - Un reçu imprimé ne doit pas être invalidé silencieusement.
 
-**À valider :** format légal, mentions obligatoires, format d'impression, numérotation et comportement en cas de rejet après impression.
+**À valider :** formats exacts, mentions légales, rendu et comportement d'un rejet après impression. Le choix du modèle de stockage permettant l'allocation atomique doit être conçu en phase de revue SQL ; le DDL v1.1 reste inchangé jusque-là.
 
 ## 9. Remises de fonds
 
@@ -147,17 +141,18 @@ La déclaration de remise de l'agent est distincte de la confirmation de récept
 7. Le caissier confirme la réception ou signale un écart.
 8. Les écarts sont documentés et traités selon les droits autorisés.
 
-**À valider :** annulation, modification, pièces justificatives et workflow de résolution des écarts.
+Après synchronisation, une déclaration de remise n'est pas modifiée directement : toute erreur passe par une annulation motivée et auditée ou une opération compensatrice autorisée. Le caissier constate l'écart et le superviseur habilité en valide la résolution avec motif et audit. Les règles de réaffectation après annulation, pièces justificatives et détails de workflow restent à valider.
 
 ## 10. Clôture journalière
 
-- Chaque agent peut enregistrer sa clôture hors ligne ; elle attend alors la synchronisation.
+- Chaque agent peut déclarer sa clôture localement hors ligne ; cette déclaration ne vaut pas rapprochement serveur.
+- Si des opérations sont encore en attente de synchronisation, le serveur garde la clôture à rapprocher et rend les opérations manquantes visibles ; il ne confirme pas un total incomplet.
 - Le fuseau métier est `Africa/Ndjamena`.
 - La journée métier va de minuit à minuit.
 - La date métier d'une collecte et l'instant de réception serveur sont deux informations distinctes.
 - Une réouverture doit être réservée aux rôles autorisés, justifiée et auditée.
 
-**À valider :** calculs de clôture, données incluses, traitement des opérations en attente et procédure de réouverture.
+**À valider :** calculs de clôture, détail des données incluses et statuts serveur de rapprochement. La réouverture d'une clôture est réservée à un superviseur autorisé, avec motif et audit ; la réouverture d'un dossier exige une décision serveur.
 
 ## 11. Synchronisation hors ligne
 

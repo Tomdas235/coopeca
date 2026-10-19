@@ -1,23 +1,3 @@
-// =====================================================================
-// COOPECA — schéma Prisma (SQUELETTE TECHNIQUE)
-// ---------------------------------------------------------------------
-// Aucun modèle métier n'est défini à ce stade, volontairement.
-// Le modèle définitif sera construit après revue du schéma SQL v1.1
-// (docs/COOPECA_Backend_Schema_v1.1.sql) et résolution des écarts
-// documentés dans docs/IMPACTS_SCHEMA_SQL.md et docs/REÇUS_ET_DATE_METIER.md.
-//
-// Règles à respecter lors de la modélisation future :
-// - montants financiers en entiers XAF (jamais de Float/Decimal flottant) ;
-// - contrôle d'accès par agence côté serveur ;
-// - synchronisation idempotente ;
-// - séparation date de collecte déclarée / date de réception serveur ;
-// - séparation déclaration de remise / réception caisse ;
-// - traçabilité des corrections et opérations sensibles.
-//
-// Aucune migration n'est appliquée par cette étape. Ne pas exécuter
-// `prisma db push` tant que le modèle n'est pas validé.
-// =====================================================================
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -25,4 +5,517 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  AGENT
+  CASHIER
+  SUPERVISOR
+  ACCOUNTANT
+  ADMIN
+  AUDITOR
+
+  @@map("user_role")
+}
+
+enum ClientStatus {
+  PROVISIONAL
+  ACTIVE
+  REJECTED
+  ARCHIVED
+
+  @@map("client_status")
+}
+
+enum CollectionStatus {
+  RECORDED
+  REVERSED
+
+  @@map("collection_status")
+}
+
+enum DossierStatus {
+  OPEN
+  CLOSED
+
+  @@map("dossier_status")
+}
+
+enum DossierLinkStatus {
+  LINKED
+  NOT_ESTABLISHED
+
+  @@map("dossier_link_status")
+}
+
+enum DossierEventType {
+  OPENED
+  CLOSED
+  REOPENED
+
+  @@map("dossier_event_type")
+}
+
+enum RemittanceStatus {
+  DRAFT
+  SUBMITTED
+  RECEIVED
+  PARTIAL
+  DISPUTED
+  CANCELLED
+
+  @@map("remittance_status")
+}
+
+enum ClosureStatus {
+  DRAFT
+  SUBMITTED
+  REVIEWED
+  REOPENED
+
+  @@map("closure_status")
+}
+
+enum DiscrepancyStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  REJECTED
+
+  @@map("discrepancy_status")
+}
+
+enum SyncStatus {
+  RECEIVED
+  APPLIED
+  REJECTED
+
+  @@map("sync_status")
+}
+
+enum DuplicateReviewStatus {
+  OPEN
+  MERGED
+  DISMISSED
+
+  @@map("duplicate_review_status")
+}
+
+model Branch {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code      String   @unique @db.VarChar(30)
+  name      String   @db.VarChar(160)
+  address   String?
+  phone     String?  @db.VarChar(40)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  userAccesses  UserBranchAccess[]
+  clients       Client[]
+  duplicateReviews ClientDuplicateReview[]
+  collections   Collection[]
+  remittances   Remittance[]
+  dailyClosures DailyClosure[]
+  reopenEvents  ClosureReopenEvent[]
+  discrepancies Discrepancy[]
+  syncEvents    SyncEvent[]
+  auditLogs     AuditLog[]
+  settings      SystemSetting[]
+
+  @@map("branches")
+}
+
+model AppUser {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fullName     String    @map("full_name") @db.VarChar(180)
+  username     String    @unique @db.VarChar(80)
+  phone        String?   @db.VarChar(40)
+  passwordHash String    @map("password_hash")
+  role         UserRole
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  branchAccesses        UserBranchAccess[]
+  grantedBranchAccess   UserBranchAccess[]     @relation("AccessGrantedBy")
+  createdClients        Client[]               @relation("ClientCreatedBy")
+  reviewedClients       Client[]               @relation("ClientReviewedBy")
+  assignedDossiers      Dossier[]              @relation("DossierAgent")
+  closedDossiers        Dossier[]              @relation("DossierClosedBy")
+  dossierEvents         DossierStateEvent[]
+  clientAliases         ClientAlias[]           @relation("ClientAliasDecidedBy")
+  duplicateReviews      ClientDuplicateReview[] @relation("DuplicateReviewDecidedBy")
+  collections           Collection[]            @relation("CollectionAgent")
+  reversedCollections   Collection[]            @relation("CollectionReversedBy")
+  remittances           Remittance[]            @relation("RemittanceAgent")
+  receivedRemittances   Remittance[]            @relation("RemittanceReceivedBy")
+  dailyClosures         DailyClosure[]          @relation("ClosureAgent")
+  reviewedClosures      DailyClosure[]          @relation("ClosureReviewedBy")
+  reopenEvents          ClosureReopenEvent[]
+  openedDiscrepancies   Discrepancy[]           @relation("DiscrepancyOpenedBy")
+  assignedDiscrepancies Discrepancy[]           @relation("DiscrepancyAssignedTo")
+  resolvedDiscrepancies Discrepancy[]           @relation("DiscrepancyResolvedBy")
+  syncEvents            SyncEvent[]
+  auditLogs             AuditLog[]
+  updatedSettings       SystemSetting[]
+
+  @@map("app_users")
+}
+
+model UserBranchAccess {
+  userId    String   @map("user_id") @db.Uuid
+  branchId  String   @map("branch_id") @db.Uuid
+  isPrimary Boolean  @default(false) @map("is_primary")
+  grantedBy String?  @map("granted_by") @db.Uuid
+  grantedAt DateTime @default(now()) @map("granted_at") @db.Timestamptz(6)
+
+  user    AppUser  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  branch  Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  grantor AppUser? @relation("AccessGrantedBy", fields: [grantedBy], references: [id], onDelete: Restrict)
+
+  @@id([userId, branchId])
+  @@index([branchId, userId], map: "idx_user_branch_access_branch")
+  @@map("user_branch_access")
+}
+
+model Client {
+  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  branchId         String       @map("branch_id") @db.Uuid
+  clientCode       String       @unique @map("client_code") @db.VarChar(40)
+  firstName        String       @map("first_name") @db.VarChar(100)
+  lastName         String       @map("last_name") @db.VarChar(100)
+  phone            String?      @db.VarChar(40)
+  neighborhood     String?      @db.VarChar(160)
+  addressDetails   String?      @map("address_details")
+  status           ClientStatus @default(PROVISIONAL)
+  createdBy        String       @map("created_by") @db.Uuid
+  reviewedBy       String?      @map("reviewed_by") @db.Uuid
+  reviewedAt       DateTime?    @map("reviewed_at") @db.Timestamptz(6)
+  rejectionReason  String?      @map("rejection_reason")
+  createdOfflineAt DateTime?    @map("created_offline_at") @db.Timestamptz(6)
+  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime     @default(now()) @map("updated_at") @db.Timestamptz(6)
+  version          Int          @default(1)
+
+  branch           Branch                  @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  creator          AppUser                 @relation("ClientCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
+  reviewer         AppUser?                @relation("ClientReviewedBy", fields: [reviewedBy], references: [id], onDelete: Restrict)
+  dossiers         Dossier[]
+  collections      Collection[]
+  sourceAlias      ClientAlias?            @relation("ClientAliasSource")
+  targetAliases    ClientAlias[]           @relation("ClientAliasTarget")
+  duplicateChecks  ClientDuplicateReview[] @relation("DuplicateReviewCandidate")
+  duplicateMatches ClientDuplicateReview[] @relation("DuplicateReviewMatch")
+
+  @@index([branchId, lastName, firstName], map: "idx_clients_branch_name")
+  @@index([phone], map: "idx_clients_phone")
+  @@index([branchId, status], map: "idx_clients_branch_status")
+  @@map("clients")
+}
+
+model ClientAlias {
+  sourceClientId String   @id @map("source_client_id") @db.Uuid
+  targetClientId String   @map("target_client_id") @db.Uuid
+  decidedBy      String   @map("decided_by") @db.Uuid
+  reason         String
+  requestId      String   @unique @map("request_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  source   Client  @relation("ClientAliasSource", fields: [sourceClientId], references: [id], onDelete: Restrict)
+  target   Client  @relation("ClientAliasTarget", fields: [targetClientId], references: [id], onDelete: Restrict)
+  decision AppUser @relation("ClientAliasDecidedBy", fields: [decidedBy], references: [id], onDelete: Restrict)
+
+  @@index([targetClientId], map: "idx_client_aliases_target")
+  @@map("client_aliases")
+}
+
+model ClientDuplicateReview {
+  id                String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  branchId          String                @map("branch_id") @db.Uuid
+  candidateClientId String                @map("candidate_client_id") @db.Uuid
+  matchedClientId   String                @map("matched_client_id") @db.Uuid
+  status            DuplicateReviewStatus @default(OPEN)
+  decisionNote      String?               @map("decision_note")
+  decidedBy         String?               @map("decided_by") @db.Uuid
+  detectedAt        DateTime              @default(now()) @map("detected_at") @db.Timestamptz(6)
+  decidedAt         DateTime?             @map("decided_at") @db.Timestamptz(6)
+
+  branch    Branch  @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  candidate Client  @relation("DuplicateReviewCandidate", fields: [candidateClientId], references: [id], onDelete: Restrict)
+  matched   Client  @relation("DuplicateReviewMatch", fields: [matchedClientId], references: [id], onDelete: Restrict)
+  decider   AppUser? @relation("DuplicateReviewDecidedBy", fields: [decidedBy], references: [id], onDelete: Restrict)
+
+  @@unique([candidateClientId, matchedClientId], map: "uq_duplicate_review_pair")
+  @@index([branchId, status, detectedAt], map: "idx_duplicate_reviews_branch_status")
+  @@map("client_duplicate_reviews")
+}
+
+model Dossier {
+  id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clientId            String        @map("client_id") @db.Uuid
+  agentId             String        @map("agent_id") @db.Uuid
+  dailyAmountXaf      BigInt        @map("daily_amount_xaf")
+  localReference      String        @unique @map("local_reference") @db.VarChar(100)
+  dossierNo           String        @unique @map("dossier_no") @db.VarChar(80)
+  clientOperationId   String        @map("client_operation_id") @db.Uuid
+  deviceId            String        @map("device_id") @db.VarChar(120)
+  openedAtDeclared    DateTime      @map("opened_at_declared") @db.Timestamptz(6)
+  openingBusinessDate DateTime      @map("opening_business_date") @db.Date
+  status              DossierStatus @default(OPEN)
+  acceptedAt          DateTime      @default(now()) @map("accepted_at") @db.Timestamptz(6)
+  closedAt            DateTime?     @map("closed_at") @db.Timestamptz(6)
+  closedBy            String?       @map("closed_by") @db.Uuid
+  closureReason       String?       @map("closure_reason")
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime      @default(now()) @map("updated_at") @db.Timestamptz(6)
+  version             Int           @default(1)
+
+  client       Client              @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  agent        AppUser             @relation("DossierAgent", fields: [agentId], references: [id], onDelete: Restrict)
+  closedByUser AppUser?            @relation("DossierClosedBy", fields: [closedBy], references: [id], onDelete: Restrict)
+  collections  Collection[]
+  events       DossierStateEvent[]
+
+  @@unique([agentId, clientOperationId], map: "uq_dossiers_agent_operation")
+  @@index([clientId, status], map: "idx_dossiers_client_status")
+  @@index([agentId, openingBusinessDate], map: "idx_dossiers_agent_opening_date")
+  @@map("dossiers")
+}
+
+model DossierStateEvent {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dossierId      String           @map("dossier_id") @db.Uuid
+  eventType      DossierEventType @map("event_type")
+  previousStatus DossierStatus?   @map("previous_status")
+  newStatus      DossierStatus    @map("new_status")
+  actorUserId    String           @map("actor_user_id") @db.Uuid
+  reason         String
+  occurredAt     DateTime         @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  deviceId       String?          @map("device_id") @db.VarChar(120)
+  requestId      String           @unique @map("request_id") @db.Uuid
+
+  dossier Dossier @relation(fields: [dossierId], references: [id], onDelete: Restrict)
+  actor   AppUser @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([dossierId, occurredAt], map: "idx_dossier_state_events_dossier")
+  @@map("dossier_state_events")
+}
+
+model Collection {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  branchId          String            @map("branch_id") @db.Uuid
+  clientId          String            @map("client_id") @db.Uuid
+  dossierId         String?           @map("dossier_id") @db.Uuid
+  dossierLinkStatus DossierLinkStatus @default(NOT_ESTABLISHED) @map("dossier_link_status")
+  agentId           String            @map("agent_id") @db.Uuid
+  amountXaf         BigInt            @map("amount_xaf")
+  collectedAt       DateTime          @map("collected_at") @db.Timestamptz(6)
+  businessDate      DateTime          @map("business_date") @db.Date
+  clientReceiptNo   String            @unique @map("client_receipt_no") @db.VarChar(80)
+  localReceiptNo    String?           @map("local_receipt_no") @db.VarChar(100)
+  deviceId          String?           @map("device_id") @db.VarChar(120)
+  clientOperationId String            @map("client_operation_id") @db.Uuid
+  status            CollectionStatus  @default(RECORDED)
+  syncReceivedAt    DateTime?         @map("sync_received_at") @db.Timestamptz(6)
+  reversedBy        String?           @map("reversed_by") @db.Uuid
+  reversedAt        DateTime?         @map("reversed_at") @db.Timestamptz(6)
+  reversalReason    String?           @map("reversal_reason")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  branch       Branch          @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  client       Client          @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  dossier      Dossier?        @relation(fields: [dossierId], references: [id], onDelete: Restrict)
+  agent        AppUser         @relation("CollectionAgent", fields: [agentId], references: [id], onDelete: Restrict)
+  reverser     AppUser?        @relation("CollectionReversedBy", fields: [reversedBy], references: [id], onDelete: Restrict)
+  remittanceItem RemittanceItem?
+
+  @@unique([agentId, clientOperationId], map: "collections_agent_id_client_operation_id_key")
+  @@index([branchId, businessDate], map: "idx_collections_branch_date")
+  @@index([clientId, businessDate], map: "idx_collections_client_date")
+  @@index([agentId, businessDate], map: "idx_collections_agent_date")
+  @@index([syncReceivedAt], map: "idx_collections_sync_received")
+  @@map("collections")
+}
+
+model Remittance {
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  branchId          String           @map("branch_id") @db.Uuid
+  agentId           String           @map("agent_id") @db.Uuid
+  remittanceNo      String           @unique @map("remittance_no") @db.VarChar(80)
+  status            RemittanceStatus @default(DRAFT)
+  declaredTotalXaf  BigInt           @default(0) @map("declared_total_xaf")
+  receivedTotalXaf  BigInt?          @map("received_total_xaf")
+  submittedAt       DateTime?        @map("submitted_at") @db.Timestamptz(6)
+  receivedBy        String?          @map("received_by") @db.Uuid
+  receivedAt        DateTime?        @map("received_at") @db.Timestamptz(6)
+  cashierNote       String?          @map("cashier_note")
+  clientOperationId String           @map("client_operation_id") @db.Uuid
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  branch        Branch          @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  agent         AppUser         @relation("RemittanceAgent", fields: [agentId], references: [id], onDelete: Restrict)
+  cashier       AppUser?        @relation("RemittanceReceivedBy", fields: [receivedBy], references: [id], onDelete: Restrict)
+  items         RemittanceItem[]
+  discrepancies Discrepancy[]
+
+  @@unique([agentId, clientOperationId], map: "remittances_agent_id_client_operation_id_key")
+  @@map("remittances")
+}
+
+model RemittanceItem {
+  remittanceId String @map("remittance_id") @db.Uuid
+  collectionId String @unique @map("collection_id") @db.Uuid
+  amountXaf    BigInt @map("amount_xaf")
+
+  remittance Remittance @relation(fields: [remittanceId], references: [id], onDelete: Restrict)
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Restrict)
+
+  @@id([remittanceId, collectionId])
+  @@index([collectionId], map: "idx_remittance_items_collection")
+  @@map("remittance_items")
+}
+
+model DailyClosure {
+  id                         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  branchId                   String        @map("branch_id") @db.Uuid
+  agentId                    String        @map("agent_id") @db.Uuid
+  businessDate               DateTime      @map("business_date") @db.Date
+  closureNo                  String        @unique @map("closure_no") @db.VarChar(80)
+  declaredCollectionTotalXaf BigInt        @default(0) @map("declared_collection_total_xaf")
+  declaredRemittanceTotalXaf BigInt        @default(0) @map("declared_remittance_total_xaf")
+  collectionCount            Int           @default(0) @map("collection_count")
+  status                     ClosureStatus @default(DRAFT)
+  submittedAt                DateTime?     @map("submitted_at") @db.Timestamptz(6)
+  reviewedBy                 String?       @map("reviewed_by") @db.Uuid
+  reviewedAt                 DateTime?     @map("reviewed_at") @db.Timestamptz(6)
+  reviewNote                 String?       @map("review_note")
+  reopenCount                Int           @default(0) @map("reopen_count")
+  clientOperationId          String        @map("client_operation_id") @db.Uuid
+  createdAt                  DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                  DateTime      @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  branch        Branch               @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  agent         AppUser              @relation("ClosureAgent", fields: [agentId], references: [id], onDelete: Restrict)
+  reviewer      AppUser?             @relation("ClosureReviewedBy", fields: [reviewedBy], references: [id], onDelete: Restrict)
+  reopenEvents  ClosureReopenEvent[]
+  discrepancies Discrepancy[]
+
+  @@unique([agentId, businessDate], map: "daily_closures_agent_id_business_date_key")
+  @@unique([agentId, clientOperationId], map: "daily_closures_agent_id_client_operation_id_key")
+  @@index([branchId, businessDate], map: "idx_closures_branch_date")
+  @@index([branchId, status, businessDate], map: "idx_closures_status")
+  @@map("daily_closures")
+}
+
+model ClosureReopenEvent {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  closureId      String        @map("closure_id") @db.Uuid
+  branchId       String        @map("branch_id") @db.Uuid
+  reopenedBy     String        @map("reopened_by") @db.Uuid
+  previousStatus ClosureStatus @map("previous_status")
+  reason         String
+  reopenedAt     DateTime      @default(now()) @map("reopened_at") @db.Timestamptz(6)
+  deviceId       String?       @map("device_id") @db.VarChar(120)
+  requestId      String        @unique @map("request_id") @db.Uuid
+
+  closure DailyClosure @relation(fields: [closureId], references: [id], onDelete: Restrict)
+  branch  Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  actor   AppUser      @relation(fields: [reopenedBy], references: [id], onDelete: Restrict)
+
+  @@index([closureId, reopenedAt], map: "idx_closure_reopen_events_closure")
+  @@map("closure_reopen_events")
+}
+
+model Discrepancy {
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  branchId         String            @map("branch_id") @db.Uuid
+  remittanceId     String?           @map("remittance_id") @db.Uuid
+  closureId        String?           @map("closure_id") @db.Uuid
+  openedBy         String            @map("opened_by") @db.Uuid
+  assignedTo       String?           @map("assigned_to") @db.Uuid
+  status           DiscrepancyStatus @default(OPEN)
+  expectedTotalXaf BigInt?           @map("expected_total_xaf")
+  actualTotalXaf   BigInt?           @map("actual_total_xaf")
+  differenceXaf    BigInt?           @map("difference_xaf")
+  description      String
+  resolutionNote   String?           @map("resolution_note")
+  resolvedBy       String?           @map("resolved_by") @db.Uuid
+  resolvedAt       DateTime?         @map("resolved_at") @db.Timestamptz(6)
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime          @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  branch     Branch        @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  remittance Remittance?   @relation(fields: [remittanceId], references: [id], onDelete: Restrict)
+  closure    DailyClosure? @relation(fields: [closureId], references: [id], onDelete: Restrict)
+  opener     AppUser       @relation("DiscrepancyOpenedBy", fields: [openedBy], references: [id], onDelete: Restrict)
+  assignee   AppUser?      @relation("DiscrepancyAssignedTo", fields: [assignedTo], references: [id], onDelete: Restrict)
+  resolver   AppUser?      @relation("DiscrepancyResolvedBy", fields: [resolvedBy], references: [id], onDelete: Restrict)
+
+  @@index([branchId, status, createdAt], map: "idx_discrepancies_branch_status")
+  @@map("discrepancies")
+}
+
+model SyncEvent {
+  id                String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String     @map("user_id") @db.Uuid
+  branchId          String     @map("branch_id") @db.Uuid
+  deviceId          String     @map("device_id") @db.VarChar(120)
+  clientOperationId String     @map("client_operation_id") @db.Uuid
+  entityType        String     @map("entity_type") @db.VarChar(60)
+  entityId          String?    @map("entity_id") @db.Uuid
+  payloadHash       String     @map("payload_hash") @db.VarChar(128)
+  status            SyncStatus @default(RECEIVED)
+  responseCode      String?    @map("response_code") @db.VarChar(60)
+  responseMessage   String?    @map("response_message")
+  receivedAt        DateTime   @default(now()) @map("received_at") @db.Timestamptz(6)
+  processedAt       DateTime?  @map("processed_at") @db.Timestamptz(6)
+
+  user   AppUser @relation(fields: [userId], references: [id], onDelete: Restrict)
+  branch Branch  @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, deviceId, clientOperationId], map: "sync_events_user_id_device_id_client_operation_id_key")
+  @@index([status, receivedAt], map: "idx_sync_events_status")
+  @@index([branchId, receivedAt], map: "idx_sync_events_branch")
+  @@map("sync_events")
+}
+
+model AuditLog {
+  id          BigInt   @id @default(autoincrement()) @db.BigInt
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  branchId    String?  @map("branch_id") @db.Uuid
+  action      String   @db.VarChar(100)
+  entityType  String   @map("entity_type") @db.VarChar(80)
+  entityId    String?  @map("entity_id") @db.Uuid
+  beforeData  Json?    @map("before_data") @db.JsonB
+  afterData   Json?    @map("after_data") @db.JsonB
+  reason      String?
+  requestId   String?  @map("request_id") @db.Uuid
+  deviceId    String?  @map("device_id") @db.VarChar(120)
+  ipAddress   Unsupported("inet")? @map("ip_address")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  actor  AppUser? @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+  branch Branch?  @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  @@index([entityType, entityId, createdAt], map: "idx_audit_entity")
+  @@index([actorUserId, createdAt], map: "idx_audit_actor")
+  @@index([branchId, createdAt], map: "idx_audit_branch_date")
+  @@map("audit_logs")
+}
+
+model SystemSetting {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  branchId     String?  @map("branch_id") @db.Uuid
+  settingKey   String   @map("setting_key") @db.VarChar(100)
+  settingValue Json     @map("setting_value") @db.JsonB
+  updatedBy    String?  @map("updated_by") @db.Uuid
+  updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  branch  Branch? @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  updater AppUser? @relation(fields: [updatedBy], references: [id], onDelete: Restrict)
+
+  @@map("system_settings")
 }

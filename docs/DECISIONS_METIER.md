@@ -6,6 +6,8 @@
 
 **Périmètre :** cadrage uniquement. Ce document ne modifie pas le schéma SQL et ne crée aucun module applicatif.
 
+**Conception de la base :** [CONCEPTION_MODELE_DONNEES.md](./CONCEPTION_MODELE_DONNEES.md) est le brouillon de revue du modèle backend. Il ne vaut pas approbation de `schema.prisma`, du DDL ou d’une migration.
+
 ## 1. Références examinées
 
 - [AGENT.md](../AGENT.md) — architecture et règles non négociables du dépôt.
@@ -101,9 +103,10 @@ Cette section rassemble les principes précédemment soumis à arbitrage et les 
 
 ### 3.8 Règles de création client et de traitement des doublons
 
-- **Ce que disent les documents :** l’App Flow v1.1 autorise la création hors ligne d’un client provisoire et demande le contrôle des doublons connus localement ; les doublons ou conflits à la synchronisation doivent être examinés. Le SQL rend `client_code` unique globalement, sans définir la méthode d’attribution hors ligne ni la règle d’identité d’un doublon.
-- **Risque :** deux appareils hors ligne peuvent créer deux fiches pour la même personne, ou se voir attribuer des codes en collision ; fusionner automatiquement des identités peut également rattacher des collectes au mauvais client.
-- **Option recommandée — À VALIDER :** définir les champs obligatoires, la génération unique du code, les critères de rapprochement et une file de revue des doublons côté serveur. Ne jamais fusionner ou supprimer silencieusement un client déjà associé à des opérations financières.
+- **Validé le 19/10/2026 — détection :** une correspondance du téléphone normalisé et du nom/prénom dans une même agence déclenche un signal de revue seulement ; elle ne bloque pas automatiquement la création et ne fusionne jamais automatiquement les fiches.
+- **Validé le 19/10/2026 — résolution :** un superviseur habilité peut décider une fusion après revue. Les identifiants et les liens financiers historiques restent ceux d’origine ; la fiche source est conservée comme alias du client survivant. La décision et la relation d’alias sont auditées. Aucune collecte, aucun montant, statut ou horodatage n’est réécrit par la fusion.
+- **À VALIDER :** champs obligatoires, règles de normalisation du téléphone et du nom, attribution hors ligne et unicité de `client_code`, agence compétente pour arbitrer les fiches multi-agences, dé-fusion/correction d’une fusion erronée et visibilité de l’alias dans les rapports.
+- **Impact technique futur :** concevoir un signal de revue et une relation d’alias avec garde-fous d’agence et audit. Le SQL v1.1 ne définit pas ces éléments ; aucune colonne ou migration n’est autorisée par cette décision seule.
 
 ### 3.9 Interface Web
 
@@ -148,6 +151,21 @@ Cette section rassemble les principes précédemment soumis à arbitrage et les 
 - **Impact technique futur :** ces arbitrages n’autorisent toujours ni table, ni contrainte, ni `schema.prisma`, ni migration, ni `prisma db push` ; la conception reste subordonnée à la revue de phase 2. Le SQL v1.1 n’est pas modifié.
 - **Cohérence :** complète §3.1 et §3.12 sans les remplacer ; les listes historiques « À VALIDER » de §3.12 et §4 sont conservées et renseignées par renvoi vers la présente section.
 
+### 3.14 Arbitrages transversaux pour la conception du backend
+
+**Statut : Validé le 19/10/2026.** Cette section consigne les arbitrages exprimés pour préparer un modèle backend cohérent. Elle complète les principes existants sans modifier le SQL v1.1 et sans autoriser une migration.
+
+- **Validé — collecte et dossier :** toute nouvelle collecte doit référencer un dossier précis ; l’identité du client est déterminée par le dossier, et non par un `client_id` indépendant fourni dans la collecte. L’historique déjà présent reste traité séparément selon §3.13 point 6. Si une représentation SQL conserve également `client_id` pour compatibilité, sa cohérence avec le dossier doit être garantie et ne devient pas une deuxième source de vérité.
+- **Validé — numéro officiel du reçu :** l’acceptation de la collecte, l’allocation du numéro officiel et sa persistance sont atomiques côté serveur. Les reprises idempotentes retournent le résultat et le numéro déjà attribués. La référence provisoire locale reste distincte. Le mécanisme doit respecter l’unicité par agence et être compatible avec les données et consommateurs historiques ; le traitement de l’actuel `client_receipt_no UNIQUE` global reste à concevoir dans la revue de schéma.
+- **Validé — permissions de base :** AGENT réalise les opérations courantes autorisées sur ses clients/dossiers, collecte, déclaration de remise et clôture ; CASHIER confirme la réception des remises et constate les écarts ; SUPERVISOR traite les conflits/fusions habilités, valide la résolution des écarts et rouvre les clôtures ; ACCOUNTANT consulte et rapproche sans modifier directement les opérations ; ADMIN administre comptes, rôles et paramètres ; AUDITOR est en lecture seule. Tous les accès restent limités aux agences explicitement attribuées, sauf autorisation multi-agence explicite. Cette matrice est une base normative ; les exceptions fines restent à spécifier.
+- **Validé — remise déclarée :** une déclaration synchronisée ne peut plus être modifiée directement. Une erreur après synchronisation passe par une annulation motivée et auditée ou une opération compensatrice explicitement autorisée ; elle ne modifie pas l’historique financier. Les règles de réaffectation des collectes après annulation restent ouvertes. Avant synchronisation, une correction locale est possible si elle conserve l’identité idempotente appropriée et n’a pas encore été soumise.
+- **Validé — écarts de caisse :** le caissier constate et documente l’écart ; un superviseur autorisé en valide la résolution avec motif et audit. Les champs, transitions détaillées et seuils restent à préciser.
+- **Validé — clôture hors ligne :** l’agent doit pouvoir enregistrer/déclarer sa clôture localement même sans réseau. Cette déclaration locale ne vaut pas rapprochement serveur. Le serveur ne confirme pas un total incomplet : si des opérations sont encore en attente, la clôture reste à rapprocher après synchronisation, avec les éléments manquants visibles. Les règles exactes de calcul et de statut serveur restent à concevoir sans inventer d’enum.
+- **Validé — réouverture d’un dossier :** requiert une décision serveur ; aucun effet métier local hors ligne n’est accordé avant acceptation. Cela ne modifie pas la fermeture à deux temps validée en §3.13.
+- **Validé — horloge incohérente :** une collecte dont l’horloge est jugée incohérente n’est pas acceptée automatiquement ; elle est conservée pour revue humaine, avec l’heure déclarée et l’instant de réception serveur distincts. Les seuils et la procédure de revue/correction restent à valider.
+- **À VALIDER :** méthode de calcul du total de clôture, traitement détaillé des opérations pendantes, seuils d’horloge, permissions fines et délégations, motif minimal des actions de dossiers/remises, codes de conflit/rejet, résolution et réaffectation après annulation.
+- **Impact technique futur :** matrice des guards et permissions, transactions idempotentes, audit et contraintes doivent être conçus à partir de ces règles ; aucune implémentation, modification SQL ou migration n’est autorisée implicitement.
+
 ## 4. Autres décisions encore ouvertes
 
 - **À VALIDER :** champs obligatoires et unicité de référence des dossiers, règles de création/doublons client, événements de collecte sur dossier inactif et données historiques ambiguës. *(Champs obligatoires et numérotation des dossiers arbitrés le 16/10/2026 — §3.13 ; format/séquence et unicité de référence exactes restent ouverts. Le reste de la ligne demeure ouvert.)*
@@ -158,6 +176,7 @@ Cette section rassemble les principes précédemment soumis à arbitrage et les 
 - **À VALIDER :** bibliothèque/stratégie de chiffrement, gestion des clés, durée de session, verrouillage et procédure de récupération d’un appareil perdu.
 - **À VALIDER :** rôles de réception et validation de caisse, seuils d’approbation, états des écarts et possibilité de réaffecter une collecte après annulation d’une remise.
 - **À VALIDER :** framework Web, appareils Android, imprimante, RPO/RTO, disponibilité, conservation et conformité réglementaire.
+- **Décisions du 19/10/2026 consignées en §3.8 et §3.14 :** détection et fusion contrôlée des doublons, collecte liée obligatoirement au dossier, allocation atomique du numéro officiel, matrice de base des rôles, clôture locale hors ligne avec rapprochement différé, traitement des remises/écarts et revue des horloges incohérentes. Les détails explicitement listés dans ces sections restent ouverts ; ne pas les réintroduire comme décisions entièrement non arbitrées.
 
 ## 5. Cohérence avec les références existantes
 

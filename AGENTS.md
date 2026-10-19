@@ -34,11 +34,17 @@ Développer COOPECA, une application de collecte journalière destinée aux agen
 - Les opérations synchronisées doivent être idempotentes.
 - Toute opération sensible doit respecter les permissions et les règles d'audit.
 - Les données d'une agence ne doivent pas être accessibles à une autre agence sans autorisation explicite.
+- Toute nouvelle collecte est rattachée à un dossier précis ; le client est dérivé de ce dossier. Un éventuel lien client conservé pour compatibilité doit être cohérent.
+- Un doublon client potentiel (téléphone normalisé et nom/prénom dans la même agence) déclenche une revue, jamais une fusion automatique. Seul un superviseur habilité décide la fusion ; la fiche source reste un alias audité et les liens financiers historiques ne sont pas réécrits.
+- L'acceptation d'une collecte, l'allocation du numéro officiel de reçu et sa persistance sont atomiques côté serveur. Les reprises idempotentes rendent le même résultat et le même numéro.
+- Après synchronisation, une remise déclarée n'est pas modifiée directement. Les erreurs passent par une annulation motivée/auditée ou une compensation autorisée ; le caissier constate un écart et un superviseur habilité en valide la résolution.
+- Une clôture peut être déclarée localement hors ligne. Elle n'est pas rapprochée côté serveur tant que des opérations attendent la synchronisation ; le serveur ne confirme pas un total incomplet.
+- Une collecte dont l'horloge est jugée incohérente est conservée pour revue humaine et n'est pas acceptée automatiquement. L'heure déclarée et l'instant de réception serveur restent distincts.
+- La réouverture d'un dossier requiert une décision serveur ; aucun effet métier local hors ligne avant acceptation.
 
 ## 5. Documents de référence
-Lire les documents disponibles dans docs/ avant toute implémentation.
-Le schéma SQL COOPECA_Backend_Schema_v1.1.sql constitue une référence technique à respecter.
-Signaler toute contradiction entre les documents avant de choisir une solution.
+Lire les documents disponibles dans docs/ avant toute implémentation. `docs/DECISIONS_METIER.md` est le registre canonique des règles métier : les autres documents doivent s'y aligner et toute contradiction doit être signalée avant de choisir une solution.
+Le schéma SQL `docs/COOPECA_Backend_Schema_v1.1.sql` décrit le DDL de référence existant ; ce n'est pas le modèle cible lorsque les décisions métier et le DDL divergent. Toute évolution doit être conçue et validée explicitement avant changement du SQL ou création de migration.
 Ne pas supprimer de contrainte SQL sans justification et validation.
 
 ## 6. Méthode de travail
