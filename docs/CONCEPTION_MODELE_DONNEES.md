@@ -1,12 +1,12 @@
 # COOPECA — Conception du modèle de données backend
 
-**Version :** 0.2 — modèle Prisma et migration additive préparés pour revue  
+**Version :** 0.3 — modèle cycle ajouté, migration additive préparée
 **Date :** 19/10/2026  
-**Statut :** feu vert reçu pour préparer les artefacts ; modèle détaillé et SQL de migration à valider avant application.  
+**Statut :** conception technique préparée d’après les décisions du 22/10/2026 ; validation Prisma/SQL et essai sur base v1.1 requis avant toute application.
 **Sources canoniques :** [DECISIONS_METIER.md](./DECISIONS_METIER.md), [IMPACTS_SCHEMA_SQL.md](./IMPACTS_SCHEMA_SQL.md), [REÇUS_ET_DATE_METIER.md](./REÇUS_ET_DATE_METIER.md).  
 **DDL existant :** [COOPECA_Backend_Schema_v1.1.sql](./COOPECA_Backend_Schema_v1.1.sql).
 
-Le modèle Prisma cible est préparé dans `backend/prisma/schema.prisma` et la migration additive dans `backend/prisma/migrations/20261019150000_add_dossiers_and_client_review/migration.sql`. Le DDL v1.1 n’est pas modifié ; la migration n’a pas été appliquée et n’autorise pas `prisma db push`. Les libellés **Décidé** reprennent les règles canoniques. Les libellés **Proposition technique** doivent encore être examinés.
+Le modèle Prisma a été étendu dans `backend/prisma/schema.prisma`; les migrations additives se trouvent dans `backend/prisma/migrations/`. Le DDL v1.1 n’est pas modifié ; aucune migration n’a été appliquée et `prisma db push` n’est pas autorisé. Depuis le 22/10/2026, le modèle « collectes journalières/remises » ci-dessous décrit les données legacy conservées ; le produit actif est `Market` + dossiers + cycles à 31 versements, détaillé en §10. Les libellés **Décidé** reprennent les règles canoniques ; les modalités de transition encore ouvertes restent à examiner.
 
 ## 1. Objectifs de modélisation
 
@@ -121,3 +121,24 @@ Cette séquence est une proposition de conception, non une autorisation d’exé
 ## 9. Décision de passage à l’implémentation
 
 Le schéma Prisma et la migration additive sont préparés mais ne sont pas encore validés définitivement ni appliqués. Le feu vert de préparation ne valide pas implicitement chaque colonne, enum, contrainte SQL ou le plan d’exécution ; toute application à une base nécessite un accord explicite distinct.
+
+## 10. Modèle cible du produit à cycles (décision du 22/10/2026)
+
+Le modèle des collectes journalières reste en place uniquement pour préserver la lecture et l’historique. Les tables `collections`, `remittances` et `daily_closures` ne reçoivent pas les nouvelles écritures des cycles.
+
+```text
+Marché autonome
+Client (agence conservée, marché, agent collecteur courant)
+  └── Dossier existant
+	  └── Cycles successifs (un cycle non clôturé par dossier)
+		  ├── Versements fixes (31 cibles, événements comptés)
+		  ├── Demandes de retrait (agent demande, superviseur décide)
+		  ├── Commission unique = montant fixe du cycle
+		  └── Solde = versements - commissions - retraits
+```
+
+Les entités Prisma sont `Market`, `TontineCycle`, `CycleTransaction`, `WithdrawalRequest`, `CycleCommission` et `TontineCycleEvent`. Les montants et soldes sont des `BIGINT` XAF ; les réponses API sérialisent ces montants comme chaînes d’entiers. `CycleTransaction` est append-only ; la commission a une unicité par cycle ; la migration ajoute les marchés et les affectations client comme NULL, sans backfill.
+
+Les versements verrouillent le cycle dans une transaction sérialisable et doivent égaler `fixed_amount_xaf`. La 31e écriture passe le cycle à `COMPLETED`. La demande de retrait ne déplace pas d’argent ; l’approbation verrouille à nouveau le cycle, recalcule le journal, crée commission si elle manque, crée le retrait, audite, puis clôt le cycle si demandé, le tout dans la même transaction. Les index/contraintes/triggers constituent des garde-fous SQL additionnels.
+
+**Limites de validation :** `prisma validate`, génération client, migration PostgreSQL et tests Jest n’ont pas encore pu être exécutés dans cet environnement faute de paquets backend installés. Ne pas appliquer la migration avant ces vérifications et l’inventaire/appariement supervisé des clients existants.

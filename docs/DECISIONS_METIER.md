@@ -22,13 +22,13 @@ Les documents n’ont pas tous le même statut. Les règles de référence déj�
 
 ## 2. Règles de référence déjà établies
 
-Les règles de cette section sont les références de cadrage du MVP.
+Les règles communes (architecture, XAF entier, idempotence, accès autorisé) restent en vigueur. Pour les nouvelles opérations financières, §3.15 est la règle métier de référence et remplace les anciens flux journaliers/remises/clôtures des règles 4 et 5 ci-dessous ; ces derniers ne décrivent plus que les données historiques.
 
 1. **Architecture.** L’application Android utilise React Native, Expo et TypeScript. L’API utilise NestJS. La base centrale est PostgreSQL, accédée avec Prisma.
 2. **Client créé hors ligne.** Un client créé sans connexion porte le statut `PROVISOIRE` jusqu’à son traitement côté serveur.
 3. **Synchronisation.** La synchronisation doit être idempotente : répéter une requête pour la même opération ne crée aucun doublon financier. Une opération locale n’est pas automatiquement confirmée par son envoi.
-4. **Remise et réception de caisse.** La déclaration de remise de l’agent n’est pas une remise confirmée par le caissier ; les deux confirmations doivent rester distinctes.
-5. **Clôture journalière.** Chaque agent doit soumettre sa clôture chaque jour, même hors ligne.
+4. **Legacy historique uniquement.** La déclaration de remise et réception caisse du DDL v1.1 sont conservées pour consultation historique ; elles ne traitent pas les versements/retraits de cycle.
+5. **Legacy historique uniquement.** Les clôtures journalières du DDL v1.1 ne sont plus le mécanisme de clôture des nouvelles opérations financières ; voir cycle 31 versements et retrait total en §3.15.
 6. **Réouverture de clôture.** La réouverture est réservée à un superviseur autorisé, avec motif et journal d’audit.
 7. **Montants.** Les montants financiers sont des nombres entiers en XAF ; aucun montant ni calcul financier n’utilise de nombre flottant.
 8. **Multi-agences.** Les autorisations d’accès aux agences sont contrôlées côté serveur pour chaque requête. L’agence fournie par un client ne constitue jamais une preuve d’autorisation.
@@ -153,7 +153,7 @@ Cette section rassemble les principes précédemment soumis à arbitrage et les 
 
 ### 3.14 Arbitrages transversaux pour la conception du backend
 
-**Statut : Validé le 19/10/2026.** Cette section consigne les arbitrages exprimés pour préparer un modèle backend cohérent. Elle complète les principes existants sans modifier le SQL v1.1 et sans autoriser une migration.
+**Statut : décisions de transition du modèle legacy, supersédées pour les nouvelles opérations financières par §3.15 (22/10/2026).** Ces règles continuent à s’appliquer à la lecture/préservation des enregistrements historiques et aux anciens endpoints tant qu’ils coexistent ; elles ne gouvernent plus le nouveau parcours cycle.
 
 - **Validé — collecte et dossier :** toute nouvelle collecte doit référencer un dossier précis ; l’identité du client est déterminée par le dossier, et non par un `client_id` indépendant fourni dans la collecte. L’historique déjà présent reste traité séparément selon §3.13 point 6. Si une représentation SQL conserve également `client_id` pour compatibilité, sa cohérence avec le dossier doit être garantie et ne devient pas une deuxième source de vérité.
 - **Validé — numéro officiel du reçu :** l’acceptation de la collecte, l’allocation du numéro officiel et sa persistance sont atomiques côté serveur. Les reprises idempotentes retournent le résultat et le numéro déjà attribués. La référence provisoire locale reste distincte. Le mécanisme doit respecter l’unicité par agence et être compatible avec les données et consommateurs historiques ; le traitement de l’actuel `client_receipt_no UNIQUE` global reste à concevoir dans la revue de schéma.
@@ -165,6 +165,22 @@ Cette section rassemble les principes précédemment soumis à arbitrage et les 
 - **Validé — horloge incohérente :** une collecte dont l’horloge est jugée incohérente n’est pas acceptée automatiquement ; elle est conservée pour revue humaine, avec l’heure déclarée et l’instant de réception serveur distincts. Les seuils et la procédure de revue/correction restent à valider.
 - **À VALIDER :** méthode de calcul du total de clôture, traitement détaillé des opérations pendantes, seuils d’horloge, permissions fines et délégations, motif minimal des actions de dossiers/remises, codes de conflit/rejet, résolution et réaffectation après annulation.
 - **Impact technique futur :** matrice des guards et permissions, transactions idempotentes, audit et contraintes doivent être conçus à partir de ces règles ; aucune implémentation, modification SQL ou migration n’est autorisée implicitement.
+
+### 3.15 Produit de cycles d’épargne à 31 versements — remplacement du parcours financier
+
+**Statut : Validé le 22/10/2026 pour devenir le parcours financier de référence.** Cette décision remplace le parcours de collectes journalières/remises décrit dans le cadrage antérieur pour les nouvelles opérations. Les lignes financières historiques ne sont ni supprimées ni réinterprétées ; les tables legacy restent en lecture historique pendant la transition.
+
+- **Marchés et rattachements :** `Market` est une entité autonome, distincte d’une agence COOPECA. Chaque client du nouveau parcours appartient à un marché et possède un agent collecteur courant. Un agent peut suivre plusieurs clients. Les rôles globaux définissent les actions sur les marchés ; les agents ne peuvent agir que sur les clients qui leur sont affectés. Le marché n’est pas une agence et aucune ACL par marché n’est introduite dans cette version.
+- **Dossiers et cycles :** un dossier conserve l’identité du contrat/client ; il peut porter plusieurs cycles successifs, mais au plus un cycle non clôturé à la fois. Le client choisit le montant fixe à l’ouverture de chaque cycle. Le montant ne change pas pendant ce cycle. La clôture définitive permet ensuite l’ouverture d’un nouveau cycle sans modifier l’historique précédent.
+- **Versements :** un cycle cible exactement 31 versements comptabilisés, et non 31 jours. Plusieurs versements peuvent partager une date. Chaque versement accepté est exactement égal au montant fixe, augmente le compteur de 1 et augmente le cumul encaissé du même montant. Un versement invalide ne modifie ni compteur, ni solde, ni historique accepté. À 31, le cycle passe à l’état TERMINÉ et n’accepte plus de versement.
+- **Suspension :** un agent autorisé peut suspendre et reprendre le cycle de son client. La suspension bloque les versements, préserve compteur et solde, et ne prélève aucune commission. La reprise garde le même cycle et le même montant.
+- **Commission :** elle vaut exactement un montant fixe du cycle, jamais 3 % du cumul. Elle constitue un revenu de l’agence du client, déterminé depuis son agence d’affectation au moment de l’ouverture du cycle. Elle est inscrite comme écriture immuable séparée et ne peut apparaître qu’une fois par cycle, atomiquement au premier retrait approuvé. Cette règle n’introduit pas un ledger général de trésorerie/agence.
+- **Retraits :** l’AGENT initie la demande ; un SUPERVISOR l’approuve ou la rejette. À l’approbation, le backend recalcule le solde dans une transaction et vérifie que le montant demandé, plus la commission encore due, sont couverts. Il inscrit séparément commission et retrait. Une approbation concurrente ou répétée ne peut ni doubler la commission ni rendre le solde négatif. Une demande de retrait total clôt définitivement le cycle ; les retraits successifs d’un cycle terminé sont permis jusqu’au solde nul, sans seconde commission. Le statut et le solde sont distincts.
+- **Journal financier :** versements acceptés, commission et retraits sont des écritures XAF entières, append-only, idempotentes et auditées. Aucun événement financier validé n’est supprimé physiquement. Les demandes de retrait ont une clé idempotente et un cycle de décision distinct.
+- **États minimum :** ACTIVE, SUSPENDED, COMPLETED (31 versements atteints) et CLOSED (clôture définitive). Le solde disponible est calculé à partir du journal : versements moins retraits et commission ; aucun nombre flottant.
+- **Compatibilité :** `clients.branch_id` reste le rattachement d’agence existant pour audit et attribution du revenu de commission ; `market_id` et `collection_agent_id` sont ajoutés sans backfill implicite. Les anciens `collections`, `remittances` et `daily_closures` sont conservés comme historique ; ils ne sont pas réutilisés comme écritures du nouveau cycle.
+- **À VALIDER avant mise en production :** affectation des clients existants aux marchés/agents, procédure de provisionnement des marchés et comptes, période de coexistence/lecture des anciennes collectes, politique de clôture des dossiers legacy, et procédure de décaissement physique/rapprochement caisse des retraits.
+- **Impact technique :** tables de marché, cycles, écritures de cycle, décisions de retrait, commission unique, événements d’état et migration additive ; services transactionnels, guards de rôle/agent, endpoints et tests concurrence/rollback. Aucune donnée legacy n’est automatiquement affectée ni convertie.
 
 ## 4. Autres décisions encore ouvertes
 

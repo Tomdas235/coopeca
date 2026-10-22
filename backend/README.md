@@ -38,6 +38,18 @@ curl http://localhost:3000/api/v1/health
 | POST | `/api/v1/auth/sessions` | Échange identifiant/mot de passe contre un jeton Bearer de 15 minutes |
 | GET | `/api/v1/me` | Profil authentifié et agences actives autorisées |
 | GET | `/api/v1/me/branches` | Agences actives accordées à l'utilisateur |
+| GET | `/api/v1/markets` | Marchés actifs |
+| POST | `/api/v1/markets` | Créer un marché (ADMIN/SUPERVISOR) |
+| POST | `/api/v1/markets/{id}/active` | Activer/désactiver un marché (ADMIN/SUPERVISOR) |
+| POST | `/api/v1/clients/{id}/cycle-assignment` | Affecter explicitement un client à un marché et agent (ADMIN/SUPERVISOR) |
+| GET/POST | `/api/v1/dossiers/{id}/cycles` | Historique des cycles et ouverture d’un cycle (AGENT affecté) |
+| GET | `/api/v1/tontine-cycles/{id}` | Détail du cycle, solde disponible et commission payée |
+| POST | `/api/v1/tontine-cycles/{id}/deposits` | Enregistrer un versement fixe (AGENT affecté) |
+| POST | `/api/v1/tontine-cycles/{id}/suspend` | Suspendre le cycle (AGENT affecté) |
+| POST | `/api/v1/tontine-cycles/{id}/resume` | Reprendre le même cycle (AGENT affecté) |
+| POST | `/api/v1/tontine-cycles/{id}/withdrawals` | Demander un retrait (AGENT affecté) |
+| GET | `/api/v1/withdrawals/pending` | File des demandes à examiner (SUPERVISOR) |
+| POST | `/api/v1/withdrawals/{id}/review` | Approuver/rejeter le retrait (SUPERVISOR) |
 
 Les routes `/me` exigent `Authorization: Bearer <accessToken>`. Les agences sont relues en base à chaque requête ; le jeton ne porte pas les droits d'agence.
 
@@ -80,11 +92,19 @@ Les emplacements `auth/`, `users/`, `agencies/`, `clients/`, `dossiers/`,
 
 ## Base de données et migrations
 
-Le modèle de données est détaillé dans [CONCEPTION_MODELE_DONNEES.md](../docs/CONCEPTION_MODELE_DONNEES.md). La migration `20261019150000_add_dossiers_and_client_review` est additive et suppose que la base possède déjà les tables du DDL `docs/COOPECA_Backend_Schema_v1.1.sql`.
+Le modèle de données est décrit dans [DECISIONS_METIER.md](../docs/DECISIONS_METIER.md) §3.15. Les migrations `20261019150000_add_dossiers_and_client_review` et `20261022103000_add_market_tontine_cycles` sont additives et supposent une base créée à partir du DDL `docs/COOPECA_Backend_Schema_v1.1.sql`.
 
-Le dépôt ne contient pas encore de migration baseline pour créer une base vide. Ne pas lancer cette migration sur une base vide. Elle n'a pas été appliquée à une base dans cette étape et ne doit être déployée qu'après revue du SQL, validation de l'environnement cible et accord explicite. Aucun backfill automatique n'est inclus ; les collectes historiques restent avec le statut explicite `NOT_ESTABLISHED` jusqu'à un traitement métier audité.
+Le dépôt ne contient pas encore de migration baseline pour créer une base vide. Ne pas lancer ces migrations sur une base vide. Elles n'ont pas été appliquées à une base ; elles doivent être testées sur une base jetable v1.1 avant tout environnement partagé. Aucun backfill automatique n'est inclus : les clients historiques restent sans marché/agent cycle jusqu'à affectation supervisée ; les collections et remises historiques restent inchangées.
 
-Pour une base v1.1 existante, après approbation séparée, la commande de déploiement est `npx prisma migrate deploy` depuis `backend/`. Pour une nouvelle base, il faut d'abord établir le schéma de référence v1.1 selon une procédure baseline dédiée avant cette migration.
+Pour une base v1.1 existante, après tests et approbation, la commande est `npx prisma migrate deploy` depuis `backend/`. Pour une nouvelle base, il faut établir le schéma de référence v1.1 selon une procédure baseline dédiée.
+
+## Cycles de tontine
+
+Le nouveau parcours conserve `clients`, `dossiers` et toutes les tables financières historiques. Les nouvelles opérations de versement/retrait utilisent `tontine_cycles`, `cycle_transactions`, `withdrawal_requests` et `cycle_commissions`; elles ne sont pas traduites en `collections` ou `remittances` legacy.
+
+Le solde est la somme des écritures : versements moins commissions moins retraits. La commission vaut un versement fixe et est créée une seule fois, dans la même transaction que le premier retrait approuvé par un superviseur. Le corps d’API transmet les montants en chaînes d’entiers XAF pour préserver la précision JSON.
+
+Les clients doivent recevoir un `market_id` et un `collection_agent_id` explicites par provisionnement superviseur/admin avant l’ouverture d’un cycle. Aucun rattachement historique n’est deviné. Le montant de retrait total doit épuiser exactement le solde net après commission.
 
 ## Authentification
 

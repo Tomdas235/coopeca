@@ -101,6 +101,44 @@ enum DuplicateReviewStatus {
   @@map("duplicate_review_status")
 }
 
+enum TontineCycleStatus {
+  ACTIVE
+  SUSPENDED
+  COMPLETED
+  CLOSED
+
+  @@map("tontine_cycle_status")
+}
+
+enum CycleTransactionType {
+  DEPOSIT
+  COMMISSION
+  WITHDRAWAL
+
+  @@map("cycle_transaction_type")
+}
+
+enum WithdrawalRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@map("withdrawal_request_status")
+}
+
+enum CycleEventType {
+  OPENED
+  SUSPENDED
+  RESUMED
+  COMPLETED
+  CLOSED
+  WITHDRAWAL_REQUESTED
+  WITHDRAWAL_APPROVED
+  WITHDRAWAL_REJECTED
+
+  @@map("cycle_event_type")
+}
+
 model Branch {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code      String   @unique @db.VarChar(30)
@@ -114,6 +152,8 @@ model Branch {
   userAccesses  UserBranchAccess[]
   clients       Client[]
   duplicateReviews ClientDuplicateReview[]
+  tontineCycles TontineCycle[]
+  cycleCommissions CycleCommission[]
   collections   Collection[]
   remittances   Remittance[]
   dailyClosures DailyClosure[]
@@ -160,6 +200,13 @@ model AppUser {
   syncEvents            SyncEvent[]
   auditLogs             AuditLog[]
   updatedSettings       SystemSetting[]
+  assignedClients      Client[]               @relation("ClientCollectingAgent")
+  openedCycles         TontineCycle[]         @relation("CycleOpenedBy")
+  cycleTransactions    CycleTransaction[]
+  withdrawalRequests   WithdrawalRequest[]    @relation("WithdrawalRequestedBy")
+  reviewedWithdrawals  WithdrawalRequest[]    @relation("WithdrawalReviewedBy")
+  cycleEvents          TontineCycleEvent[]
+  commissions          CycleCommission[]      @relation("CommissionChargedBy")
 
   @@map("app_users")
 }
@@ -198,8 +245,12 @@ model Client {
   createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime     @default(now()) @map("updated_at") @db.Timestamptz(6)
   version          Int          @default(1)
+  marketId         String?      @map("market_id") @db.Uuid
+  collectionAgentId String?     @map("collection_agent_id") @db.Uuid
 
   branch           Branch                  @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  market           Market?                 @relation(fields: [marketId], references: [id], onDelete: Restrict)
+  collectionAgent  AppUser?                @relation("ClientCollectingAgent", fields: [collectionAgentId], references: [id], onDelete: Restrict)
   creator          AppUser                 @relation("ClientCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
   reviewer         AppUser?                @relation("ClientReviewedBy", fields: [reviewedBy], references: [id], onDelete: Restrict)
   dossiers         Dossier[]
@@ -208,6 +259,7 @@ model Client {
   targetAliases    ClientAlias[]           @relation("ClientAliasTarget")
   duplicateChecks  ClientDuplicateReview[] @relation("DuplicateReviewCandidate")
   duplicateMatches ClientDuplicateReview[] @relation("DuplicateReviewMatch")
+  tontineCycles    TontineCycle[]
 
   @@index([branchId, lastName, firstName], map: "idx_clients_branch_name")
   @@index([phone], map: "idx_clients_phone")
@@ -277,6 +329,7 @@ model Dossier {
   closedByUser AppUser?            @relation("DossierClosedBy", fields: [closedBy], references: [id], onDelete: Restrict)
   collections  Collection[]
   events       DossierStateEvent[]
+  cycles       TontineCycle[]
 
   @@unique([agentId, clientOperationId], map: "uq_dossiers_agent_operation")
   @@index([clientId, status], map: "idx_dossiers_client_status")
@@ -518,4 +571,139 @@ model SystemSetting {
   updater AppUser? @relation(fields: [updatedBy], references: [id], onDelete: Restrict)
 
   @@map("system_settings")
+}
+
+model Market {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code      String   @unique @db.VarChar(40)
+  name      String   @db.VarChar(160)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  clients Client[]
+  cycles  TontineCycle[]
+
+  @@map("markets")
+}
+
+model TontineCycle {
+  id                   String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dossierId            String            @map("dossier_id") @db.Uuid
+  clientId             String            @map("client_id") @db.Uuid
+  marketId             String            @map("market_id") @db.Uuid
+  branchId             String            @map("branch_id") @db.Uuid
+  openedByAgentId      String            @map("opened_by_agent_id") @db.Uuid
+  fixedAmountXaf       BigInt            @map("fixed_amount_xaf")
+  targetInstallments   Int               @default(31) @map("target_installments")
+  installmentCount     Int               @default(0) @map("installment_count")
+  totalCollectedXaf    BigInt            @default(0) @map("total_collected_xaf")
+  status               TontineCycleStatus @default(ACTIVE)
+  openedAt             DateTime          @default(now()) @map("opened_at") @db.Timestamptz(6)
+  completedAt          DateTime?         @map("completed_at") @db.Timestamptz(6)
+  closedAt             DateTime?         @map("closed_at") @db.Timestamptz(6)
+  clientOperationId    String            @unique @map("client_operation_id") @db.Uuid
+  payloadHash          String            @map("payload_hash") @db.VarChar(64)
+  version              Int               @default(1)
+
+  dossier       Dossier              @relation(fields: [dossierId], references: [id], onDelete: Restrict)
+  client        Client               @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  market        Market               @relation(fields: [marketId], references: [id], onDelete: Restrict)
+  branch        Branch               @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  openedBy      AppUser              @relation("CycleOpenedBy", fields: [openedByAgentId], references: [id], onDelete: Restrict)
+  transactions  CycleTransaction[]
+  withdrawalRequests WithdrawalRequest[]
+  commission    CycleCommission?
+  events        TontineCycleEvent[]
+
+  @@index([clientId, openedAt], map: "idx_cycles_client_opened")
+  @@index([marketId, status, openedAt], map: "idx_cycles_market_status_opened")
+  @@index([openedByAgentId, status, openedAt], map: "idx_cycles_agent_status_opened")
+  @@map("tontine_cycles")
+}
+
+model CycleTransaction {
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cycleId            String               @map("cycle_id") @db.Uuid
+  type               CycleTransactionType
+  amountXaf          BigInt               @map("amount_xaf")
+  actorUserId        String               @map("actor_user_id") @db.Uuid
+  withdrawalRequestId String?             @map("withdrawal_request_id") @db.Uuid
+  idempotencyKey     String               @unique @map("idempotency_key") @db.Uuid
+  payloadHash        String               @map("payload_hash") @db.VarChar(64)
+  clientOccurredAt   DateTime?            @map("client_occurred_at") @db.Timestamptz(6)
+  occurredAt         DateTime             @default(now()) @map("occurred_at") @db.Timestamptz(6)
+
+  cycle      TontineCycle       @relation(fields: [cycleId], references: [id], onDelete: Restrict)
+  actor      AppUser            @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+  commission CycleCommission?   @relation("CommissionTransaction")
+  withdrawal WithdrawalRequest? @relation("WithdrawalTransaction")
+  withdrawalRequest WithdrawalRequest? @relation("WithdrawalLedgerEntries", fields: [withdrawalRequestId], references: [id], onDelete: Restrict)
+
+  @@index([cycleId, occurredAt], map: "idx_cycle_transactions_cycle_date")
+  @@index([cycleId, type, occurredAt], map: "idx_cycle_transactions_cycle_type_date")
+  @@map("cycle_transactions")
+}
+
+model WithdrawalRequest {
+  id                  String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cycleId             String                 @map("cycle_id") @db.Uuid
+  requestedByAgentId String                 @map("requested_by_agent_id") @db.Uuid
+  reviewedById        String?                @map("reviewed_by_id") @db.Uuid
+  amountXaf           BigInt                 @map("amount_xaf")
+  closesCycle         Boolean                @default(false) @map("closes_cycle")
+  status              WithdrawalRequestStatus @default(PENDING)
+  reason              String?
+  rejectionReason     String?                @map("rejection_reason")
+  idempotencyKey      String                 @unique @map("idempotency_key") @db.Uuid
+  payloadHash         String                 @map("payload_hash") @db.VarChar(64)
+  requestedAt         DateTime               @default(now()) @map("requested_at") @db.Timestamptz(6)
+  reviewedAt          DateTime?              @map("reviewed_at") @db.Timestamptz(6)
+  transactionId       String?                @unique @map("transaction_id") @db.Uuid
+
+  cycle       TontineCycle     @relation(fields: [cycleId], references: [id], onDelete: Restrict)
+  requester   AppUser          @relation("WithdrawalRequestedBy", fields: [requestedByAgentId], references: [id], onDelete: Restrict)
+  reviewer    AppUser?         @relation("WithdrawalReviewedBy", fields: [reviewedById], references: [id], onDelete: Restrict)
+  transaction CycleTransaction? @relation("WithdrawalTransaction", fields: [transactionId], references: [id], onDelete: Restrict)
+  ledgerEntries CycleTransaction[] @relation("WithdrawalLedgerEntries")
+  commission  CycleCommission? @relation("CommissionWithdrawal")
+
+  @@index([cycleId, status, requestedAt], map: "idx_withdrawals_cycle_status_date")
+  @@index([requestedByAgentId, status, requestedAt], map: "idx_withdrawals_agent_status_date")
+  @@map("withdrawal_requests")
+}
+
+model CycleCommission {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cycleId              String   @unique @map("cycle_id") @db.Uuid
+  branchId             String   @map("branch_id") @db.Uuid
+  amountXaf            BigInt   @map("amount_xaf")
+  transactionId        String   @unique @map("transaction_id") @db.Uuid
+  withdrawalRequestId  String   @unique @map("withdrawal_request_id") @db.Uuid
+  chargedById          String   @map("charged_by_id") @db.Uuid
+  chargedAt            DateTime @default(now()) @map("charged_at") @db.Timestamptz(6)
+
+  cycle             TontineCycle      @relation(fields: [cycleId], references: [id], onDelete: Restrict)
+  branch            Branch            @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  transaction       CycleTransaction  @relation("CommissionTransaction", fields: [transactionId], references: [id], onDelete: Restrict)
+  withdrawalRequest WithdrawalRequest @relation("CommissionWithdrawal", fields: [withdrawalRequestId], references: [id], onDelete: Restrict)
+  chargedBy         AppUser           @relation("CommissionChargedBy", fields: [chargedById], references: [id], onDelete: Restrict)
+
+  @@map("cycle_commissions")
+}
+
+model TontineCycleEvent {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cycleId     String         @map("cycle_id") @db.Uuid
+  actorUserId String         @map("actor_user_id") @db.Uuid
+  eventType   CycleEventType @map("event_type")
+  reason      String?
+  requestId   String         @unique @map("request_id") @db.Uuid
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  cycle TontineCycle @relation(fields: [cycleId], references: [id], onDelete: Restrict)
+  actor AppUser      @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([cycleId, createdAt], map: "idx_cycle_events_cycle_date")
+  @@map("tontine_cycle_events")
 }

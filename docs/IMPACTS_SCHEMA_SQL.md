@@ -2,7 +2,7 @@
 
 **Statut :** analyse de cadrage fondée sur les règles métier validées et les détails encore ouverts. Ce document ne modifie pas le schéma SQL v1.1, ne définit pas le schéma Prisma final et ne prescrit aucune migration exécutable.
 
-Le brouillon de modèle cible à examiner est [CONCEPTION_MODELE_DONNEES.md](./CONCEPTION_MODELE_DONNEES.md). Le présent fichier décrit les écarts et impacts ; le brouillon ne lève pas à lui seul les validations métier/techniques restantes.
+**Portée actuelle :** les sections ci-dessous décrivent la transition du modèle legacy dossier/collecte et ne constituent plus le modèle actif des nouvelles opérations financières depuis la décision §3.15 de `DECISIONS_METIER.md` (22/10/2026). Le produit actif à cycles et sa migration sont décrits dans [CONCEPTION_MODELE_DONNEES.md](./CONCEPTION_MODELE_DONNEES.md) §10. Le présent fichier reste utile pour préserver les données historiques et expliquer les écarts du DDL v1.1.
 
 ## 1. Décision et objectif
 
