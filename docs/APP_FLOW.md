@@ -6,6 +6,8 @@
 **Application :** Mobile Android et tableau de bord web
 
 > Les règles indiquées « À valider » ne constituent pas des décisions métier définitives.
+>
+> **Périmètre historique :** les sections de collectes journalières, remises et clôtures ci-dessous décrivent le parcours legacy et la consultation de son historique. Depuis la décision validée en `DECISIONS_METIER.md` §3.15 (22/10/2026), les nouvelles opérations utilisent marchés, cycles à 31 versements, suspension/reprise, commission et retraits approuvés. Ces parcours legacy ne doivent pas servir de contrats pour les nouvelles écritures financières.
 
 ## 1. Objectif
 
@@ -98,7 +100,7 @@ Décisions métier déjà consignées :
 
 Les règles de création concurrente, fermeture en deux temps, réouverture en ligne, traitement des collectes en vol, champs minimaux et rapprochement historique sont arbitrées dans [DECISIONS_METIER.md](./DECISIONS_METIER.md) §3.13. Les codes de conflit, seuils d'horloge, références exactes et rôles du rapprochement historique restent à préciser.
 
-## 7. Parcours de collecte
+## 7. Parcours legacy de collecte journalière
 
 1. L'agent sélectionne un dossier précis ; le client associé est affiché à partir de ce dossier.
 2. L'application vérifie l'état connu du dossier.
@@ -118,7 +120,7 @@ Règles :
 
 Une collecte dont l'horloge est jugée incohérente n'est pas acceptée automatiquement et est conservée pour revue humaine. Les heures déclarée et reçue par le serveur restent distinctes. Les seuils, procédure de correction et règles détaillées d'annulation restent à valider.
 
-## 8. Reçus
+## 8. Reçus des collectes legacy
 
 - Une référence locale stable permet de retrouver un reçu provisoire.
 - L'acceptation, l'attribution atomique du numéro officiel et la persistance de la collecte sont réalisées ensemble côté serveur ; une reprise idempotente retourne le même numéro.
@@ -128,7 +130,7 @@ Une collecte dont l'horloge est jugée incohérente n'est pas acceptée automati
 
 **À valider :** formats exacts, mentions légales, rendu et comportement d'un rejet après impression. Le choix du modèle de stockage permettant l'allocation atomique doit être conçu en phase de revue SQL ; le DDL v1.1 reste inchangé jusque-là.
 
-## 9. Remises de fonds
+## 9. Remises legacy de fonds
 
 La déclaration de remise de l'agent est distincte de la confirmation de réception par le caissier.
 
@@ -143,7 +145,7 @@ La déclaration de remise de l'agent est distincte de la confirmation de récept
 
 Après synchronisation, une déclaration de remise n'est pas modifiée directement : toute erreur passe par une annulation motivée et auditée ou une opération compensatrice autorisée. Le caissier constate l'écart et le superviseur habilité en valide la résolution avec motif et audit. Les règles de réaffectation après annulation, pièces justificatives et détails de workflow restent à valider.
 
-## 10. Clôture journalière
+## 10. Clôture journalière legacy
 
 - Chaque agent peut déclarer sa clôture localement hors ligne ; cette déclaration ne vaut pas rapprochement serveur.
 - Si des opérations sont encore en attente de synchronisation, le serveur garde la clôture à rapprocher et rend les opérations manquantes visibles ; il ne confirme pas un total incomplet.
