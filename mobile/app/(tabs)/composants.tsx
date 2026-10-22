@@ -5,6 +5,7 @@ import { InputNumerique } from '../../src/components/InputNumerique';
 import { InputRecherche } from '../../src/components/InputRecherche';
 import { SelecteurSimple } from '../../src/components/SelecteurSimple';
 import { SelecteurDossier } from '../../src/components/SelecteurDossier';
+import { SelecteurClient } from '../../src/components/SelecteurClient';
 import { colors } from '../../src/components/theme';
 
 /**
@@ -80,6 +81,16 @@ export default function ComposantsScreen() {
           options={[]}
           onValueChange={() => {}}
           accessibilityLabel="Sélecteur de dossier"
+        />
+      </View>
+
+      <View style={styles.exampleCard}>
+        <SelecteurClient
+          label="Client"
+          value={null}
+          options={[]}
+          onValueChange={() => {}}
+          accessibilityLabel="Sélecteur de client"
         />
       </View>
 
