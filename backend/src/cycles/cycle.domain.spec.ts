@@ -25,7 +25,11 @@ describe('cycle domain rules', () => {
 
   it('counts 31 accepted deposits, including repeated same-day deposits', () => {
     let cycle = activeCycle();
-    for (let index = 0; index < 31; index += 1) {
+    const depositsDeclaredOnSameDay = Array.from(
+      { length: 31 },
+      () => new Date('2026-10-22T09:00:00.000Z'),
+    );
+    for (const _sameDayDeposit of depositsDeclaredOnSameDay) {
       const next = recordDeposit(cycle, 5_000n);
       cycle = { ...cycle, ...next };
     }
@@ -33,6 +37,7 @@ describe('cycle domain rules', () => {
     expect(cycle.installmentCount).toBe(31);
     expect(cycle.totalCollectedXaf).toBe(155_000n);
     expect(cycle.status).toBe('COMPLETED');
+    expect(new Set(depositsDeclaredOnSameDay.map((date) => date.toISOString().slice(0, 10))).size).toBe(1);
     expect(recordDeposit(activeCycle({ installmentCount: 30 }), 5_000n).installmentCount).toBe(31);
   });
 
