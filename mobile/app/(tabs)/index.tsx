@@ -47,6 +47,15 @@ export default function AccueilScreen() {
         <ActionCard
           title="Dossiers"
           description="Consulter ou créer un dossier"
+        />
+        <ActionCard
+          title="Cycles"
+          description="Nouveau produit à 31 versements"
+          icon={<Wallet size={20} color={colors.accent} strokeWidth={1.8} />}
+          onPress={() => router.push('/(tabs)/cycles')}>
+        <ActionCard
+          title="Collectes"
+          description="Parcours legacy des collectes journalières"
           icon={<Folder size={20} color={colors.accent} strokeWidth={1.8} />}
           onPress={() => router.push('/(tabs)/dossiers')}
         />
