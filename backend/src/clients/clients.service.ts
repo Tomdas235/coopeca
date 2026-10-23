@@ -1,6 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../database/prisma.service';
 import { AuthenticatedPrincipal } from '../auth/auth.types';
 
@@ -40,7 +39,7 @@ export class ClientsService {
 
     const where: Prisma.ClientWhereInput = {};
 
-    if (params.filters.status) where.status = params.filters.status;
+    if (params.filters.status) where.status = params.filters.status as any;
     if (params.filters.agencyId) where.branchId = params.filters.agencyId;
     if (params.filters.marketId) where.marketId = params.filters.marketId;
     if (params.filters.agentId) where.collectionAgentId = params.filters.agentId;
@@ -51,12 +50,10 @@ export class ClientsService {
         { lastName: { contains: params.filters.search, mode: 'insensitive' } },
       ];
     }
-    if (params.filters.fromCreatedAt) {
-      where.createdAt = { ...where.createdAt, gte: new Date(params.filters.fromCreatedAt) };
-    }
-    if (params.filters.toCreatedAt) {
-      where.createdAt = { ...where.createdAt, lte: new Date(params.filters.toCreatedAt) };
-    }
+    const createdAtFilter: Record<string, any> = {};
+    if (params.filters.fromCreatedAt) createdAtFilter.gte = new Date(params.filters.fromCreatedAt);
+    if (params.filters.toCreatedAt) createdAtFilter.lte = new Date(params.filters.toCreatedAt);
+    if (Object.keys(createdAtFilter).length > 0) where.createdAt = createdAtFilter;
 
     const orderBy: Prisma.ClientOrderByWithRelationInput[] = [];
     const sortField = params.sortBy && ['clientCode', 'firstName', 'lastName', 'createdAt'].includes(params.sortBy)
@@ -138,7 +135,7 @@ export class ClientsService {
     };
   }
 
-  async create(actor: AuthenticatedPrincipal, input: { clientCode: string; firstName: string; lastName: string; phone?: string | null; neighborhood?: string | null; addressDetails?: string | null; branchId: string; marketId?: string | null; collectionAgentId?: string | null }) {
+  async create(_actor: AuthenticatedPrincipal, input: { clientCode: string; firstName: string; lastName: string; phone?: string | null; neighborhood?: string | null; addressDetails?: string | null; branchId: string; marketId?: string | null; collectionAgentId?: string | null }) {
     // Vérifier si un client avec ce code existe déjà dans la même agence
     const existingClient = await this.prisma.client.findFirst({
       where: {
@@ -148,7 +145,7 @@ export class ClientsService {
     });
 
     if (existingClient) {
-      throw new ConflictException({ code: 'CLIENT_CODE_DEJA_UTILISE', message: 'Ce code client existe déjà pour cette agence.' });
+      throw new ConflictException('Ce code client existe déjà pour cette agence.');
     }
 
     // Si collectionAgentId est fourni, vérifier que l'agent appartient à la même agence

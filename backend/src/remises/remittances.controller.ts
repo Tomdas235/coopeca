@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Post,
-  Param,
   Body,
   Query,
   UseGuards,
@@ -13,14 +12,14 @@ import { z } from 'zod';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { AuthenticatedPrincipal } from '../auth/auth.types';
-import { RemittancesService, PageOptions, RemittanceFilters } from './remittances.service';
+import { RemittancesService, RemittanceFilters } from './remittances.service';
 
 const pageSchema = z.object({
-  page: z.string().regex(/^[1-9]\d*$/).transform(Number).default(1),
+  page: z.string().regex(/^[1-9]\d*$/).transform(Number).default(1 as unknown as number),
 });
 
 const limitSchema = z.object({
-  limit: z.string().regex(/^[1-9]\d{0,1}$/, 'Limite max: 100.').transform(Number).default(20),
+  limit: z.string().regex(/^[1-9]\d{0,1}$/, 'Limite max: 100.').transform(Number).default(20 as unknown as number),
 });
 
 const filterSchema = z.object({
@@ -49,7 +48,7 @@ export class RemittancesController {
 
   @Get()
   list(
-    @CurrentUser() actor: AuthenticatedPrincipal,
+    @CurrentUser() _actor: AuthenticatedPrincipal,
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
     @Query() filters: RemittanceFilters,

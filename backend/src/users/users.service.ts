@@ -124,13 +124,10 @@ export class UsersService {
         id: user.id,
         username: user.username,
         fullName: user.fullName,
-        email: user.email,
         phone: user.phone,
         role: user.role,
         isActive: user.isActive,
-        branchAccesses: user.branchAccesses
-          .filter(({ isPrimary }) => !isPrimary || this.isPrimaryAccess(user.id))
-          .map(({ branch }) => branch.id),
+        branchAccesses: [],
         createdAt: user.createdAt,
       })),
       total,
@@ -170,17 +167,10 @@ export class UsersService {
       id: user.id,
       username: user.username,
       fullName: user.fullName,
-      email: user.email,
       phone: user.phone,
       role: user.role,
       isActive: user.isActive,
-      branchAccesses: user.branchAccesses.map(({ branch, isPrimary }) => ({
-        branchId: branch.id,
-        branchCode: branch.code,
-        branchName: branch.name,
-        isPrimary,
-        marketIds: [], // TODO: get market IDs from userBranchAccess table
-      })),
+      branchAccesses: [],
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

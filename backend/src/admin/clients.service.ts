@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 
 @Injectable()
 export class ClientsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listClients(actor: any) {
+  async listClients(_actor: any) {
     return this.prisma.client.findMany({
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
       select: {
@@ -13,7 +13,6 @@ export class ClientsService {
         firstName: true,
         lastName: true,
         phone: true,
-        address: true,
         status: true,
         branchId: true,
         createdAt: true,
@@ -21,44 +20,45 @@ export class ClientsService {
     });
   }
 
-  async createClient(actor: any, input: {
+  async createClient(_actor: any, input: {
     firstName: string;
     lastName: string;
-    phone?: string;
-    address?: string;
+    phone?: string | null;
+    branchId: string;
   }) {
-    this.requireRole(actor, ['ADMIN', 'SUPERVISOR']);
+    this.requireRole(_actor, ['ADMIN', 'SUPERVISOR']);
     
     // Check for duplicate client (same name + phone)
     const existing = await this.prisma.client.findFirst({
       where: {
         OR: [
           { firstName: input.firstName, lastName: input.lastName },
-          { phone: input.phone },
-        ].filter(Boolean) as any,
+          { phone: input.phone ?? undefined },
+        ],
       },
     });
     if (existing) {
-      throw new Error({
-        code: 'DOUBLE_CLIENT',
-        message: 'Un client avec ces coordonnées existe déjà.',
-      });
+      throw new Error('Un client avec ces coordonnées existe déjà.');
     }
 
     return this.prisma.client.create({
       data: {
+        clientCode: `CLT-${Date.now()}`,
         firstName: input.firstName,
         lastName: input.lastName,
-        phone: input.phone,
-        address: input.address,
-        status: 'PROVISIONAL', // New clients created offline are PROVISIONAL
+        phone: input.phone ?? null,
+        status: 'PROVISIONAL',
+        branchId: input.branchId,
+        createdBy: _actor.id,
+        branch: { connect: { id: input.branchId } },
+        creator: { connect: { id: _actor.id } },
       },
       select: {
         id: true,
+        clientCode: true,
         firstName: true,
         lastName: true,
         phone: true,
-        address: true,
         status: true,
         createdAt: true,
       },
@@ -66,11 +66,11 @@ export class ClientsService {
   }
 
   async updateClientStatus(
-    actor: any,
+    _actor: any,
     clientId: string,
     status: 'PROVISIONAL' | 'ACTIVE' | 'REJECTED' | 'ARCHIVED',
   ) {
-    this.requireRole(actor, ['ADMIN', 'SUPERVISOR']);
+    this.requireRole(_actor, ['ADMIN', 'SUPERVISOR']);
     
     const valid = ['PROVISIONAL', 'ACTIVE', 'REJECTED', 'ARCHIVED'].includes(status);
     if (!valid) throw new BadRequestException('Statut invalide.');
@@ -89,8 +89,8 @@ export class ClientsService {
     });
   }
 
-  private requireRole(actor: any, allowed: string[]) {
-    if (!allowed.includes(actor.role)) {
+  private requireRole(_actor: any, allowed: string[]) {
+    if (!allowed.includes(_actor.role)) {
       throw new Error('Action non autorisée pour ce rôle.');
     }
   }

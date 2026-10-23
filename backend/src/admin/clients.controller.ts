@@ -11,17 +11,15 @@ import { z } from 'zod';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { AuthenticatedPrincipal } from '../auth/auth.types';
-import { ClientsService } from '../clients/clients.service';
+import { ClientsService } from './clients.service';
 
 const uuid = z.string().uuid();
-const amount = z.string().regex(/^[1-9][0-9]*$/, 'Le montant XAF doit être un entier positif sérialisé en chaîne.');
 
 const clientSchema = z
   .object({
     firstName: z.string().trim().min(1).max(100),
     lastName: z.string().trim().min(1).max(100),
     phone: z.string().trim().optional(),
-    address: z.string().trim().optional(),
   })
   .strict();
 

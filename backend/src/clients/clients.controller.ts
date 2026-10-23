@@ -76,8 +76,8 @@ export class ClientsController {
     @CurrentUser() actor: AuthenticatedPrincipal,
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
-    @Query('sortBy', ) sortBy: string,
-    @Query('sortOrder', ) sortOrder: 'asc' | 'desc',
+    @Query('sortBy') sortBy: string,
+    @Query('sortOrder') sortOrder: 'asc' | 'desc',
     @Query() filters: ClientFilters,
   ) {
     const pageParams = pageSchema.safeParse({ page });
@@ -94,19 +94,13 @@ export class ClientsController {
       limit: limitParams.data.limit,
       sortBy: sortParams.data.sortBy,
       sortOrder: sortParams.data.sortOrder,
-      status: filterParams.data.status,
-      agencyId: filterParams.data.agencyId,
-      marketId: filterParams.data.marketId,
-      agentId: filterParams.data.agentId,
-      search: filterParams.data.search,
-      fromCreatedAt: filterParams.data.fromCreatedAt,
-      toCreatedAt: filterParams.data.toCreatedAt,
+      filters: filterParams.data,
     });
   }
 
   @Get(':id')
   getOne(
-    @CurrentUser() actor: AuthenticatedPrincipal,
+    @CurrentUser() _actor: AuthenticatedPrincipal,
     @Param('id') id: string,
   ) {
     return this.clientsService.findOne(id);
@@ -114,7 +108,7 @@ export class ClientsController {
 
   @Post()
   create(
-    @CurrentUser() actor: AuthenticatedPrincipal,
+    @CurrentUser() _actor: AuthenticatedPrincipal,
     @Body() body: unknown,
   ) {
     const input = createSchema.safeParse(body);
@@ -122,12 +116,12 @@ export class ClientsController {
       throw new BadRequestException('Données client invalides.');
     }
 
-    return this.clientsService.create(actor, input.data);
+    return this.clientsService.create(_actor, input.data);
   }
 
   @Patch(':id')
   update(
-    @CurrentUser() actor: AuthenticatedPrincipal,
+    @CurrentUser() _actor: AuthenticatedPrincipal,
     @Param('id') id: string,
     @Body() body: unknown,
   ) {
@@ -136,12 +130,12 @@ export class ClientsController {
       throw new BadRequestException('Données de mise à jour invalides.');
     }
 
-    return this.clientsService.update(id, actor, input.data);
+    return this.clientsService.update(id, _actor, input.data);
   }
 
   @Get(':id/balance')
   getBalance(
-    @CurrentUser() actor: AuthenticatedPrincipal,
+    @CurrentUser() _actor: AuthenticatedPrincipal,
     @Param('id') id: string,
   ) {
     return { clientId: id, balanceXaf: this.clientsService.getBalance(id).toString() };

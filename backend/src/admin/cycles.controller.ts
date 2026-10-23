@@ -32,10 +32,7 @@ const depositSchema = z.object({
   declaredAt: z.string().datetime({ offset: true }).optional(),
 }).strict();
 
-const stateChangeSchema = z.object({
-  requestId: uuid,
-  reason: z.string().max(1000).optional(),
-}).strict();
+
 
 const withdrawalSchema = z.object({
   amountXaf: amount,
@@ -59,7 +56,7 @@ export class AdminCyclesController {
   constructor(private readonly cyclesService: CyclesService) {}
 
   @Get()
-  list(@CurrentUser() actor: AuthenticatedPrincipal) {
+  list(@CurrentUser() _actor: AuthenticatedPrincipal) {
     return this.cyclesService.listMarkets();
   }
 
@@ -115,11 +112,11 @@ export class AdminCyclesController {
 
   @Post('tontine-cycles/:cycleId/suspend')
   suspend(
-    @CurrentUser() actor: AuthenticatedPrincipal,
+    @CurrentUser() _actor: AuthenticatedPrincipal,
     @Param('cycleId') cycleId: string,
     @Body() body: unknown,
   ) {
-    return this.cyclesService.changeCycleState(actor, cycleId, 'SUSPEND', {});
+    return this.cyclesService.changeCycleState(_actor, cycleId, 'SUSPEND', { requestId: uuid.parse(cycleId) });
   }
 
   @Post('tontine-cycles/:cycleId/resume')

@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigType } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import configuration from '../config/configuration';
 import { validateEnv } from '../config/env.validation';
-import { CommonModule } from './common/common.module';
 import { DatabaseModule } from '../database/database.module';
 import { AuthModule } from '../auth/auth.module';
 import { MarketsModule } from './markets/markets.module';
@@ -18,9 +17,7 @@ import { CyclesModule } from './cycles/cycles.module';
       validate: validateEnv,
       cache: true,
     }),
-    CommonModule,
     DatabaseModule,
-    HealthModule,
     AuthModule,
     MarketsModule,
     ClientsModule,

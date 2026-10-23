@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import express from 'express';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
@@ -11,8 +12,8 @@ async function bootstrap(): Promise<void> {
   app.setGlobalPrefix('api/v1');
 
   // Admin Web Dashboard : servir les fichiers statiques
-  app.use('/admin', (req, res, next) => {
-    express().use(express.static('dist/admin-dashboard', { index: 'index.html' }))(req, res, next);
+  app.use('/admin', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    express.static('dist/admin-dashboard', { index: 'index.html' })(req, res, next);
   });
 
   const port = process.env.PORT ?? 3000;
