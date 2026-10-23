@@ -1,14 +1,18 @@
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from './theme';
 
 interface ActionCardProps {
   title: string;
   description: string;
-  symbol: string;
   onPress: () => void;
+  /** Decorative vector icon; the parent button provides the accessible label. */
+  icon?: ReactNode;
+  /** Text fallback kept for existing call sites. */
+  symbol?: string;
 }
 
-export function ActionCard({ title, description, symbol, onPress }: ActionCardProps) {
+export function ActionCard({ title, description, icon, symbol, onPress }: ActionCardProps) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -16,8 +20,12 @@ export function ActionCard({ title, description, symbol, onPress }: ActionCardPr
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
-      <View style={styles.symbolBox}>
-        <Text style={styles.symbol}>{symbol}</Text>
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={styles.symbolBox}
+      >
+        {icon ?? <Text style={styles.symbol}>{symbol}</Text>}
       </View>
       <View style={styles.copy}>
         <Text style={styles.title}>{title}</Text>

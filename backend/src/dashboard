@@ -1,0 +1,67 @@
+export type DashboardScope = 'general' | 'zone' | 'agency' | 'market' | 'agent';
+
+export interface OrganizationalStats {
+  totalZones: number;
+  activeZones: number;
+  totalAgencies: number;
+  activeAgencies: number;
+  totalMarkets: number;
+  activeMarkets: number;
+  totalAgents: number;
+  activeAgents: number;
+  totalClients: number;
+  activeClients: number;
+  activeCycles: number;
+  completedCycles: number;
+}
+
+export interface FinancialStats {
+  totalDepositsXaf: bigint;
+  totalWithdrawalsXaf: bigint;
+  totalDepositsCount: number;
+  totalWithdrawalsCount: number;
+  totalCommissionsXaf: bigint;
+  totalRemittancesXaf: bigint;
+  totalReceivedXaf: bigint;
+  totalDiscrepanciesXaf: bigint;
+  pendingWithdrawalsCount: number;
+  pendingWithdrawalsXaf: bigint;
+  rejectedWithdrawalsCount: number;
+  rejectedWithdrawalsXaf: bigint;
+}
+
+export interface EvolutionDataPoint {
+  date: Date;
+  depositsXaf: bigint;
+  withdrawalsXaf: bigint;
+  commissionsXaf: bigint;
+  remittancesXaf: bigint;
+  newClients: number;
+  completedCycles: number;
+}
+
+export interface AgentPerformance {
+  agentId: string;
+  agentName: string;
+  branchId: string;
+  branchCode: string;
+  branchName: string;
+  marketId?: string;
+  marketCode?: string;
+  marketName?: number;
+  clientCount: number;
+  depositCount: number;
+  withdrawalCount: number;
+  depositAmountXaf: bigint;
+  withdrawalAmountXaf: bigint;
+  commissionXaf: bigint;
+  remittanceAmountXaf: bigint;
+}
+
+export interface CycleStatusStats {
+  activeCycles: number;
+  suspendedCycles: number;
+  completedButNotClosedCycles: number; // cycles at 31 deposits but not formally closed
+  closedCycles: number;
+  cyclesAt31Deposits: number;
+}

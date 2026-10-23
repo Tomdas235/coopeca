@@ -1,4 +1,4 @@
-import { openDatabase } from 'expo-sqlite';
+import { openDatabaseSync } from 'expo-sqlite';
 import { SCHEMA_SQL, SCHEMA_SQL_SUITE, SCHEMA_VERSION } from './schema';
 
 /**
@@ -8,13 +8,13 @@ import { SCHEMA_SQL, SCHEMA_SQL_SUITE, SCHEMA_VERSION } from './schema';
  * Conformément à DECISIONS_VALIDÉES_FRONTEND §7, expo-sqlite est installé
  * et le schéma local est créé après validation du modèle.
  */
-let db: any = null;
+let db: ReturnType<typeof openDatabaseSync> | null = null;
 
-export function getDatabase(): any {
+export function getDatabase(): ReturnType<typeof openDatabaseSync> {
   if (!db) {
-    db = openDatabase('coopeca.db');
-    // Exécuter le schéma au premier ouverture
-    db.execSync?.(SCHEMA_SQL + SCHEMA_SQL_SUITE);
+    db = openDatabaseSync('coopeca.db');
+    // Exécuter le schéma au premier ouverture.
+    db.execSync(SCHEMA_SQL + SCHEMA_SQL_SUITE);
   }
   return db;
 }

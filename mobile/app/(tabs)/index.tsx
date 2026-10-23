@@ -1,301 +1,154 @@
-import { useRouter, useState } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { InputMontantXAF } from '../../src/components/InputMontantXAF';
-import { DialogConfirmation } from '../../src/components/DialogConfirmation';
+import { useRouter } from 'expo-router';
+import { Blocks, ClipboardCheck, Folder, Receipt, UserRound, Users, Wallet } from 'lucide-react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { ActionCard } from '../../src/components/ActionCard';
+import { AppButton } from '../../src/components/AppButton';
+import { AppCard } from '../../src/components/AppCard';
+import { AppNotice } from '../../src/components/AppNotice';
 import { AppScreen } from '../../src/components/AppScreen';
-import { MetricCard } from '../../src/components/MetricCard';
-import { StatusPill } from '../../src/components/StatusPill';
+import { SyncStatusBanner } from '../../src/components/SyncStatusBanner';
 import { colors } from '../../src/components/theme';
-import { indicateursDemonstration } from '../../src/features/accueil';
-import { formatMontantXAF } from '../../src/utils/montants';
 
 export default function AccueilScreen() {
   const router = useRouter();
-  const [montantSaisie, setMontantSaisie] = useState<string>('');
-  const [showDialog, setShowDialog] = useState<boolean>(false);
-  const [actionResult, setActionResult] = useState<string | null>(null);
 
   return (
     <AppScreen>
       <View style={styles.heading}>
-        <View style={styles.headingCopy}>
-          <Text style={styles.eyebrow}>COOPECA · ESPACE AGENT</Text>
-          <Text accessibilityRole="header" style={styles.title}>
-            Bonjour
-          </Text>
-          <Text style={styles.subtitle}>Votre activité, en un coup d’œil.</Text>
-        </View>
-        <StatusPill kind="unknown" label="APERÇU DÉMO" />
-      </View>
-
-      <View style={styles.demoNotice}>
-        <Text style={styles.noticeTitle}>Données de démonstration</Text>
-        <Text style={styles.noticeBody}>
-          Ces chiffres et statuts sont illustratifs. La connexion et la synchronisation réelles ne
-          sont pas configurées.
+        <Text style={styles.eyebrow}>COOPECA · ESPACE AGENT</Text>
+        <Text accessibilityRole="header" style={styles.title}>
+          Bonjour
         </Text>
+        <Text style={styles.subtitle}>Choisissez l’écran de travail à ouvrir.</Text>
       </View>
 
-      <View style={styles.section}>
-        <View style={styles.sectionHeading}>
-          <Text style={styles.sectionTitle}>Aperçu d’activité</Text>
-          <Text style={styles.sectionCaption}>Exemple uniquement</Text>
-        </View>
-        <View style={styles.metrics}>
-          <MetricCard label="Clients" value={String(indicateursDemonstration.clients)} />
-          <MetricCard label="Dossiers actifs" value={String(indicateursDemonstration.dossiers)} />
-          <MetricCard label="Collectes du jour" value={String(indicateursDemonstration.collectes)} />
-          <MetricCard
-            label="Montant collecté"
-            value={formatMontantXAF(indicateursDemonstration.montantCollecte)}
-            note="Montant entier XAF"
-          />
-        </View>
-      </View>
+      <AppNotice
+        title="Suivi d’activité indisponible"
+        body="Aucune statistique fiable n’est connectée pour le moment. Les chiffres seront affichés uniquement quand une source réelle sera disponible."
+        kind="info"
+      />
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>État réseau et synchronisation</Text>
-        <View style={styles.statusCard}>
-          <View style={styles.statusRow}>
-            <View style={styles.statusCopy}>
-              <Text style={styles.statusTitle}>En ligne</Text>
-              <Text style={styles.statusDescription}>Exemple d’état de connexion</Text>
-            </View>
-            <StatusPill kind="online" label="En ligne" />
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.statusRow}>
-            <View style={styles.statusCopy}>
-              <Text style={styles.statusTitle}>Hors ligne</Text>
-              <Text style={styles.statusDescription}>Exemple d’état de connexion</Text>
-            </View>
-            <StatusPill kind="offline" label="Hors ligne" />
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.statusRow}>
-            <View style={styles.statusCopy}>
-              <Text style={styles.statusTitle}>Synchronisation en attente</Text>
-              <Text style={styles.statusDescription}>Exemple d’opération non confirmée</Text>
-            </View>
-            <StatusPill kind="pending" label="En attente" />
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.statusRow}>
-            <View style={styles.statusCopy}>
-              <Text style={styles.statusTitle}>Erreur</Text>
-              <Text style={styles.statusDescription}>Exemple d’état nécessitant une action</Text>
-            </View>
-            <StatusPill kind="error" label="Erreur" />
-          </View>
-        </View>
-      </View>
+      <SyncStatusBanner />
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Saisie de montant (démo)</Text>
-        <InputMontantXAF
-          label="Montant à collecter"
-          value={montantSaisie}
-          onChangeText={setMontantSaisie}
-          placeholder="0"
+      <AppCard>
+        <Text style={styles.actionEyebrow}>ACTION PRINCIPALE</Text>
+        <Text style={styles.actionTitle}>Clients</Text>
+        <Text style={styles.actionDescription}>
+          Accéder à la liste pour retrouver ou créer un client.
+        </Text>
+        <AppButton
+          label="Ouvrir les clients"
+          onPress={() => router.push('/(tabs)/clients')}
         />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Confirmation d’action (démo)</Text>
-        <Pressable
-          style={styles.demoButton}
-          onPress={() => {
-            setActionResult(null);
-            setShowDialog(true);
-          }}
-        >
-          <Text style={styles.demoButtonText}>Clôturer la journée (démo)</Text>
-        </Pressable>
-        {actionResult ? (
-          <AppNotice
-            title={actionResult === 'confirmé' ? 'Action confirmée' : 'Action annulée'}
-            body={
-              actionResult === 'confirmé'
-                ? 'La clôture a été enregistrée (démonstration).'
-                : 'L’opération a été annulée par l’utilisateur.'
-            }
-            kind={actionResult === 'confirmé' ? 'success' : 'info'}
-          />
-        ) : null}
-      </View>
+      </AppCard>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Accès rapides</Text>
         <ActionCard
-          title="Clients"
-          description="Consulter et gérer les clients"
-          symbol="C"
-          onPress={() => router.push('/(tabs)/clients')}
-        />
-        <ActionCard
           title="Dossiers"
-          description="Consulter les dossiers de tontine"
-          symbol="D"
+          description="Consulter ou créer un dossier"
+          icon={<Folder size={20} color={colors.accent} strokeWidth={1.8} />}
           onPress={() => router.push('/(tabs)/dossiers')}
         />
         <ActionCard
           title="Collectes"
-          description="Suivre les collectes journalières"
-          symbol="＋"
+          description="Parcours legacy des collectes journalières"
+          icon={<Receipt size={20} color={colors.accent} strokeWidth={1.8} />}
           onPress={() => router.push('/(tabs)/collectes')}
         />
         <ActionCard
-          title="Reversements"
-          description="Déclarations de remise de fonds"
-          symbol="↗"
+          title="Remises"
+          description="Parcours legacy des remises (reversements)"
+          icon={<Wallet size={20} color={colors.accent} strokeWidth={1.8} />}
           onPress={() => router.push('/(tabs)/remises')}
         />
         <ActionCard
           title="Clôture"
-          description="Consulter la clôture journalière"
-          symbol="✓"
+          description="Ancienne clôture — module en préparation"
+          icon={<ClipboardCheck size={20} color={colors.accent} strokeWidth={1.8} />}
           onPress={() => router.push('/(tabs)/cloture')}
         />
+      </View>
+
+      <AppNotice
+        title="Parcours financier"
+        body="Les collectes, remises et clôtures affichées ici sont des parcours legacy. Elles ne représentent pas les versements ou retraits des nouveaux cycles."
+        kind="warning"
+      />
+
+      <View style={styles.secondarySection}>
+        <Text style={styles.secondaryTitle}>Autres accès</Text>
         <ActionCard
           title="Session et profil"
-          description="Consulter le compte et se déconnecter"
-          symbol="•"
+          description="Consulter la session sur cet appareil"
+          icon={<UserRound size={20} color={colors.accent} strokeWidth={1.8} />}
           onPress={() => router.push('/(auth)/session')}
         />
         <ActionCard
           title="Composants UI"
-          description="Vitrine des composants de l'interface"
-          symbol="🧩"
+          description="Vitrine des composants de l’interface"
+          icon={<Blocks size={20} color={colors.accent} strokeWidth={1.8} />}
           onPress={() => router.push('/(tabs)/composants')}
         />
       </View>
-
-      <DialogConfirmation
-        visible={showDialog}
-        title="Clôturer la journée ?"
-        message="Cette action est irréversible en démonstration."
-        confirmLabel="Oui, clôturer"
-        cancelLabel="Non, annuler"
-        destructive
-        onConfirm={() => {
-          setActionResult('confirmé');
-          setShowDialog(false);
-        }}
-        onCancel={() => {
-          setActionResult('annulé');
-          setShowDialog(false);
-        }}
-      />
     </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
   heading: {
-    gap: 14,
+    gap: 6,
     paddingTop: 4,
-  },
-  headingCopy: {
-    gap: 5,
   },
   eyebrow: {
     color: colors.accent,
     fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1,
+    fontWeight: '700',
+    letterSpacing: 0.8,
   },
   title: {
     color: colors.text,
-    fontSize: 31,
-    fontWeight: '800',
+    fontSize: 28,
+    fontWeight: '700',
   },
   subtitle: {
     color: colors.muted,
     fontSize: 15,
+    lineHeight: 22,
   },
-  demoNotice: {
-    gap: 5,
-    borderRadius: 13,
-    borderColor: colors.border,
-    borderWidth: 1,
-    backgroundColor: colors.surface,
-    padding: 14,
+  actionEyebrow: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.7,
   },
-  noticeTitle: {
+  actionTitle: {
     color: colors.text,
-    fontSize: 14,
+    fontSize: 20,
     fontWeight: '700',
   },
-  noticeBody: {
+  actionDescription: {
     color: colors.muted,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 14,
+    lineHeight: 20,
   },
   section: {
-    gap: 11,
-  },
-  sectionHeading: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: 8,
+    gap: 10,
   },
   sectionTitle: {
     color: colors.text,
     fontSize: 18,
-    fontWeight: '800',
-  },
-  sectionCaption: {
-    color: colors.muted,
-    fontSize: 11,
-  },
-  metrics: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  statusCard: {
-    gap: 12,
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  statusCopy: {
-    flex: 1,
-    gap: 3,
-  },
-  statusTitle: {
-    color: colors.text,
-    fontSize: 14,
     fontWeight: '700',
+    marginBottom: 2,
   },
-  statusDescription: {
+  secondarySection: {
+    gap: 10,
+    paddingTop: 4,
+  },
+  secondaryTitle: {
     color: colors.muted,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
-  },
-  demoButton: {
-    backgroundColor: colors.accent,
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  demoButtonText: {
-    color: colors.surface,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
+    marginBottom: 2,
   },
 });

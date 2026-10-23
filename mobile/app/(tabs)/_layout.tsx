@@ -1,19 +1,34 @@
 import { Redirect, Tabs } from 'expo-router';
+import { ClipboardCheck, Home, Receipt, Users, Wallet } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Text, type ColorValue } from 'react-native';
 import { AppScreen } from '../../src/components/AppScreen';
 import { StatusPill } from '../../src/components/StatusPill';
 import { colors } from '../../src/components/theme';
 import { authenticationService } from '../../src/features/auth';
 
-const icone = (glyphe: string) =>
-  function TabIcon({ color }: { color: ColorValue }) {
-    return <Text style={{ color, fontSize: 16 }}>{glyphe}</Text>;
+interface TabIconProps {
+  color: string;
+  focused: boolean;
+  size: number;
+}
+
+type TabIconComponent = typeof Home;
+
+const tabIcon = (Icon: TabIconComponent) =>
+  function TabIcon({ color, focused, size }: TabIconProps) {
+    return (
+      <Icon
+        accessible={false}
+        color={color}
+        size={size}
+        strokeWidth={focused ? 2.2 : 1.8}
+      />
+    );
   };
 
 /**
- * Navigation principale COOPECA. Les dossiers sont accessibles depuis
- * l'accueil mais restent hors de la barre pour préserver les cinq onglets.
+ * Navigation principale COOPECA. Les routes dossiers et composants
+ * restent accessibles depuis l'accueil sans occuper un onglet.
  */
 export default function TabsLayout() {
   const [sessionChecked, setSessionChecked] = useState(false);
@@ -59,21 +74,70 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '600', marginBottom: 4 },
+        tabBarIconStyle: { marginTop: 2 },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '600',
+          lineHeight: 14,
+          marginBottom: 4,
+        },
+        tabBarItemStyle: {
+          minHeight: 48,
+          justifyContent: 'center',
+        },
         tabBarStyle: {
-          height: 62,
+          minHeight: 64,
           paddingTop: 6,
+          paddingBottom: 4,
+          borderTopWidth: 1,
           borderTopColor: colors.border,
           backgroundColor: colors.surface,
+          elevation: 0,
         },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Accueil', tabBarIcon: icone('🏠') }} />
-      <Tabs.Screen name="clients" options={{ title: 'Clients', tabBarIcon: icone('👥') }} />
-      <Tabs.Screen name="collectes" options={{ title: 'Collectes', tabBarIcon: icone('📒') }} />
-      <Tabs.Screen name="remises" options={{ title: 'Remises', tabBarIcon: icone('💶') }} />
-      <Tabs.Screen name="cloture" options={{ title: 'Clôture', tabBarIcon: icone('🔒') }} />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Accueil',
+          tabBarAccessibilityLabel: 'Accueil',
+          tabBarIcon: tabIcon(Home),
+        }}
+      />
+      <Tabs.Screen
+        name="clients"
+        options={{
+          title: 'Clients',
+          tabBarAccessibilityLabel: 'Clients',
+          tabBarIcon: tabIcon(Users),
+        }}
+      />
+      <Tabs.Screen
+        name="collectes"
+        options={{
+          title: 'Collectes',
+          tabBarAccessibilityLabel: 'Collectes',
+          tabBarIcon: tabIcon(Receipt),
+        }}
+      />
+      <Tabs.Screen
+        name="remises"
+        options={{
+          title: 'Remises',
+          tabBarAccessibilityLabel: 'Remises',
+          tabBarIcon: tabIcon(Wallet),
+        }}
+      />
+      <Tabs.Screen
+        name="cloture"
+        options={{
+          title: 'Clôture',
+          tabBarAccessibilityLabel: 'Clôture journalière',
+          tabBarIcon: tabIcon(ClipboardCheck),
+        }}
+      />
       <Tabs.Screen name="dossiers" options={{ href: null }} />
+      <Tabs.Screen name="composants" options={{ href: null }} />
     </Tabs>
   );
 }
