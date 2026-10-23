@@ -13,10 +13,11 @@ WORKDIR /app
 # D'abord les manifests pour profiter du cache Docker des couches.
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma
-RUN npm ci || npm install
+RUN npm ci
 
 COPY . .
-RUN npm run build \
+RUN npx prisma generate \
+  && npm run build \
   && npm prune --omit=dev
 
 # --- Étape 2 : exécution ---

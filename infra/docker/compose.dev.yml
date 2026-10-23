@@ -36,7 +36,7 @@ services:
 
   api:
     build:
-      context: ../backend
+      context: ../../backend
       dockerfile: Dockerfile
     container_name: coopeca-api-dev
     restart: unless-stopped
@@ -51,6 +51,12 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-coopeca}:${POSTGRES_PASSWORD:-coopeca_dev_password}@postgres:5432/${POSTGRES_DB:-coopeca}?schema=public&sslmode=disable
     ports:
       - "127.0.0.1:3000:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/v1/health').then((r) => process.exit(r.status === 200 ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
 volumes:
   coopeca_pgdata_dev:

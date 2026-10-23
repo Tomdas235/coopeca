@@ -26,9 +26,11 @@ npm run start:dev           # API sur http://localhost:3000/api/v1
 Avec Docker (PostgreSQL + API) :
 
 ```bash
-docker compose -f ../infra/docker/compose.dev.yml up --build
+docker compose -f ../infra/docker/compose.dev.yml up --build -d --wait
 curl http://localhost:3000/api/v1/health
 ```
+
+`docker compose config` permet de vérifier la configuration résolue avant le build. L’image API est compilée depuis le lockfile avec Prisma Client généré dans l’image ; un `npm ci` en échec arrête le build au lieu de basculer silencieusement vers une installation non verrouillée.
 
 ## Endpoints disponibles
 
@@ -95,6 +97,8 @@ Les emplacements `auth/`, `users/`, `agencies/`, `clients/`, `dossiers/`,
 Le modèle de données est décrit dans [DECISIONS_METIER.md](../docs/DECISIONS_METIER.md) §3.15. Les migrations `20261019150000_add_dossiers_and_client_review` et `20261022103000_add_market_tontine_cycles` sont additives et supposent une base créée à partir du DDL `docs/COOPECA_Backend_Schema_v1.1.sql`.
 
 Le dépôt ne contient pas encore de migration baseline pour créer une base vide. Ne pas lancer ces migrations sur une base vide. Elles n'ont pas été appliquées à une base ; elles doivent être testées sur une base jetable v1.1 avant tout environnement partagé. Aucun backfill automatique n'est inclus : les clients historiques restent sans marché/agent cycle jusqu'à affectation supervisée ; les collections et remises historiques restent inchangées.
+
+Sur un volume PostgreSQL neuf, le healthcheck PostgreSQL valide seulement que le serveur accepte les connexions. L’endpoint `/health` valide seulement la connectivité. Ni l’un ni l’autre ne crée les tables : la migration de référence v1.1 puis les migrations Prisma doivent être exécutées suivant une procédure baseline validée avant d’utiliser les routes métier. Ne pas supprimer le volume Docker pour « repartir propre » si des données doivent être conservées.
 
 Pour une base v1.1 existante, après tests et approbation, la commande est `npx prisma migrate deploy` depuis `backend/`. Pour une nouvelle base, il faut établir le schéma de référence v1.1 selon une procédure baseline dédiée.
 
