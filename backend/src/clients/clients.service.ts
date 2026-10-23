@@ -135,7 +135,7 @@ export class ClientsService {
     };
   }
 
-  async create(_actor: AuthenticatedPrincipal, input: { clientCode: string; firstName: string; lastName: string; phone?: string | null; neighborhood?: string | null; addressDetails?: string | null; branchId: string; marketId?: string | null; collectionAgentId?: string | null }) {
+  async create(actor: AuthenticatedPrincipal, input: { clientCode: string; firstName: string; lastName: string; phone?: string | null; neighborhood?: string | null; addressDetails?: string | null; branchId: string; marketId?: string | null; collectionAgentId?: string | null }) {
     // Vérifier si un client avec ce code existe déjà dans la même agence
     const existingClient = await this.prisma.client.findFirst({
       where: {
@@ -153,7 +153,7 @@ export class ClientsService {
       const agentBelongsToBranch = await this.prisma.appUser.findFirst({
         where: {
           id: input.collectionAgentId,
-          branchId: input.branchId,
+          branchAccesses: { some: { branchId: input.branchId } },
         },
       });
 
@@ -170,10 +170,11 @@ export class ClientsService {
         phone: input.phone,
         neighborhood: input.neighborhood,
         addressDetails: input.addressDetails,
-        status: 'PROVISIONAL', // Nouveau client créé hors ligne a le statut PROVISOIRE
+        status: 'PROVISIONAL',
         branchId: input.branchId,
         marketId: input.marketId,
         collectionAgentId: input.collectionAgentId,
+        createdBy: actor.id,
       },
       select: {
         id: true,
@@ -201,7 +202,7 @@ export class ClientsService {
     };
   }
 
-  async update(id: string, actor: AuthenticatedPrincipal, input: { firstName?: string | null; lastName?: string | null; phone?: string | null; neighborhood?: string | null; addressDetails?: string | null; status?: string | null; branchId?: string | null; marketId?: string | null; collectionAgentId?: string | null; rejectionReason?: string | null; reviewedById?: string | null; reviewedAt?: Date | null }) {
+  async update(id: string, _actor: AuthenticatedPrincipal, input: { firstName?: string | null; lastName?: string | null; phone?: string | null; neighborhood?: string | null; addressDetails?: string | null; status?: string | null; branchId?: string | null; marketId?: string | null; collectionAgentId?: string | null; rejectionReason?: string | null; reviewedById?: string | null; reviewedAt?: Date | null }) {
     // Vérifier que le client existe
     await this.prisma.client.findUnique({ where: { id } });
 
@@ -209,8 +210,8 @@ export class ClientsService {
     if (input.collectionAgentId && input.branchId) {
       const agentBelongsToBranch = await this.prisma.appUser.findFirst({
         where: {
-          id: input.collectionAgentId,
-          branchId: input.branchId,
+          id: input.collectionAgentId as string,
+          branchAccesses: { some: { branchId: input.branchId as string } },
         },
       });
 
@@ -272,7 +273,7 @@ export class ClientsService {
     if (!client) throw new NotFoundException('Client introuvable.');
 
     // Récupérer les transactions de tontine cycle pour ce client
-    const cycleTransactions = await this.prisma.tontineCycleTransaction.findMany({
+    const cycleTransactions = await this.prisma.cycleTransaction.findMany({
       where: { clientId: id },
       select: {
         type: true,

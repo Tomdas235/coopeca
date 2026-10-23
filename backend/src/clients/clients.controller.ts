@@ -14,7 +14,8 @@ import { z } from 'zod';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { AuthenticatedPrincipal } from '../auth/auth.types';
-import { ClientsService, ClientFilters, PageOptions } from './clients.service';
+import { ClientsService, ClientFilters } from './clients.service';
+import { ClientStatus } from '@prisma/client';
 const createSchema = z.object({
   clientCode: z.string().min(1).max(40),
   firstName: z.string().min(1).max(100),
@@ -29,11 +30,11 @@ const createSchema = z.object({
 
 
 const pageSchema = z.object({
-  page: z.string().regex(/^[1-9]\d*$/).transform(Number).default(1),
+  page: z.string().regex(/^[1-9]\d*$/).transform(Number).default(1 as unknown as number),
 });
 
 const limitSchema = z.object({
-  limit: z.string().regex(/^[1-9]\d{0,1}$/, 'Limite max: 100.').transform(Number).default(20),
+  limit: z.string().regex(/^[1-9]\d{0,1}$/, 'Limite max: 100.').transform(Number).default(20 as unknown as number),
 });
 
 const sortSchema = z.object({
@@ -73,7 +74,7 @@ export class ClientsController {
 
   @Get()
   list(
-    @CurrentUser() actor: AuthenticatedPrincipal,
+    @CurrentUser() _actor: AuthenticatedPrincipal,
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
     @Query('sortBy') sortBy: string,

@@ -15,6 +15,7 @@ import { MarketsService } from '../markets/markets.service';
 import { ClientStatus } from '@prisma/client';
 
 const uuid = z.string().uuid();
+const marketSchema = z
   .object({
     code: z.string().trim().min(1).max(40),
     name: z.string().trim().min(1).max(160),
