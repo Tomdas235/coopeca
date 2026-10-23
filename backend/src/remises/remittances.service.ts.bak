@@ -1,0 +1,230 @@
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
+import { PrismaService } from '../database/prisma.service';
+import { AuthenticatedPrincipal } from '../auth/auth.types';
+
+export type PageOptions = {
+  page?: number;
+  limit?: number;
+};
+
+export type RemittanceFilters = {
+  status?: string;
+  agentId?: string;
+  branchId?: string;
+  marketId?: string;
+  fromDate?: Date;
+  toDate?: Date;
+};
+
+export interface RemittanceListItem {
+  id: string;
+  agent: { id: string; username: string; fullName: string };
+  branch: { id: string; code: string; name: string };
+  market: { id: string; code: string; name: string };
+  declaredAmountXaf: string;
+  receivedAmountXaf: string;
+  status: string;
+  cashierId: string | null;
+  discrepancy?: { id: string; amountXaf: string; reason?: string | null };
+  transactions: RemittanceTransaction[];
+  createdAt: Date;
+}
+
+export interface RemittanceTransaction {
+  id: string;
+  clientId?: string;
+  cycleId?: string;
+  type: 'DEPOSIT' | 'WITHDRAWAL' | 'COMMISSION';
+  amountXaf: string;
+  status: string;
+}
+
+export interface RemittanceDetailResponse {
+  id: string;
+  agent: { id: string; username: string; fullName: string };
+  branch: { id: string; code: string; name: string };
+  market: { id: string; code: string; name: string };
+  declaredAmountXaf: string;
+  receivedAmountXaf: string;
+  status: string;
+  cashierId: string | null;
+  discrepancy: { id: string; amountXaf: string; reason?: string | null } | null;
+  transactions: RemittanceTransaction[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+@Injectable()
+export class RemittancesService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async findAll(params: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    agentId?: string;
+    branchId?: string;
+    marketId?: string;
+    fromDate?: Date;
+    toDate?: Date;
+  }) {
+    const page = Math.max(1, params.page ?? 1);
+    const limit = Math.min(100, Math.max(1, params.limit ?? 20));
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.RemittanceWhereInput = {};
+    if (params.status) where.status = params.status;
+    if (params.agentId) where.agentId = params.agentId;
+    if (params.branchId) where.branchId = params.branchId;
+    if (params.marketId) where.marketId = params.marketId;
+    if (params.fromDate) where.createdAt = { gte: params.fromDate };
+    if (params.toDate) where.createdAt = { ...where.createdAt, lte: params.toDate };
+
+    const [items, total] = await Promise.all([
+      this.prisma.remittance.findMany({
+        where,
+        orderBy: [{ createdAt: 'desc' }],
+        skip,
+        take: limit,
+        include: {
+          agent: {
+            select: { id: true, username: true, fullName: true },
+          },
+          branch: {
+            select: { id: true, code: true, name: true },
+          },
+          market: {
+            select: { id: true, code: true, name: true },
+          },
+          discrepancy: {
+            select: {
+              id: true,
+              amountXaf: true,
+              reason: true,
+            },
+          },
+          transactions: {
+            orderBy: [{ createdAt: 'asc' }],
+            select: {
+              id: true,
+              clientId: true,
+              cycleId: true,
+              type: true,
+              amountXaf: true,
+              status: true,
+            },
+          },
+        },
+      }),
+      this.prisma.remittance.count({ where }),
+    ]);
+
+    return {
+      items: items.map((r) => ({
+        id: r.id,
+        agent: r.agent,
+        branch: r.branch,
+        market: r.market,
+        declaredAmountXaf: r.declaredAmountXaf.toString(),
+        receivedAmountXaf: r.receivedAmountXaf.toString(),
+        status: r.status,
+        cashierId: r.cashierId,
+        discrepancy: r.discrepancy ?? undefined,
+        transactions: r.transactions.map((t) => ({
+          id: t.id,
+          clientId: t.clientId,
+          cycleId: t.cycleId,
+          type: t.type,
+          amountXaf: t.amountXaf.toString(),
+          status: t.status,
+        })),
+        createdAt: r.createdAt,
+      })),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  private requireRole(actor: AuthenticatedPrincipal, allowed: string[]): void {
+    if (!allowed.includes(actor.role)) {
+      throw new ForbiddenException('Action non autorisée pour ce rôle.');
+    }
+  }
+}
+
+  async create(
+    actor: AuthenticatedPrincipal,
+    data: {
+      agentId: string;
+      branchId: string;
+      marketId: string;
+      periodStart: Date;
+      periodEnd: Date;
+      declaredAmountXaf: string;
+      description?: string | null;
+    },
+  ) {
+    this.requireRole(actor, ['AGENT', 'CASHIER', 'SUPERVISOR', 'ACCOUNTANT', 'ADMIN']);
+
+    const branchExists = await this.prisma.branch.findUnique({
+      where: { id: data.branchId },
+    });
+    if (!branchExists) throw new NotFoundException('Agence introuvable.');
+
+    const marketExists = await this.prisma.market.findUnique({
+      where: { id: data.marketId },
+    });
+    if (!marketExists) throw new NotFoundException('Marché introuvable.');
+
+    const remittance = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.remittance.create({
+        data: {
+          agentId: data.agentId,
+          branchId: data.branchId,
+          marketId: data.marketId,
+          periodStart: data.periodStart,
+          periodEnd: data.periodEnd,
+          declaredAmountXaf: BigInt(data.declaredAmountXaf),
+          description: data.description,
+          status: 'DRAFT',
+        },
+        include: {
+          agent: { select: { id: true, username: true, fullName: true } },
+          branch: { select: { id: true, code: true, name: true } },
+          market: { select: { id: true, code: true, name: true } },
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorUserId: actor.id,
+          branchId: actor.branches[0]?.id ?? null,
+          action: 'REMITTANCE_CREATED',
+          entityType: 'remittances',
+          entityId: created.id,
+          afterData: {
+            agentId: created.agentId,
+            branchId: created.branchId,
+            marketId: created.marketId,
+            declaredAmountXaf: created.declaredAmountXaf,
+            status: created.status,
+          },
+          requestId: randomUUID(),
+        },
+      });
+
+      return created;
+    });
+
+    return this.findOne(remittance.id);
+  }
+}
