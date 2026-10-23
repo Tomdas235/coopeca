@@ -110,6 +110,28 @@ enum TontineCycleStatus {
   @@map("tontine_cycle_status")
 }
 
+// Geographic hierarchy: Zone -> Market -> Branch
+model Zone {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String   @unique @db.VarChar(40)
+  name        String   @db.VarChar(160)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  markets     Market[]
+}
+
+model Market {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String   @unique @db.VarChar(40)
+  name        String   @db.VarChar(160)
+  zoneId      String?  @db.Uuid
+  zone        Zone?    @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+
+  branches    Branch[]
+}
+
 enum CycleTransactionType {
   DEPOSIT
   COMMISSION
@@ -148,6 +170,8 @@ model Branch {
   isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  marketId String @db.Uuid @map("market_id")
 
   market  Market    @relation(fields: [marketId], references: [id], onDelete: Restrict)
   marketId String    @db.Uuid
