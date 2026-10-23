@@ -149,6 +149,8 @@ model Branch {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
+  market  Market    @relation(fields: [marketId], references: [id], onDelete: Restrict)
+  marketId String    @db.Uuid
   userAccesses  UserBranchAccess[]
   clients       Client[]
   duplicateReviews ClientDuplicateReview[]
@@ -163,6 +165,7 @@ model Branch {
   auditLogs     AuditLog[]
   settings      SystemSetting[]
 
+  @@index([marketId], map: "idx_branch_market")
   @@map("branches")
 }
 
@@ -212,18 +215,24 @@ model AppUser {
 }
 
 model UserBranchAccess {
-  userId    String   @map("user_id") @db.Uuid
-  branchId  String   @map("branch_id") @db.Uuid
-  isPrimary Boolean  @default(false) @map("is_primary")
-  grantedBy String?  @map("granted_by") @db.Uuid
-  grantedAt DateTime @default(now()) @map("granted_at") @db.Timestamptz(6)
+  userId     String   @map("user_id") @db.Uuid
+  branchId   String   @map("branch_id") @db.Uuid
+  marketId   String?  @map("market_id") @db.Uuid
+  zoneId     String?  @map("zone_id") @db.Uuid
+  isPrimary  Boolean  @default(false) @map("is_primary")
+  grantedBy  String?  @map("granted_by") @db.Uuid
+  grantedAt  DateTime @default(now()) @map("granted_at") @db.Timestamptz(6)
 
-  user    AppUser  @relation(fields: [userId], references: [id], onDelete: Restrict)
-  branch  Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  grantor AppUser? @relation("AccessGrantedBy", fields: [grantedBy], references: [id], onDelete: Restrict)
+  user     AppUser  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  market   Market?  @relation(fields: [marketId], references: [id], onDelete: Restrict)
+  zone     Zone?    @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+  grantor  AppUser? @relation("AccessGrantedBy", fields: [grantedBy], references: [id], onDelete: Restrict)
 
   @@id([userId, branchId])
   @@index([branchId, userId], map: "idx_user_branch_access_branch")
+  @@index([marketId, userId], map: "idx_user_branch_access_market")
+  @@index([zoneId, userId], map: "idx_user_branch_access_zone")
   @@map("user_branch_access")
 }
 
@@ -581,10 +590,27 @@ model Market {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  clients Client[]
-  cycles  TontineCycle[]
+  zone        Zone?      @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+  zones       Zone[]     @relation("MarketZone")
+  branches    Branch[]
+  clients     Client[]
+  cycles      TontineCycle[]
 
   @@map("markets")
+}
+
+model Zone {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code      String   @unique @db.VarChar(40)
+  name      String   @db.VarChar(160)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  markets     Market[]
+  userAccesses UserBranchAccess[]
+
+  @@map("zones")
 }
 
 model TontineCycle {
