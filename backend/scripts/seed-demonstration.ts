@@ -1,0 +1,140 @@
+import 'reflect-metadata';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log('🌱 Starting COOPECA demonstration seed...\n');
+
+  // 1. Create Zone
+  const zone = await prisma.zone.upsert({
+    where: { code: 'ZONE-COOPEC' },
+    update: {},
+    create: {
+      code: 'ZONE-COOPEC',
+      name: 'Zone COOPECA Paris',
+    },
+  });
+  console.log(`✅ Zone: ${zone.name}`);
+
+  // 2. Create Markets
+  const market1 = await prisma.market.upsert({
+    where: { code: 'MKT-PARIS-01' },
+    update: {},
+    create: { code: 'MKT-PARIS-01', name: 'Marché Paris Centre', zoneId: zone.id },
+  });
+  console.log(`✅ Market: ${market1.name}`);
+
+  const market2 = await prisma.market.upsert({
+    where: { code: 'MKT-PARIS-02' },
+    update: {},
+    create: { code: 'MKT-PARIS-02', name: 'Marché Paris Nord', zoneId: zone.id },
+  });
+  console.log(`✅ Market: ${market2.name}`);
+
+  // 3. Create Branches
+  const branch1 = await prisma.branch.upsert({
+    where: { code: 'BR-PARIS-001' },
+    update: {},
+    create: {
+      code: 'BR-PARIS-001',
+      name: 'Agence Paris 1',
+      address: '1 Rue de la Tontine',
+      marketId: market1.id,
+    },
+  });
+  console.log(`✅ Branch: ${branch1.name}`);
+
+  const branch2 = await prisma.branch.upsert({
+    where: { code: 'BR-PARIS-002' },
+    update: {},
+    create: {
+      code: 'BR-PARIS-002',
+      name: 'Agence Paris 2',
+      address: '2 Avenue des Versements',
+      marketId: market2.id,
+    },
+  });
+  console.log(`✅ Branch: ${branch2.name}`);
+
+  // 4. Create Users
+  const adminUser = await prisma.appUser.upsert({
+    where: { username: 'admin.coopeca' },
+    update: {},
+    create: {
+      username: 'admin.coopeca',
+      passwordHash: '$2b$10$dummy',
+      role: 'ADMIN',
+      isActive: true,
+    },
+  });
+  console.log(`✅ Admin: ${adminUser.username}`);
+
+  const supervisor1 = await prisma.appUser.upsert({
+    where: { username: 'superv.paris1' },
+    update: {},
+    create: {
+      username: 'superv.paris1',
+      passwordHash: '$2b$10$dummy',
+      role: 'SUPERVISOR',
+      isActive: true,
+    },
+  });
+  console.log(`✅ Supervisor: ${supervisor1.username}`);
+
+  const agent1 = await prisma.appUser.upsert({
+    where: { username: 'agent.paris1' },
+    update: {},
+    create: {
+      username: 'agent.paris1',
+      passwordHash: '$2b$10$dummy',
+      role: 'AGENT',
+      isActive: true,
+    },
+  });
+  console.log(`✅ Agent: ${agent1.username}`);
+
+  // 5. Create Clients
+  const client1 = await prisma.client.upsert({
+    where: { code: 'CLT-PARIS1-001' },
+    update: {},
+    create: {
+      code: 'CLT-PARIS1-001',
+      name: 'M. Dupont',
+      phone: '+33 6 12 34 56 78',
+      email: 'dupont@example.com',
+      status: 'PROVISIONAL',
+      collectionAgentId: agent1.id,
+      branchId: branch1.id,
+    },
+  });
+  console.log(`✅ Client: ${client1.name} (${client1.status})`);
+
+  const client2 = await prisma.client.upsert({
+    where: { code: 'CLT-PARIS1-002' },
+    update: {},
+    create: {
+      code: 'CLT-PARIS1-002',
+      name: 'Mme Martin',
+      phone: '+33 6 23 45 67 89',
+      email: 'martin@example.com',
+      status: 'ACTIVE',
+      collectionAgentId: agent1.id,
+      branchId: branch1.id,
+    },
+  });
+  console.log(`✅ Client: ${client2.name} (${client2.status})`);
+
+  console.log('\n🌱 Seed completed!\n');
+}
+
+main()
+  .then(async () => {
+    await prisma.$disconnect();
+    process.exit(0);
+  })
+  .catch(async (e) => {
+    console.error('❌ Seed failed:', e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });

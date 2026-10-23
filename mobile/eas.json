@@ -1,0 +1,159 @@
+{
+  "expo": {
+    "name": "COOPECA Mobile",
+    "slug": "coopeca-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userStyle": {
+      "expo": {
+        "scheme": "coopeca"
+      }
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndPermission": "When you use this app, it occasionally accesses your location.",
+          "locationWhenInUseAndPermission": "When you use this app, it accesses your location only while you are using it."
+        }
+      ]
+    ],
+    "expoRouter": {
+      "enableAutomaticRouting": true,
+      "linkExpiresIn": 86400
+    },
+    "android": {
+      "package": "coopeca.mobile",
+      "versionCode": 1,
+      "versionName": "1.0",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_NETWORK_STATE",
+        "INTERNET",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ],
+      "softwareKeyboardRect": {
+        "height": 216,
+        "width": 360
+      },
+      "useNextNotificationsApi": true,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/foreground.png",
+        "backgroundImage": "./assets/background.png"
+      },
+      "enablePerformanceMonitor": true,
+      "icon": "./assets/adaptive-icon.png",
+      "subscription": {
+        "android": {
+          "properties": {}
+        }
+      }
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Cette application accède à votre localisation pour les opérations de tontine.",
+        "NSLocationAlwaysAndPermission": "Cette application accède à votre localisation même quand elle est en arrière-plan."
+      }
+    },
+    "schemes": [
+      "coopeca"
+    ],
+    "hooks": {
+      "postPublish": [
+        [
+          "expo-doctor",
+          {
+            "api": "https://doctor.expo.dev"
+          }
+        ]
+      ]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "placeholder"
+      }
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "androidNavigationBarColor": "#17324D",
+    "androidStatusBarColor": "#17324D",
+    "isDetachable": false,
+    "name": "COOPECA",
+    "slug": "coopeca-mobile",
+    "version": {
+      "ios": "1.0.0",
+      "android": "1.0.0"
+    },
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#17324D"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "plugins": [
+      "expo-sqlite"
+    ],
+    "android": {
+      "jsEngine": "hermes",
+      "googleServices": {
+        "admobAppId": "",
+        "analyticsSenderId": ""
+      }
+    },
+    "ios": {
+      "jsEngine": "hermes"
+    },
+    "performance": false,
+    "plugins": [
+      [
+        "expo-font",
+        {
+          "font": "./assets/fonts/custom-font.ttf"
+        }
+      ]
+    ],
+    "extra": {
+      "supportsTablet": true,
+      "runtimeVersion": {
+        "node": "20.11.0",
+        " Expo": "~58.0.0"
+      }
+    },
+    "owner": "tomkerdev",
+    "build": {
+      "development": {
+        "android": {
+          "buildType": "apk",
+          "env": {
+            "EXPO_PUBLIC_API_BASE_URL": "http://10.0.2.2:3000"
+          }
+        }
+      },
+      "preview": {
+        "android": {
+          "buildType": "apk",
+          "env": {
+            "EXPO_PUBLIC_API_BASE_URL": "http://10.0.2.2:3000"
+          }
+        }
+      },
+      "production": {
+        "android": {
+          "buildType": "app-bundle",
+          "env": {
+            "EXPO_PUBLIC_API_BASE_URL": "https://api.coopeca.io"
+          }
+        }
+      }
+    }
+  }
+}

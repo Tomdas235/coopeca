@@ -25,15 +25,98 @@ export function generateIdempotencyKey(): string {
   return crypto.randomBytes(16).toString('hex');
 }
 
-/** Base URL de l'API — par défaut pour l'émulateur Android */
-let apiBase = 'http://10.0.2.2:3000';
-
-/** Mise à jour dynamique de la base URL (pour les tests/émulateur) */
-export function setApiBaseUrl(url: string) {
-  apiBase = url;
-}
+/** Base URL de l'API — lue depuis les variables d'environnement.
+ * * Production/APK Android : COOPECA_API_URL=http://adresse-IP-serveur:3000
+ * * Développement local : http://localhost:3000 ou http IP-local:3000
+ * * Jamais 10.0.2.2 en production (émulateur uniquement).
+ */
+const apiBase = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://10.0.2.2:3000';
 
 /** Lecture de la base URL globale */
 export function getApiBase(): string {
   return apiBase;
+}
+
+/** Génère une clé d'idempotence UUID v4 pour les opérations locales */
+export function generateIdempotencyKey(): string {
+  const crypto = require('crypto');
+  return crypto.randomBytes(16).toString('hex');
+}
+
+/** Effectue une requête vers l'API COOPECA. */
+async function apiRequest<T>(endpoint: string, method: Method = 'GET', body?: any): Promise<ApiResponse<T>> {
+  const url = `${apiBase}/api/v1${endpoint}`;
+  const options: RequestInit = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  };
+
+  if (body !== undefined) {
+    options.body = JSON.stringify(body);
+  }
+
+  const response = await fetch(url, options);
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || `Erreur API ${response.status}`);
+  }
+
+  return {
+    status: 'success',
+    data: data.data,
+  } as ApiResponse<T>;
+}
+
+/** Récupère la liste des marchés disponibles. */
+export async function listMarkets(): Promise<ApiResponse> {
+  return apiRequest('/markets', 'GET');
+}
+
+/** Définit l'état actif d'un marché. */
+export async function setMarketActive(marketId: string, active: boolean): Promise<ApiResponse> {
+  return apiRequest(`/markets/${marketId}/active`, 'POST', { active });
+}
+
+/** Crée un nouveau cycle tontine pour un client. */
+export async function createCycle(clientId: string, collectionAgentId: string, branchId: string, fixedAmountXaf: number): Promise<ApiResponse> {
+  return apiRequest('/cycles/open', 'POST', {
+    clientId,
+    collectionAgentId,
+    branchId,
+    fixedAmountXaf,
+  });
+}
+
+/** Effectue un versement (déposit) sur un cycle. */
+export async function depositToCycle(cycleId: string, amountXaf: number, idempotencyKey?: string): Promise<ApiResponse> {
+  return apiRequest('/cycles/tontine-cycles/deposits', 'POST', {
+    cycleId,
+    amountXaf,
+    idempotencyKey: idempotencyKey || generateIdempotencyKey(),
+  });
+}
+
+/** Demande un retrait sur un cycle. */
+export async function requestWithdrawal(cycleId: string, amountXaf: number, idempotencyKey?: string): Promise<ApiResponse> {
+  return apiRequest('/cycles/tontine-cycles/withdrawals', 'POST', {
+    cycleId,
+    amountXaf,
+    idempotencyKey: idempotencyKey || generateIdempotencyKey(),
+  });
+}
+
+/** Récupère les demandes de retrait en attente. */
+export async function getPendingWithdrawals(cycleId: string): Promise<ApiResponse> {
+  return apiRequest(`/cycles/withdrawals/pending?cycleId=${cycleId}`, 'GET');
+}
+
+/** Revise une demande de retrait (approuvée/ rejetée). */
+export async function reviewWithdrawal(withdrawalRequestId: string, decision: 'APPROVE' | 'REJECT', reason?: string): Promise<ApiResponse> {
+  return apiRequest(`/admin/cycles/withdrawals/${withdrawalRequestId}/review`, 'POST', {
+    decision,
+    reason,
+  });
 }
