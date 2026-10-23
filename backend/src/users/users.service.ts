@@ -1,13 +1,9 @@
 import {
-  BadRequestException,
-  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../database/prisma.service';
-import { AuthenticatedPrincipal } from '../auth/auth.types';
 
 export interface UserListItem {
   id: string;
@@ -73,7 +69,7 @@ export class UsersService {
     const skip = (page - 1) * limit;
 
     const where: Prisma.AppUserWhereInput = {};
-    if (params.role) where.role = params.role;
+    if (params.role) where.role = params.role as Prisma.UserRole;
     if (params.isActive !== undefined) where.isActive = params.isActive;
     if (params.search) {
       where.OR = [
@@ -100,7 +96,6 @@ export class UsersService {
           id: true,
           username: true,
           fullName: true,
-          email: true,
           phone: true,
           role: true,
           isActive: true,
@@ -144,7 +139,6 @@ export class UsersService {
         id: true,
         username: true,
         fullName: true,
-        email: true,
         phone: true,
         role: true,
         isActive: true,
@@ -176,8 +170,4 @@ export class UsersService {
     };
   }
 
-  private isPrimaryAccess(userId: string): boolean {
-    // TODO: Get primary access from userBranchAccess table
-    return false;
-  }
 }

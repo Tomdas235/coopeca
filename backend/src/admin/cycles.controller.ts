@@ -86,7 +86,7 @@ export class AdminCyclesController {
     if (!input.success) {
       throw new BadRequestException('Montant fixe et identifiant opération valides requis.');
     }
-    return this.cyclesService.openCycleProduct(actor, {
+    return this.cyclesService.openCycle(actor, {
       fixedAmountXaf: BigInt(input.data.fixedAmountXaf),
       clientOperationId: input.data.clientOperationId,
     });
@@ -114,7 +114,6 @@ export class AdminCyclesController {
   suspend(
     @CurrentUser() _actor: AuthenticatedPrincipal,
     @Param('cycleId') cycleId: string,
-    @Body() body: unknown,
   ) {
     return this.cyclesService.changeCycleState(_actor, cycleId, 'SUSPEND', { requestId: uuid.parse(cycleId) });
   }
@@ -123,9 +122,8 @@ export class AdminCyclesController {
   resume(
     @CurrentUser() actor: AuthenticatedPrincipal,
     @Param('cycleId') cycleId: string,
-    @Body() body: unknown,
   ) {
-    return this.cyclesService.changeCycleState(actor, cycleId, 'RESUME', {});
+    return this.cyclesService.changeCycleState(actor, cycleId, 'RESUME', { requestId: cycleId });
   }
 
   @Post('tontine-cycles/:cycleId/withdrawals')

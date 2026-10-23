@@ -1,11 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 
 @Injectable()
 export class MarketsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listMarkets(actor: any) {
+  async listMarkets(_actor: any) {
     return this.prisma.market.findMany({
       where: { isActive: true },
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
@@ -13,8 +17,7 @@ export class MarketsService {
     });
   }
 
-  async createMarket(actor: any, input: { code: string; name: string }) {
-    this.requireRole(actor, ['ADMIN', 'SUPERVISOR']);
+  async createMarket(_actor: any, input: { code: string; name: string }) {
     try {
       return await this.prisma.$transaction(async (tx) => {
         const market = await tx.market.create({
@@ -24,16 +27,16 @@ export class MarketsService {
         return market;
       });
     } catch (error) {
-      if (error.code === 'P2002') {
-        throw new Error({ code: 'MARCHE_CODE_DEJA_UTILISE', message: 'Ce code marché existe déjà.' });
+      if ((error as any).code === 'P2002') {
+        throw new BadRequestException({ code: 'MARCHE_CODE_DEJA_UTILISE', message: 'Ce code marché existe déjà.' });
       }
       throw error;
     }
   }
 
   private requireRole(actor: any, allowed: string[]) {
-    if (!allowed.includes(actor.role)) {
-      throw new Error('Action non autorisée pour ce rôle.');
+    if (!allowed.includes(actor?.role)) {
+      throw new ForbiddenException('Action non autorisée pour ce rôle.');
     }
   }
 }

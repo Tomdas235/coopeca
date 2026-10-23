@@ -17,6 +17,7 @@ const uuid = z.string().uuid();
 
 const clientSchema = z
   .object({
+    clientId: uuid,
     firstName: z.string().trim().min(1).max(100),
     lastName: z.string().trim().min(1).max(100),
     phone: z.string().trim().optional(),

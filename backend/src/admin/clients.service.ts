@@ -21,6 +21,7 @@ export class ClientsService {
   }
 
   async createClient(_actor: any, input: {
+    clientId: string;
     firstName: string;
     lastName: string;
     phone?: string | null;
@@ -50,7 +51,6 @@ export class ClientsService {
         status: 'PROVISIONAL',
         branchId: input.branchId,
         createdBy: _actor.id,
-        branch: { connect: { id: input.branchId } },
         creator: { connect: { id: _actor.id } },
       },
       select: {

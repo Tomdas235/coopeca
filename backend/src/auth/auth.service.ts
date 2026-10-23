@@ -3,12 +3,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createHmac, randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { PrismaService } from '../database/prisma.service';
 import { AccessTokenClaims } from './auth.types';
 
-const scrypt = promisify(scryptCallback);
 const SCRYPT_N = 16384;
 const SCRYPT_R = 8;
 const SCRYPT_P = 1;
@@ -148,12 +147,12 @@ export class AuthService {
   }
 
   private async deriveKey(password: string, salt: Buffer): Promise<Buffer> {
-    return (await scrypt(password, salt, KEY_LENGTH, {
+    return scryptSync(password, salt, KEY_LENGTH, {
       N: SCRYPT_N,
       r: SCRYPT_R,
       p: SCRYPT_P,
       maxmem: 64 * 1024 * 1024,
-    })) as Buffer;
+    });
   }
 
   private signClaims(claims: AccessTokenClaims): string {
