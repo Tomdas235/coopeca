@@ -43,41 +43,51 @@ export default function AccueilScreen() {
       </AppCard>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Accès rapides</Text>
-        <ActionCard
-          title="Dossiers"
-          description="Consulter ou créer un dossier"
-        />
-        <ActionCard
-          title="Cycles"
-          description="Nouveau produit à 31 versements"
-          icon={<Wallet size={20} color={colors.accent} strokeWidth={1.8} />}
-          onPress={() => router.push('/(tabs)/cycles')}>
-        <ActionCard
-          title="Collectes"
-          description="Parcours legacy des collectes journalières"
-          icon={<Folder size={20} color={colors.accent} strokeWidth={1.8} />}
-          onPress={() => router.push('/(tabs)/dossiers')}
-        />
-        <ActionCard
-          title="Collectes"
-          description="Parcours legacy des collectes journalières"
-          icon={<Receipt size={20} color={colors.accent} strokeWidth={1.8} />}
-          onPress={() => router.push('/(tabs)/collectes')}
-        />
-        <ActionCard
-          title="Remises"
-          description="Parcours legacy des remises (reversements)"
-          icon={<Wallet size={20} color={colors.accent} strokeWidth={1.8} />}
-          onPress={() => router.push('/(tabs)/remises')}
-        />
-        <ActionCard
-          title="Clôture"
-          description="Ancienne clôture — module en préparation"
-          icon={<ClipboardCheck size={20} color={colors.accent} strokeWidth={1.8} />}
-          onPress={() => router.push('/(tabs)/cloture')}
-        />
-      </View>
+        ```tsx
+<Text style={styles.sectionTitle}>Accès rapides</Text>
+
+<ActionCard
+  title="Dossiers"
+  description="Consulter ou créer un dossier"
+  onPress={() => router.push('/(tabs)/dossiers')}
+/>
+
+<ActionCard
+  title="Cycles"
+  description="Nouveau produit à 31 versements"
+  icon={<Wallet size={20} color={colors.accent} strokeWidth={1.8} />}
+  onPress={() => router.push('/(tabs)/cycles')}
+/>
+
+<ActionCard
+  title="Collectes"
+  description="Parcours legacy des collectes journalières"
+  icon={<Folder size={20} color={colors.accent} strokeWidth={1.8} />}
+  onPress={() => router.push('/(tabs)/dossiers')}
+/>
+
+<ActionCard
+  title="Collectes"
+  description="Parcours legacy des collectes journalières"
+  icon={<Receipt size={20} color={colors.accent} strokeWidth={1.8} />}
+  onPress={() => router.push('/(tabs)/collectes')}
+/>
+
+<ActionCard
+  title="Remises"
+  description="Parcours legacy des remises (reversements)"
+  icon={<Wallet size={20} color={colors.accent} strokeWidth={1.8} />}
+  onPress={() => router.push('/(tabs)/remises')}
+/>
+
+<ActionCard
+  title="Clôture"
+  description="Ancienne clôture — module en préparation"
+  icon={<ClipboardCheck size={20} color={colors.accent} strokeWidth={1.8} />}
+  onPress={() => router.push('/(tabs)/cloture')}
+/>
+</View>
+```
 
       <AppNotice
         title="Parcours financier"
