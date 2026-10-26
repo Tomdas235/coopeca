@@ -2,7 +2,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 
 export interface UserListItem {
@@ -69,7 +69,7 @@ export class UsersService {
     const skip = (page - 1) * limit;
 
     const where: Prisma.AppUserWhereInput = {};
-    if (params.role) where.role = params.role as Prisma.UserRole;
+    if (params.role) where.role = params.role as UserRole;
     if (params.isActive !== undefined) where.isActive = params.isActive;
     if (params.search) {
       where.OR = [
