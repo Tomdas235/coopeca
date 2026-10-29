@@ -15,7 +15,6 @@ import CashierDashboard from './pages/CashierDashboard'
 import AuditorDashboard from './pages/AuditorDashboard'
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -25,13 +24,9 @@ function App() {
         const token = loadToken()
         if (token) {
           await getProfile()
-          setIsAuthenticated(true)
-        } else {
-          setIsAuthenticated(false)
         }
       } catch {
         clearToken()
-        setIsAuthenticated(false)
       } finally {
         if (mounted) setIsLoading(false)
       }
@@ -39,6 +34,8 @@ function App() {
     initAuth()
     return () => { mounted = false }
   }, [])
+
+  const isAuthenticated = !!loadToken()
 
   if (isLoading) {
     return (
