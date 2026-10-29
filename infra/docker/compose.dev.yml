@@ -16,12 +16,13 @@ services:
     image: postgres:16-alpine
     container_name: coopeca-postgres-dev
     restart: unless-stopped
+    env_file: .env
     environment:
       # Identifiants de DÉVELOPPEMENT uniquement — à remplacer localement
       # par des valeurs issues de backend/.env (jamais versionnées).
       POSTGRES_DB: ${POSTGRES_DB:-coopeca}
       POSTGRES_USER: ${POSTGRES_USER:-coopeca}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-coopeca_dev_password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD doit être défini dans infra/docker/.env}
     ports:
       # Exposition locale uniquement. Ne jamais publier ce port en production.
       - "127.0.0.1:5432:5432"
@@ -40,6 +41,7 @@ services:
       dockerfile: Dockerfile
     container_name: coopeca-api-dev
     restart: unless-stopped
+    env_file: .env
     depends_on:
       postgres:
         condition: service_healthy
@@ -48,7 +50,7 @@ services:
       PORT: 3000
       JWT_SECRET: ${JWT_SECRET:-replace-this-development-secret-with-a-random-value}
       # Pointée vers le service « postgres » du réseau Compose, pas localhost.
-      DATABASE_URL: postgresql://${POSTGRES_USER:-coopeca}:${POSTGRES_PASSWORD:-coopeca_dev_password}@postgres:5432/${POSTGRES_DB:-coopeca}?schema=public&sslmode=disable
+      DATABASE_URL: postgresql://${POSTGRES_USER:-coopeca}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-coopeca}?schema=public&sslmode=disable
     ports:
       - "127.0.0.1:3000:3000"
     healthcheck:

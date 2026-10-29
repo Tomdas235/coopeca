@@ -1,0 +1,12 @@
+# Environnements
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Docker
+docker-compose.override.yml
