@@ -1,10 +1,10 @@
 import { PrismaClient } from '@prisma/client';
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 
 const prisma = new PrismaClient();
 
 function uuid(): string {
-  return crypto.randomUUID();
+  return randomUUID();
 }
 
 function hashPassword(password: string): string {
@@ -86,7 +86,77 @@ async function main() {
     },
   });
 
-  // Create clients (idempotent)
+  const cashier1 = await prisma.appUser.upsert({
+    where: { username: 'cashier1' },
+    update: { passwordHash: hashPassword('cashier123') },
+    create: {
+      username: 'cashier1',
+      passwordHash: hashPassword('cashier123'),
+      fullName: 'Marie Koné',
+      role: 'CASHIER',
+      isActive: true,
+      branchAccesses: {
+        create: {
+          isPrimary: true,
+          branchId: branch1.id,
+        },
+      },
+    },
+  });
+
+  const auditor1 = await prisma.appUser.upsert({
+    where: { username: 'auditor1' },
+    update: { passwordHash: hashPassword('auditor123') },
+    create: {
+      username: 'auditor1',
+      passwordHash: hashPassword('auditor123'),
+      fullName: 'Paul Traoré',
+      role: 'AUDITOR',
+      isActive: true,
+      branchAccesses: {
+        create: {
+          isPrimary: true,
+          branchId: branch1.id,
+        },
+      },
+    },
+  });
+
+  const accountant1 = await prisma.appUser.upsert({
+    where: { username: 'accountant1' },
+    update: { passwordHash: hashPassword('accountant123') },
+    create: {
+      username: 'accountant1',
+      passwordHash: hashPassword('accountant123'),
+      fullName: 'Aïcha Bamba',
+      role: 'ACCOUNTANT',
+      isActive: true,
+      branchAccesses: {
+        create: {
+          isPrimary: true,
+          branchId: branch1.id,
+        },
+      },
+    },
+  });
+
+  const supervisor1 = await prisma.appUser.upsert({
+    where: { username: 'supervisor1' },
+    update: { passwordHash: hashPassword('supervisor123') },
+    create: {
+      username: 'supervisor1',
+      passwordHash: hashPassword('supervisor123'),
+      fullName: 'Koffi Diallo',
+      role: 'SUPERVISOR',
+      isActive: true,
+      branchAccesses: {
+        create: {
+          isPrimary: true,
+          branchId: branch1.id,
+        },
+      },
+    },
+  });
   const client1 = await prisma.client.upsert({
     where: { clientCode: 'CLT-001' },
     update: {},
