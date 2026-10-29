@@ -63,7 +63,7 @@ export default function WithdrawalsPending() {
           </thead>
           <tbody>
             {withdrawals.length === 0 ? (
-              <tr><td colSpan=\"7\" className=\"empty-cell\">Aucune demande de retrait en attente.</td></tr>
+              <tr><td colSpan={7} className=\"empty-cell\">Aucune demande de retrait en attente.</td></tr>
             ) : (
               withdrawals.map((w) => (
                 <tr key={w.id}>

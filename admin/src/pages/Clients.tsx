@@ -48,7 +48,7 @@ export default function Clients() {
           </thead>
           <tbody>
             {clients.length === 0 ? (
-              <tr><td colSpan="6" className="empty-cell">Aucun client trouvé.</td></tr>
+              <tr><td colSpan={6} className="empty-cell">Aucun client trouvé.</td></tr>
             ) : (
               clients.map((c) => (
                 <tr key={c.id}>

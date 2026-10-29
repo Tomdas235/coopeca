@@ -49,7 +49,7 @@ export default function Cycles() {
           </thead>
           <tbody>
             {cycles.length === 0 ? (
-              <tr><td colSpan="7" className="empty-cell">Aucun cycle trouvé.</td></tr>
+              <tr><td colSpan={7} className="empty-cell">Aucun cycle trouvé.</td></tr>
             ) : (
               cycles.map((c) => (
                 <tr key={c.id}>

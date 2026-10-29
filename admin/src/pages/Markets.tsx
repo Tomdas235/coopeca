@@ -46,7 +46,7 @@ export default function Markets() {
           </thead>
           <tbody>
             {markets.length === 0 ? (
-              <tr><td colSpan="4" className="empty-cell">Aucun marché trouvé.</td></tr>
+              <tr><td colSpan={4} className="empty-cell">Aucun marché trouvé.</td></tr>
             ) : (
               markets.map((m) => (
                 <tr key={m.id}>

@@ -47,7 +47,7 @@ export default function Remittances() {
           </thead>
           <tbody>
             {remittances.length === 0 ? (
-              <tr><td colSpan="5" className="empty-cell">Aucune remise trouvée.</td></tr>
+              <tr><td colSpan={5} className="empty-cell">Aucune remise trouvée.</td></tr>
             ) : (
               remittances.map((r) => (
                 <tr key={r.id}>
