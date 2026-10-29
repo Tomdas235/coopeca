@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { loadToken, clearToken, getProfile } from './services/auth'
 import MainLayout from './layouts/MainLayout'
 import Login from './pages/Login'
@@ -14,7 +14,8 @@ import AccountantDashboard from './pages/AccountantDashboard'
 import CashierDashboard from './pages/CashierDashboard'
 import AuditorDashboard from './pages/AuditorDashboard'
 
-function App() {
+function AppContent() {
+  const location = useLocation()
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -46,33 +47,39 @@ function App() {
   }
 
   return (
+    <Routes>
+      <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" replace />} />
+      <Route
+        path="/"
+        element={
+          isAuthenticated ? (
+            <MainLayout>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="clients" element={<Clients />} />
+                <Route path="cycles" element={<Cycles />} />
+                <Route path="remittances" element={<Remittances />} />
+                <Route path="markets" element={<Markets />} />
+                <Route path="health" element={<Health />} />
+                <Route path="withdrawals" element={<WithdrawalsPending />} />
+                <Route path="accountant" element={<AccountantDashboard />} />
+                <Route path="cashier" element={<CashierDashboard />} />
+                <Route path="auditor" element={<AuditorDashboard />} />
+              </Routes>
+            </MainLayout>
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      />
+    </Routes>
+  )
+}
+
+function App() {
+  return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" replace />} />
-        <Route
-          path="/"
-          element={
-            isAuthenticated ? (
-              <MainLayout>
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="clients" element={<Clients />} />
-                  <Route path="cycles" element={<Cycles />} />
-                  <Route path="remittances" element={<Remittances />} />
-                  <Route path="markets" element={<Markets />} />
-                  <Route path="health" element={<Health />} />
-                  <Route path="withdrawals" element={<WithdrawalsPending />} />
-                  <Route path="accountant" element={<AccountantDashboard />} />
-                  <Route path="cashier" element={<CashierDashboard />} />
-                  <Route path="auditor" element={<AuditorDashboard />} />
-                </Routes>
-              </MainLayout>
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-      </Routes>
+      <AppContent />
     </BrowserRouter>
   )
 }
