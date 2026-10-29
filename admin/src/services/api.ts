@@ -1,9 +1,9 @@
-import axios from 'axios'
+Property 'env' does not exist on type 'ImportMeta'.import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios'
 import { ApiError } from '../types/api'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1'
 
-const api = axios.create({
+const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
@@ -22,7 +22,7 @@ export function getToken(): string | null {
 }
 
 api.interceptors.request.use(
-  (config: any) => {
+  (config: InternalAxiosRequestConfig) => {
     if (currentToken) {
       config.headers.Authorization = `Bearer ${currentToken}`
     }
@@ -32,8 +32,8 @@ api.interceptors.request.use(
 )
 
 api.interceptors.response.use(
-  (response: any) => response,
-  (error: any) => {
+  (response) => response,
+  (error: AxiosError<ApiError>) => {
     if (error.response?.status === 401) {
       currentToken = null
       if (typeof window !== 'undefined') {
@@ -46,7 +46,7 @@ api.interceptors.response.use(
 
 export function apiErrorToMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
-    const axiosError = error as any
+    const axiosError = error as AxiosError<ApiError>
     if (axiosError.response?.data?.message) {
       return axiosError.response.data.message
     }
