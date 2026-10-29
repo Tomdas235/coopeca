@@ -251,7 +251,7 @@ export default function CollectesScreen() {
         </View>
 
         <View style={styles.noteBas}>
-          <Text style={styles.te   xteNote}>
+          <Text style={styles.texteNote}>
             Le montant est stocké en entier XAF. La référence provisoire est
             générée localement ; le numéro officiel sera alloué par le serveur
             à l'acceptation.
