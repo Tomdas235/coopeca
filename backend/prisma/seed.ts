@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import { PrismaClient } from '@prisma/client';
-import { createHash, randomUUID } from 'crypto';
+import { randomUUID, scryptSync, randomBytes } from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -9,7 +9,16 @@ function uuid(): string {
 }
 
 function hashPassword(password: string): string {
-  return createHash('sha256').update(password).digest('hex');
+  const salt = randomBytes(16);
+  const derivedKey = scryptSync(password, salt, 64, { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 });
+  return [
+    'scrypt',
+    16384,
+    8,
+    1,
+    salt.toString('hex'),
+    derivedKey.toString('hex'),
+  ].join('$');
 }
 
 async function main() {
@@ -87,7 +96,7 @@ async function main() {
     },
   });
 
-  const cashier1 = await prisma.appUser.upsert({
+  await prisma.appUser.upsert({
     where: { username: 'cashier1' },
     update: { passwordHash: hashPassword('cashier123') },
     create: {
@@ -105,7 +114,7 @@ async function main() {
     },
   });
 
-  const auditor1 = await prisma.appUser.upsert({
+  await prisma.appUser.upsert({
     where: { username: 'auditor1' },
     update: { passwordHash: hashPassword('auditor123') },
     create: {
@@ -123,7 +132,7 @@ async function main() {
     },
   });
 
-  const accountant1 = await prisma.appUser.upsert({
+  await prisma.appUser.upsert({
     where: { username: 'accountant1' },
     update: { passwordHash: hashPassword('accountant123') },
     create: {
@@ -141,7 +150,7 @@ async function main() {
     },
   });
 
-  const supervisor1 = await prisma.appUser.upsert({
+  await prisma.appUser.upsert({
     where: { username: 'supervisor1' },
     update: { passwordHash: hashPassword('supervisor123') },
     create: {
@@ -174,7 +183,7 @@ async function main() {
     },
   });
 
-  const client2 = await prisma.client.upsert({
+  await prisma.client.upsert({
     where: { clientCode: 'CLT-002' },
     update: {},
     create: {
@@ -191,8 +200,10 @@ async function main() {
   });
 
   // Create a dossier (required for TontineCycle.dossierId)
-  const dossier1 = await prisma.dossier.create({
-    data: {
+  const dossier1 = await prisma.dossier.upsert({
+    where: { localReference: 'LOCAL-001' },
+    update: {},
+    create: {
       clientId: client1.id,
       agentId: agent1.id,
       dailyAmountXaf: 5000,
