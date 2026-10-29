@@ -237,6 +237,7 @@ export default function RemisesScreen() {
                 Aucune remise pour le moment. Déclarez-en une ci-dessus.
               </Text>
             </View>
+          ) : (
             remises.map((r) => (
               <View key={r.id} style={styles.ligneRemise}>
                 <View style={styles.infosRemise}>
@@ -286,3 +287,191 @@ export default function RemisesScreen() {
     </AppScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  content: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  heading: {
+    gap: 8,
+    paddingTop: 4,
+  },
+  eyebrow: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  title: {
+    color: colors.text,
+    fontSize: 28,
+    fontWeight: '800',
+  },
+  subtitle: {
+    color: colors.muted,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  chargement: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  texteChargement: {
+    color: colors.muted,
+    fontSize: 14,
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 16,
+  },
+  cardTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 12,
+  },
+  sousTitreCard: {
+    color: colors.muted,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  vide: {
+    padding: 24,
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 14,
+  },
+  texteVide: {
+    color: colors.muted,
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  ligneCollecte: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+  },
+  ligneSelectionnee: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accentSoft,
+  },
+  infosCollecte: {
+    flex: 1,
+    gap: 2,
+  },
+  refCollecte: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  montantCollecte: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  texteSelectionnee: {
+    color: colors.accent,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  resumeRemise: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  libelleResume: {
+    color: colors.muted,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  valeurResume: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  boutonCreer: {
+    backgroundColor: colors.accent,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  texteBoutonCreer: {
+    color: colors.surface,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  noteDistinction: {
+    color: colors.muted,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 8,
+  },
+  section: {
+    marginTop: 20,
+    gap: 8,
+  },
+  sectionTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  ligneRemise: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+  },
+  infosRemise: {
+    flex: 1,
+    gap: 2,
+  },
+  idRemise: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  montantRemise: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  badgesRemise: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  noteBas: {
+    marginTop: 16,
+    padding: 14,
+    backgroundColor: colors.accentSoft,
+    borderRadius: 10,
+  },
+  texteNote: {
+    color: colors.accent,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+});

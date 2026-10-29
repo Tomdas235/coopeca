@@ -1,10 +1,12 @@
+/// <reference types="node" />
 import 'reflect-metadata';
 import { PrismaClient } from '@prisma/client';
+import { randomUUID } from 'crypto';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Starting COOPECA demonstration seed...\n');
+  console.warn('🌱 Starting COOPECA demonstration seed...\n');
 
   // 1. Create Zone
   const zone = await prisma.zone.upsert({
@@ -15,7 +17,7 @@ async function main() {
       name: 'Zone COOPECA Paris',
     },
   });
-  console.log(`✅ Zone: ${zone.name}`);
+  console.warn(`✅ Zone: ${zone.name}`);
 
   // 2. Create Markets
   const market1 = await prisma.market.upsert({
@@ -23,14 +25,14 @@ async function main() {
     update: {},
     create: { code: 'MKT-PARIS-01', name: 'Marché Paris Centre', zoneId: zone.id },
   });
-  console.log(`✅ Market: ${market1.name}`);
+  console.warn(`✅ Market: ${market1.name}`);
 
   const market2 = await prisma.market.upsert({
     where: { code: 'MKT-PARIS-02' },
     update: {},
     create: { code: 'MKT-PARIS-02', name: 'Marché Paris Nord', zoneId: zone.id },
   });
-  console.log(`✅ Market: ${market2.name}`);
+  console.warn(`✅ Market: ${market2.name}`);
 
   // 3. Create Branches
   const branch1 = await prisma.branch.upsert({
@@ -43,7 +45,7 @@ async function main() {
       marketId: market1.id,
     },
   });
-  console.log(`✅ Branch: ${branch1.name}`);
+  console.warn(`✅ Branch: ${branch1.name}`);
 
   const branch2 = await prisma.branch.upsert({
     where: { code: 'BR-PARIS-002' },
@@ -55,7 +57,7 @@ async function main() {
       marketId: market2.id,
     },
   });
-  console.log(`✅ Branch: ${branch2.name}`);
+  console.warn(`✅ Branch: ${branch2.name}`);
 
   // 4. Create Users
   const adminUser = await prisma.appUser.upsert({
@@ -68,7 +70,7 @@ async function main() {
       isActive: true,
     },
   });
-  console.log(`✅ Admin: ${adminUser.username}`);
+  console.warn(`✅ Admin: ${adminUser.username}`);
 
   const supervisor1 = await prisma.appUser.upsert({
     where: { username: 'superv.paris1' },
@@ -80,7 +82,7 @@ async function main() {
       isActive: true,
     },
   });
-  console.log(`✅ Supervisor: ${supervisor1.username}`);
+  console.warn(`✅ Supervisor: ${supervisor1.username}`);
 
   const agent1 = await prisma.appUser.upsert({
     where: { username: 'agent.paris1' },
@@ -92,7 +94,7 @@ async function main() {
       isActive: true,
     },
   });
-  console.log(`✅ Agent: ${agent1.username}`);
+  console.warn(`✅ Agent: ${agent1.username}`);
 
   // 5. Create Clients
   const client1 = await prisma.client.upsert({
@@ -108,7 +110,7 @@ async function main() {
       branchId: branch1.id,
     },
   });
-  console.log(`✅ Client: ${client1.name} (${client1.status})`);
+  console.warn(`✅ Client: ${client1.name} (${client1.status})`);
 
   const client2 = await prisma.client.upsert({
     where: { code: 'CLT-PARIS1-002' },
@@ -123,9 +125,9 @@ async function main() {
       branchId: branch1.id,
     },
   });
-  console.log(`✅ Client: ${client2.name} (${client2.status})`);
+  console.warn(`✅ Client: ${client2.name} (${client2.status})`);
 
-  console.log('\n🌱 Seed completed!\n');
+  console.warn('\n🌱 Seed completed!\n');
 // 5. Create a dossier (required for TontineCycle.dossierId)
    const dossier1 = await prisma.dossier.create({
      data: {
@@ -134,7 +136,7 @@ async function main() {
        dailyAmountXaf: 5000,
        localReference: 'LOCAL-001',
        dossierNo: 'DOSSIER-001',
-       clientOperationId: uuid(),
+       clientOperationId: randomUUID(),
        deviceId: 'seed-device-001',
        openedAtDeclared: new Date(),
        openingBusinessDate: new Date(),
@@ -142,7 +144,7 @@ async function main() {
        version: 1,
      },
    });
-   console.log(`✅ Dossier: ${dossier1.dossierNo}`);
+   console.warn(`✅ Dossier: ${dossier1.dossierNo}`);
 
    // 6. Create tontine cycle (all required fields)
    const cycle1 = await prisma.tontineCycle.create({
@@ -157,12 +159,12 @@ async function main() {
        installmentCount: 0,
        totalCollectedXaf: 0n,
        status: 'ACTIVE',
-       clientOperationId: uuid(),
-       payloadHash: uuid().replace(/-/g, '').substring(0, 64),
+       clientOperationId: randomUUID(),
+       payloadHash: randomUUID().replace(/-/g, '').substring(0, 64),
        version: 1,
      },
    });
-   console.log(`✅ Cycle: ${cycle1.id} (31 versements de ${cycle1.fixedAmountXaf} FCFA)`);
+   console.warn(`✅ Cycle: ${cycle1.id} (31 versements de ${cycle1.fixedAmountXaf} FCFA)`);
 
    // 7. Create cycle event
    await prisma.tontineCycleEvent.create({
@@ -170,10 +172,10 @@ async function main() {
        cycleId: cycle1.id,
        actorUserId: agent1.id,
        eventType: 'OPENED',
-       requestId: uuid(),
+       requestId: randomUUID(),
      },
    });
-   console.log(`✅ Cycle event: OPENED`);
+   console.warn(`✅ Cycle event: OPENED`);
 
    // 8. Create initial deposit cycle transaction
    await prisma.cycleTransaction.create({
@@ -182,11 +184,11 @@ async function main() {
        type: 'DEPOSIT',
        amountXaf: 5000n,
        actorUserId: agent1.id,
-       idempotencyKey: uuid(),
-       payloadHash: uuid().replace(/-/g, '').substring(0, 64),
+       idempotencyKey: randomUUID(),
+       payloadHash: randomUUID().replace(/-/g, '').substring(0, 64),
      },
    });
-   console.log(`✅ Cycle transaction: DEPOSIT 5000 FCFA`);
+   console.warn(`✅ Cycle transaction: DEPOSIT 5000 FCFA`);
 }
 
 main()
