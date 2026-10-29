@@ -21,7 +21,7 @@ import { ClientsModule } from './clients/clients.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env'],
+      envFilePath: ['backend/.env'],
       load: [configuration],
       validate: validateEnv,
       cache: true,

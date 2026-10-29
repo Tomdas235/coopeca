@@ -9,6 +9,7 @@ import Cycles from './pages/Cycles'
 import Remittances from './pages/Remittances'
 import Markets from './pages/Markets'
 import Health from './pages/Health'
+import WithdrawalsPending from './pages/WithdrawalsPending'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)

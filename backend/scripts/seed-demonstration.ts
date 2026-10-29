@@ -126,6 +126,67 @@ async function main() {
   console.log(`✅ Client: ${client2.name} (${client2.status})`);
 
   console.log('\n🌱 Seed completed!\n');
+// 5. Create a dossier (required for TontineCycle.dossierId)
+   const dossier1 = await prisma.dossier.create({
+     data: {
+       clientId: client1.id,
+       agentId: agent1.id,
+       dailyAmountXaf: 5000,
+       localReference: 'LOCAL-001',
+       dossierNo: 'DOSSIER-001',
+       clientOperationId: uuid(),
+       deviceId: 'seed-device-001',
+       openedAtDeclared: new Date(),
+       openingBusinessDate: new Date(),
+       status: 'OPEN',
+       version: 1,
+     },
+   });
+   console.log(`✅ Dossier: ${dossier1.dossierNo}`);
+
+   // 6. Create tontine cycle (all required fields)
+   const cycle1 = await prisma.tontineCycle.create({
+     data: {
+       dossierId: dossier1.id,
+       clientId: client1.id,
+       marketId: market1.id,
+       branchId: branch1.id,
+       openedByAgentId: agent1.id,
+       fixedAmountXaf: 5000n,
+       targetInstallments: 31,
+       installmentCount: 0,
+       totalCollectedXaf: 0n,
+       status: 'ACTIVE',
+       clientOperationId: uuid(),
+       payloadHash: uuid().replace(/-/g, '').substring(0, 64),
+       version: 1,
+     },
+   });
+   console.log(`✅ Cycle: ${cycle1.id} (31 versements de ${cycle1.fixedAmountXaf} FCFA)`);
+
+   // 7. Create cycle event
+   await prisma.tontineCycleEvent.create({
+     data: {
+       cycleId: cycle1.id,
+       actorUserId: agent1.id,
+       eventType: 'OPENED',
+       requestId: uuid(),
+     },
+   });
+   console.log(`✅ Cycle event: OPENED`);
+
+   // 8. Create initial deposit cycle transaction
+   await prisma.cycleTransaction.create({
+     data: {
+       cycleId: cycle1.id,
+       type: 'DEPOSIT',
+       amountXaf: 5000n,
+       actorUserId: agent1.id,
+       idempotencyKey: uuid(),
+       payloadHash: uuid().replace(/-/g, '').substring(0, 64),
+     },
+   });
+   console.log(`✅ Cycle transaction: DEPOSIT 5000 FCFA`);
 }
 
 main()

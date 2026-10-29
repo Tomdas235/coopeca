@@ -8,6 +8,15 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
+  // Stats étendues (chargées en parallèle)
+  const [stats, setStats] = useState({
+    totalClients: 0,
+    provisionalClients: 0,
+    activeCycles: 0,
+    totalCollected: '0',
+    pendingWithdrawals: 0,
+  })
+
   useEffect(() => {
     let mounted = true
     async function loadData() {
@@ -17,8 +26,29 @@ export default function Dashboard() {
           setProfile(prof)
           setBranches(brs)
         }
+        // Charger les stats depuis les endpoints dédiés
+        const [clientsResp, cyclesResp, withdrawalsResp] = await Promise.all([
+          api.get('/clients'),
+          api.get('/tontine-cycles'),
+          api.get('/withdrawals/pending'),
+        ])
+        if (!mounted) return
+
+        const clients = clientsResp.data.items || clientsResp.data || []
+        const cycles = cyclesResp.data.items || cyclesResp.data || []
+
+        setStats({
+          totalClients: clients.length,
+          provisionalClients: clients.filter((c: any) => c.status === 'PROVISOIRE').length,
+          activeCycles: cycles.filter((c: any) => c.status === 'ACTIVE').length,
+          totalCollected: (
+            cycles.reduce((sum: number, cy: any) => sum + (cy.totalCollectedXaf ? parseInt(cy.totalCollectedXaf, 10) : 0), 0) /
+            1000
+          ).toString(),
+          pendingWithdrawals: withdrawalsResp.data.length,
+        })
       } catch (err: any) {
-        if (mounted) setError(err.message || 'Erreur lors du chargement')
+        if (mounted) setError(apiErrorToMessage(err))
       } finally {
         if (mounted) setIsLoading(false)
       }
