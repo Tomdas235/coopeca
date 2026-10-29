@@ -11,6 +11,8 @@ import Markets from './pages/Markets'
 import Health from './pages/Health'
 import WithdrawalsPending from './pages/WithdrawalsPending'
 import AccountantDashboard from './pages/AccountantDashboard'
+import CashierDashboard from './pages/CashierDashboard'
+import AuditorDashboard from './pages/AuditorDashboard'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
@@ -64,6 +66,8 @@ function App() {
                   <Route path="health" element={<Health />} />
                   <Route path="withdrawals" element={<WithdrawalsPending />} />
                   <Route path="accountant" element={<AccountantDashboard />} />
+                  <Route path="cashier" element={<CashierDashboard />} />
+                  <Route path="auditor" element={<AuditorDashboard />} />
                 </Routes>
               </MainLayout>
             ) : (

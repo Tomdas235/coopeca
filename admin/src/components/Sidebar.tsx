@@ -17,6 +17,8 @@ const navItems = [
   { path: '/remittances', label: 'Remises', icon: RefreshCcw },
   { path: '/markets', label: 'Marchés', icon: Building2 },
   { path: '/accountant', label: 'Espace comptable', icon: LayoutDashboard },
+  { path: '/cashier', label: 'Espace caissier', icon: LayoutDashboard },
+  { path: '/auditor', label: 'Espace auditeur', icon: LayoutDashboard },
   { path: '/health', label: 'Santé API', icon: Activity },
 ]
 
