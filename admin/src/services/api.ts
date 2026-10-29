@@ -1,9 +1,9 @@
-import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios'
+import axios from 'axios'
 import { ApiError } from '../types/api'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1'
 
-const api: AxiosInstance = axios.create({
+const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
@@ -22,7 +22,7 @@ export function getToken(): string | null {
 }
 
 api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
+  (config: any) => {
     if (currentToken) {
       config.headers.Authorization = `Bearer ${currentToken}`
     }
@@ -32,8 +32,8 @@ api.interceptors.request.use(
 )
 
 api.interceptors.response.use(
-  (response) => response,
-  (error: AxiosError<ApiError>) => {
+  (response: any) => response,
+  (error: any) => {
     if (error.response?.status === 401) {
       currentToken = null
       if (typeof window !== 'undefined') {
@@ -46,7 +46,7 @@ api.interceptors.response.use(
 
 export function apiErrorToMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError<ApiError>
+    const axiosError = error as any
     if (axiosError.response?.data?.message) {
       return axiosError.response.data.message
     }

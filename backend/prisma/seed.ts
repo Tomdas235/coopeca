@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { PrismaClient } from '@prisma/client';
 import { createHash, randomUUID } from 'crypto';
 
