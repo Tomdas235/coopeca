@@ -75,7 +75,7 @@ export default function Dashboard() {
 
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-label">Utilisateur</h3>
+          <div className="stat-label">Utilisateur</div>
           <div className="stat-value">{profile?.fullName}</div>
           <div className="stat-sub">{profile?.username}</div>
         </div>

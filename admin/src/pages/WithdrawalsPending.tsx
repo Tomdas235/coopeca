@@ -37,19 +37,19 @@ export default function WithdrawalsPending() {
   }, [])
 
   if (isLoading) {
-    return <div className=\"loading-container\"><div className=\"spinner\"></div><span className=\"loading-text\">Chargement…</span></div>
+    return <div className="loading-container"><div className="spinner"></div><span className="loading-text">Chargement…</span></div>
   }
-  if (error) return <div className=\"empty-state\"><p>{error}</p></div>
+  if (error) return <div className="empty-state"><p>{error}</p></div>
 
   return (
-    <div className=\"page\">
-      <div className=\"page-header\">
+    <div className="page">
+      <div className="page-header">
         <h1>Demandes de retrait en attente</h1>
         <p>File de vérification SUPERVISOR</p>
       </div>
 
-      <div className=\"table-container\">
-        <table className=\"table\">
+      <div className="table-container">
+        <table className="table">
           <thead>
             <tr>
               <th>ID</th>
@@ -63,18 +63,18 @@ export default function WithdrawalsPending() {
           </thead>
           <tbody>
             {withdrawals.length === 0 ? (
-              <tr><td colSpan={7} className=\"empty-cell\">Aucune demande de retrait en attente.</td></tr>
+              <tr><td colSpan={7} className="empty-cell">Aucune demande de retrait en attente.</td></tr>
             ) : (
               withdrawals.map((w) => (
                 <tr key={w.id}>
                   <td>{w.id.slice(-8)}</td>
                   <td>{w.cycleId.slice(-8)}</td>
                   <td>{w.requestedByAgentName || '—'}</td>
-                  <td><span className=\"amount-xaf\">{w.amountXaf}</span></td>
+                  <td><span className="amount-xaf">{w.amountXaf}</span></td>
                   <td>{w.closesCycle ? 'Oui' : 'Non'}</td>
                   <td>{new Date(w.requestedAt).toLocaleDateString('fr-FR')}</td>
                   <td>
-                    <button className=\"btn-small btn-warning\">Examiner</button>
+                    <button className="btn-small btn-warning">Examiner</button>
                   </td>
                 </tr>
               ))
