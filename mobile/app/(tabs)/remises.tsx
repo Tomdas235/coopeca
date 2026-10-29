@@ -225,7 +225,6 @@ export default function RemisesScreen() {
             Cette déclaration n'est pas une confirmation de réception par le
             caissier. Les deux confirmations restent distinctes.
           </Text>
-        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
