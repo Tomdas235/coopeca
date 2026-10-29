@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '../../src/components/AppScreen';
 import { InputTexte } from '../../src/components/InputTexte';
@@ -15,6 +16,12 @@ import { colors } from '../../src/components/theme';
  * Aucune logique métier : vitrine visuelle uniquement.
  */
 export default function ComposantsScreen() {
+  // Valeurs locales : la vitrine reste interactive et valide réellement la
+  // saisie (entiers XAF, compteurs) au lieu d'afficher des champs figés.
+  const [nomComplet, setNomComplet] = useState('');
+  const [age, setAge] = useState('');
+  const [recherche, setRecherche] = useState('');
+
   return (
     <AppScreen>
       <View style={styles.heading}>
@@ -37,6 +44,8 @@ export default function ComposantsScreen() {
       <View style={styles.exampleCard}>
         <InputTexte
           label="Nom complet"
+          value={nomComplet}
+          onChangeText={setNomComplet}
           placeholder="Ex. Jean Dupont"
           accessibilityLabel="Nom complet du client"
         />
@@ -45,6 +54,8 @@ export default function ComposantsScreen() {
       <View style={styles.exampleCard}>
         <InputNumerique
           label="Âge"
+          value={age}
+          onChangeText={setAge}
           placeholder="Ex. 35"
           integer
           min={18}
@@ -55,6 +66,8 @@ export default function ComposantsScreen() {
 
       <View style={styles.exampleCard}>
         <InputRecherche
+          value={recherche}
+          onChangeText={setRecherche}
           placeholder="Chercher un client…"
           accessibilityLabel="Recherche de client"
         />
@@ -110,7 +123,7 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   eyebrow: {
-    color: colors.accent,
+    color: colors.primary,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1,

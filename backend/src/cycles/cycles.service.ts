@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
@@ -70,7 +70,7 @@ export class CyclesService {
       });
     } catch (error) {
       if (this.isPrismaCode(error, 'P2002')) {
-        throw new ConflictException({ code: 'MARCHE_CODE_DEJA_UTILISE', message: 'Ce code marché existe déjà.' });
+        throw new ConflictException({ code: 'MARCHE_CODE_DEJA_UTILISE', message: 'Ce code marché existe déjÃ .' });
       }
       throw error;
     }
@@ -109,7 +109,7 @@ export class CyclesService {
       if (openCycleCount > 0) {
         throw new ConflictException({
           code: 'CLIENT_CYCLE_EN_COURS',
-          message: 'L’affectation marché/agent ne peut pas changer pendant un cycle non clôturé.',
+          message: 'Lâ€™affectation marché/agent ne peut pas changer pendant un cycle non clôturé.',
         });
       }
       const market = await tx.market.findUnique({ where: { id: input.marketId } });
@@ -119,7 +119,7 @@ export class CyclesService {
         select: { id: true, role: true, isActive: true },
       });
       if (!agent || !agent.isActive || agent.role !== 'AGENT') {
-        throw new BadRequestException('L’agent collecteur doit être un compte AGENT actif.');
+        throw new BadRequestException('Lâ€™agent collecteur doit être un compte AGENT actif.');
       }
       const updated = await tx.client.update({
         where: { id: clientId },
@@ -156,7 +156,7 @@ export class CyclesService {
           if (existing.payloadHash !== payloadHash) {
             throw new ConflictException({
               code: 'IDEMPOTENCY_PAYLOAD_MISMATCH',
-              message: 'Cette clé a déjà été utilisée avec un contenu différent.',
+              message: 'Cette clé a déjÃ  été utilisée avec un contenu différent.',
             });
           }
           return this.serializeCycle(existing, existing.transactions);
@@ -174,11 +174,11 @@ export class CyclesService {
         if (client.status !== 'ACTIVE' || !client.marketId || !client.collectionAgentId) {
           throw new ConflictException({
             code: 'CLIENT_CYCLE_NON_PRET',
-            message: 'Le client doit être confirmé, rattaché à un marché et affecté à un agent.',
+            message: 'Le client doit être confirmé, rattaché Ã  un marché et affecté Ã  un agent.',
           });
         }
         if (client.collectionAgentId !== actor.id) {
-          throw new ForbiddenException('Ce client n’est pas affecté à votre portefeuille.');
+          throw new ForbiddenException('Ce client nâ€™est pas affecté Ã  votre portefeuille.');
         }
 
         const market = await tx.market.findUnique({ where: { id: client.marketId } });
@@ -224,7 +224,7 @@ export class CyclesService {
           }
           return this.serializeCycle(replay, replay.transactions);
         }
-        throw new ConflictException({ code: 'CYCLE_OUVERT_EXISTANT', message: 'Un cycle non clôturé existe déjà pour ce dossier.' });
+        throw new ConflictException({ code: 'CYCLE_OUVERT_EXISTANT', message: 'Un cycle non clôturé existe déjÃ  pour ce dossier.' });
       }
       throw error;
     }
@@ -268,7 +268,7 @@ export class CyclesService {
   async listPendingWithdrawals(actor: AuthenticatedPrincipal) {
     this.requireRole(actor, ['SUPERVISOR']);
     const branchIds = actor.branches.map(({ id }) => id);
-    if (branchIds.length === 0) throw new ForbiddenException('Aucune agence n’est attribuée à ce superviseur.');
+    if (branchIds.length === 0) throw new ForbiddenException('Aucune agence nâ€™est attribuée Ã  ce superviseur.');
     const requests = await this.prisma.withdrawalRequest.findMany({
       where: { status: 'PENDING', cycle: { branchId: { in: branchIds } } },
       include: {
@@ -309,7 +309,7 @@ export class CyclesService {
       const existing = await tx.cycleTransaction.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
       if (existing) {
         if (existing.payloadHash !== payloadHash || existing.type !== 'DEPOSIT' || existing.cycleId !== cycleId) {
-          throw new ConflictException({ code: 'IDEMPOTENCY_PAYLOAD_MISMATCH', message: 'La clé de versement a déjà été utilisée.' });
+          throw new ConflictException({ code: 'IDEMPOTENCY_PAYLOAD_MISMATCH', message: 'La clé de versement a déjÃ  été utilisée.' });
         }
         return { transactionId: existing.id, replayed: true, cycleId };
       }
@@ -355,7 +355,7 @@ export class CyclesService {
       const previous = await tx.tontineCycleEvent.findUnique({ where: { requestId: input.requestId } });
       if (previous) {
         if (previous.cycleId !== cycleId || previous.eventType !== eventType || previous.reason !== (input.reason ?? null)) {
-          throw new ConflictException({ code: 'IDEMPOTENCY_PAYLOAD_MISMATCH', message: 'Cette clé de transition est déjà utilisée.' });
+          throw new ConflictException({ code: 'IDEMPOTENCY_PAYLOAD_MISMATCH', message: 'Cette clé de transition est déjÃ  utilisée.' });
         }
         return { cycleId, status: cycle.status, replayed: true };
       }
@@ -399,7 +399,7 @@ export class CyclesService {
       const existing = await tx.withdrawalRequest.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
       if (existing) {
         if (existing.payloadHash !== payloadHash || existing.cycleId !== cycleId) {
-          throw new ConflictException({ code: 'IDEMPOTENCY_PAYLOAD_MISMATCH', message: 'La clé de retrait a déjà été utilisée.' });
+          throw new ConflictException({ code: 'IDEMPOTENCY_PAYLOAD_MISMATCH', message: 'La clé de retrait a déjÃ  été utilisée.' });
         }
         return { withdrawalRequestId: existing.id, status: existing.status, replayed: true };
       }
@@ -467,7 +467,7 @@ export class CyclesService {
         if (decision === 'REJECT' && request.status === 'REJECTED') {
           return { withdrawalRequestId, status: request.status, transactionId: null, replayed: true };
         }
-        throw new ConflictException({ code: 'WITHDRAWAL_ALREADY_REVIEWED', message: 'La demande a déjà été traitée.' });
+        throw new ConflictException({ code: 'WITHDRAWAL_ALREADY_REVIEWED', message: 'La demande a déjÃ  été traitée.' });
       }
 
       if (decision === 'REJECT') {
@@ -598,7 +598,7 @@ export class CyclesService {
           if (this.isPrismaCode(error, 'P2034')) {
             throw new ConflictException({
               code: 'CONCURRENCY_RETRY_EXHAUSTED',
-              message: 'L’opération est concurrente ; réessayez avec la même clé idempotente.',
+              message: 'Lâ€™opération est concurrente ; réessayez avec la même clé idempotente.',
             });
           }
           throw error;
@@ -607,7 +607,7 @@ export class CyclesService {
     }
     throw new ConflictException({
       code: 'CONCURRENCY_RETRY_EXHAUSTED',
-      message: 'L’opération est concurrente ; réessayez avec la même clé idempotente.',
+      message: 'Lâ€™opération est concurrente ; réessayez avec la même clé idempotente.',
     });
   }
 
@@ -638,7 +638,7 @@ export class CyclesService {
 
   private assertAssignedAgent(actor: AuthenticatedPrincipal, assignedAgentId: string | null): void {
     if (!assignedAgentId || actor.id !== assignedAgentId) {
-      throw new ForbiddenException('Ce client n’est pas affecté à votre portefeuille.');
+      throw new ForbiddenException('Ce client nâ€™est pas affecté Ã  votre portefeuille.');
     }
   }
 

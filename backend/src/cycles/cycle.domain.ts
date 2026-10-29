@@ -1,4 +1,4 @@
-export const CYCLE_TARGET_INSTALLMENTS = 31;
+﻿export const CYCLE_TARGET_INSTALLMENTS = 31;
 
 export type CycleStatus = 'ACTIVE' | 'SUSPENDED' | 'COMPLETED' | 'CLOSED';
 export type CycleEntryType = 'DEPOSIT' | 'COMMISSION' | 'WITHDRAWAL';
@@ -30,7 +30,7 @@ export class CycleRuleError extends Error {
 
 export function validateCycleOpening(fixedAmountXaf: bigint): void {
   if (fixedAmountXaf <= 0n) {
-    throw new CycleRuleError('MONTANT_FIXE_INVALIDE', 'Le montant fixe doit être supérieur à zéro.');
+    throw new CycleRuleError('MONTANT_FIXE_INVALIDE', 'Le montant fixe doit être supérieur Ã  zéro.');
   }
 }
 
@@ -39,13 +39,13 @@ export function recordDeposit(
   amountXaf: bigint,
 ): Pick<CycleSnapshot, 'installmentCount' | 'totalCollectedXaf' | 'status'> {
   if (cycle.status !== 'ACTIVE') {
-    throw new CycleRuleError('CYCLE_NON_ACTIF', 'Le cycle n’accepte pas de versement dans cet état.');
+    throw new CycleRuleError('CYCLE_NON_ACTIF', 'Le cycle nâ€™accepte pas de versement dans cet état.');
   }
   if (amountXaf <= 0n || amountXaf !== cycle.fixedAmountXaf) {
     throw new CycleRuleError('MONTANT_VERSEMENT_INVALIDE', 'Le versement doit égaler le montant fixe du cycle.');
   }
   if (cycle.installmentCount < 0 || cycle.installmentCount >= CYCLE_TARGET_INSTALLMENTS) {
-    throw new CycleRuleError('OBJECTIF_CYCLE_ATTEINT', 'Le nombre cible de versements est déjà atteint.');
+    throw new CycleRuleError('OBJECTIF_CYCLE_ATTEINT', 'Le nombre cible de versements est déjÃ  atteint.');
   }
 
   const installmentCount = cycle.installmentCount + 1;
@@ -87,10 +87,10 @@ export function calculateWithdrawal(
   closesCycle = false,
 ): WithdrawalCalculation {
   if (cycle.status === 'CLOSED') {
-    throw new CycleRuleError('CYCLE_CLOTURE', 'Un cycle clôturé ne peut plus faire l’objet d’un retrait.');
+    throw new CycleRuleError('CYCLE_CLOTURE', 'Un cycle clôturé ne peut plus faire lâ€™objet dâ€™un retrait.');
   }
   if (requestedAmountXaf <= 0n) {
-    throw new CycleRuleError('MONTANT_RETRAIT_INVALIDE', 'Le montant du retrait doit être supérieur à zéro.');
+    throw new CycleRuleError('MONTANT_RETRAIT_INVALIDE', 'Le montant du retrait doit être supérieur Ã  zéro.');
   }
   if (availableBalanceXaf < 0n) {
     throw new CycleRuleError('SOLDE_INCOHERENT', 'Le solde du cycle ne peut pas être négatif.');

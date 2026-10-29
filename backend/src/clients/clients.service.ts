@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { ClientStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { AuthenticatedPrincipal } from '../auth/auth.types';
 
@@ -13,13 +13,28 @@ export interface ClientListItem {
 }
 
 export interface ClientFilters {
-  status?: string;
+  status?: ClientStatus;
   agencyId?: string;
   marketId?: string;
   agentId?: string;
   search?: string;
   fromCreatedAt?: string;
   toCreatedAt?: string;
+}
+
+export interface ClientUpdateInput {
+  firstName?: string;
+  lastName?: string;
+  phone?: string | null;
+  neighborhood?: string | null;
+  addressDetails?: string | null;
+  status?: ClientStatus;
+  branchId?: string;
+  marketId?: string | null;
+  collectionAgentId?: string | null;
+  rejectionReason?: string | null;
+  reviewedById?: string;
+  reviewedAt?: Date;
 }
 
 @Injectable()
@@ -39,7 +54,7 @@ export class ClientsService {
 
     const where: Prisma.ClientWhereInput = {};
 
-    if (params.filters.status) where.status = params.filters.status as any;
+    if (params.filters.status) where.status = params.filters.status;
     if (params.filters.agencyId) where.branchId = params.filters.agencyId;
     if (params.filters.marketId) where.marketId = params.filters.marketId;
     if (params.filters.agentId) where.collectionAgentId = params.filters.agentId;
@@ -50,7 +65,7 @@ export class ClientsService {
         { lastName: { contains: params.filters.search, mode: 'insensitive' } },
       ];
     }
-    const createdAtFilter: Record<string, any> = {};
+    const createdAtFilter: Prisma.DateTimeFilter = {};
     if (params.filters.fromCreatedAt) createdAtFilter.gte = new Date(params.filters.fromCreatedAt);
     if (params.filters.toCreatedAt) createdAtFilter.lte = new Date(params.filters.toCreatedAt);
     if (Object.keys(createdAtFilter).length > 0) where.createdAt = createdAtFilter;
@@ -202,7 +217,7 @@ export class ClientsService {
     };
   }
 
-  async update(id: string, _actor: AuthenticatedPrincipal, input: { firstName?: string | null; lastName?: string | null; phone?: string | null; neighborhood?: string | null; addressDetails?: string | null; status?: string | null; branchId?: string | null; marketId?: string | null; collectionAgentId?: string | null; rejectionReason?: string | null; reviewedById?: string | null; reviewedAt?: Date | null }) {
+  async update(id: string, _actor: AuthenticatedPrincipal, input: ClientUpdateInput) {
     // Vérifier que le client existe
     await this.prisma.client.findUnique({ where: { id } });
 
@@ -233,7 +248,7 @@ export class ClientsService {
         marketId: input.marketId,
         collectionAgentId: input.collectionAgentId,
         rejectionReason: input.rejectionReason,
-        reviewedById: input.reviewedById,
+        reviewedBy: input.reviewedById,
         reviewedAt: input.reviewedAt,
       },
       select: {
@@ -274,7 +289,7 @@ export class ClientsService {
 
     // Récupérer les transactions de tontine cycle pour ce client
     const cycleTransactions = await this.prisma.cycleTransaction.findMany({
-      where: { clientId: id },
+      where: { cycle: { clientId: id } },
       select: {
         type: true,
         amountXaf: true,

@@ -62,7 +62,7 @@ export function InputMontantXAF({
         value={value}
         onChangeText={onChangeText}
         keyboardType="numeric"
-        disabled={disabled}
+        editable={!disabled}
         placeholder={placeholder}
         accessibilityLabel={label}
       />

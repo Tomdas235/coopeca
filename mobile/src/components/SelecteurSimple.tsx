@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { colors } from './theme';
+import { absoluteFill, colors } from './theme';
 
 export type Option = {
   label: string;
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     marginTop: -1,
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...absoluteFill,
     backgroundColor: 'transparent',
   },
   listePanel: {

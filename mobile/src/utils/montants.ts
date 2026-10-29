@@ -8,7 +8,7 @@ import { MontantXAF } from '../types';
  * toute valeur non entière plutôt que d'arrondir silencieusement.
  */
 
-function exigerEntier(montant: number, contexte: string): void {
+export function exigerEntier(montant: number, contexte: string): void {
   if (!Number.isInteger(montant)) {
     throw new TypeError(
       `${contexte} : montant non entier (${montant}). Les montants COOPECA sont des entiers XAF.`,

@@ -6,7 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { colors } from './theme';
+import { absoluteFill, colors } from './theme';
 
 /**
  * Dialogue de confirmation COOPECA.
@@ -111,7 +111,7 @@ export function DialogConfirmation({
 
 const styles = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   panel: {

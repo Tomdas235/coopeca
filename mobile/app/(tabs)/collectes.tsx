@@ -20,6 +20,11 @@ import {
   collecteRepository,
   dossierRepository,
 } from '../../src/database/repositories';
+import {
+  BusinessStatusCollecte,
+  PrintStatus,
+  SyncStatus,
+} from '../../src/database/schema';
 
 /**
  * Écran Collectes COOPECA.
@@ -93,10 +98,10 @@ export default function CollectesScreen() {
       client_id: '', // dérivé du dossier, conservé pour compatibilité
       montant_xaf: montantEntier,
       date_heure_declaree: dateHeureDeclaree,
-      statut: 'ENREGISTRÉE_LOCAL' as const,
+      statut: BusinessStatusCollecte.ENREGISTRÉE_LOCAL,
       cle_idempotence: cleIdempotence,
-      sync_status: 'DRAFT' as const,
-      print_status: 'NON_IMPRIMÉ' as const,
+      sync_status: SyncStatus.DRAFT,
+      print_status: PrintStatus.NON_IMPRIMÉ,
       date_maj: new Date().toISOString(),
     };
 
@@ -126,7 +131,7 @@ export default function CollectesScreen() {
   const statutPillKind = (s: string) => {
     switch (s) {
       case 'ACCEPTÉE':
-        return 'success' as const;
+        return 'online' as const;
       case 'ENREGISTRÉE_LOCAL':
         return 'pending' as const;
       case 'EN_ATTENTE':
@@ -232,19 +237,11 @@ export default function CollectesScreen() {
                 <View style={styles.badgesCollecte}>
                   <StatusPill kind={statutPillKind(c.statut)} label={c.statut} />
                   <StatusPill
-                    kind={
-                      c.sync_status === 'SYNCED'
-                        ? ('success' as const)
-                        : ('pending' as const)
-                    }
+                    kind={c.sync_status === 'SYNCED' ? 'online' : 'pending'}
                     label={c.sync_status}
                   />
                   <StatusPill
-                    kind={
-                      c.print_status === 'IMPRIMÉ'
-                        ? ('success' as const)
-                        : ('warning' as const)
-                    }
+                    kind={c.print_status === 'IMPRIMÉ' ? 'online' : 'pending'}
                     label={c.print_status}
                   />
                 </View>
@@ -254,7 +251,7 @@ export default function CollectesScreen() {
         </View>
 
         <View style={styles.noteBas}>
-          <Text style={styles.texteNote}>
+          <Text style={styles.te   xteNote}>
             Le montant est stocké en entier XAF. La référence provisoire est
             générée localement ; le numéro officiel sera alloué par le serveur
             à l'acceptation.
@@ -289,7 +286,7 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   eyebrow: {
-    color: colors.accent,
+    color: colors.primary,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1,

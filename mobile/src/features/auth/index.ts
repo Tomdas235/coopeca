@@ -1,38 +1,65 @@
+import { ApiError, createSession, getProfile, type UserRole } from '../../services/api';
+import { getAccessToken, setAccessToken } from '../../services/tokenStore';
+
 /**
  * Service d'authentification COOPECA — Gestion de session agent.
  *
  * Règles non négociables :
  * - L'identifiant correspond au username backend (ex: agent.paris1).
- * - Le token JWT est porté par l'en-tête Authorization des requêtes.
- * - Les rôles contrôlent l'accès aux endpoints (/api/v1/admin/... selon les permissions).
- * - En mode démo (EXPO_PUBLIC_DEMO_MODE=true), toute connexion valide accepte un identifiant répertorié.
- * - En production, le login vérifie auprès de POST /api/v1/auth/login.
+ * - Le jeton Bearer est conservé hors de l'UI et injecté par `services/api`.
+ * - Les rôles contrôlent l'accès aux endpoints (/api/v1/... selon les permissions).
+ * - En mode démo (EXPO_PUBLIC_DEMO_MODE=true), toute connexion valide accepte un
+ *   identifiant répertorié, sans appel réseau.
+ * - En production, POST /api/v1/auth/sessions ouvre la session, puis
+ *   GET /api/v1/me fournit le profil et les agences autorisées.
+ */
+
+/** Profil tel qu'affiché par l'écran Session. */
+export interface AuthProfile {
+  identity: string;
+  roles: string[];
+  agency: string;
+}
+
+/**
+ * Session ouverte. `profile` porte ce que l'UI affiche ; `user` conserve les
+ * identifiants techniques nécessaires aux appels métier.
  */
 export interface AuthSession {
-  user: {
+  profile: AuthProfile;
+  user?: {
     id: string;
     username: string;
-    role: 'ADMIN' | 'SUPERVISOR' | 'ACCOUNTANT' | 'AGENT' | 'CASHIER' | 'AUDITOR';
+    role: UserRole;
     branchId?: string;
   };
-  token: string;
-  role: string;
-  expiresAt: Date;
-  createdAt: Date;
-  sessionId: string;
+  expiresAt?: Date;
+  createdAt?: Date;
 }
 
 export interface AuthenticationService {
-  getUser(): any;
-  getToken(): string;
-  getRole(): string;
-  getBranchId(): string | null;
-  isAuthenticated(): boolean;
   authenticate(credentials: { identifier: string; password: string }): Promise<AuthSession>;
+  getCurrentSession(): Promise<AuthSession | null>;
   logout(): Promise<void>;
 }
 
-export const authService = (() => {
+/**
+ * Levée lorsque le service d'authentification réel n'est pas joignable ou pas
+ * configuré : l'UI distingue ce cas d'un simple refus d'identifiants.
+ */
+export class AuthenticationUnavailableError extends Error {
+  constructor(message = "Le service d'authentification n'est pas disponible.") {
+    super(message);
+    this.name = 'AuthenticationUnavailableError';
+  }
+}
+
+interface PersistedSession {
+  session: AuthSession;
+  token: string | null;
+}
+
+export const authenticationService: AuthenticationService = (() => {
   const DEMO_IDENTIFIERS = [
     'admin.coopeca',
     'superv.paris1',
@@ -43,125 +70,178 @@ export const authService = (() => {
     'cashier.test',
   ];
 
-  // Session démo stockée en localStorage (navigateur) ou mémoire (RN)
-  let storedSession: AuthSession | null = null;
-
-  // Vérifier le stockage disponible
+  const STORAGE_KEY = 'coopeca_auth_session';
+  const DEMO_MODE = process.env.EXPO_PUBLIC_DEMO_MODE === 'true';
   const hasLocalStorage = typeof window !== 'undefined';
 
-  function loadStoredSession(): void {
+  let storedSession: AuthSession | null = null;
+
+  /**
+   * Lecture de la session courante via une fonction : `storedSession` n'est
+   * affecté que dans des fermetures, donc une lecture directe serait réduite
+   * à `null` par l'analyse de flux de TypeScript.
+   */
+  function sessionCourante(): AuthSession | null {
+    return storedSession;
+  }
+
+  function lireStockage(): void {
     if (!hasLocalStorage) return;
     try {
-      const data = localStorage.getItem('coopeca_auth_session');
-      if (data) storedSession = JSON.parse(data);
+      const brut = localStorage.getItem(STORAGE_KEY);
+      if (!brut) return;
+      const persisted = JSON.parse(brut) as Partial<PersistedSession>;
+      storedSession = persisted.session ?? null;
+      setAccessToken(persisted.token ?? null);
     } catch {
       storedSession = null;
+      setAccessToken(null);
     }
   }
 
-  function saveStoredSession(session: AuthSession): void {
+  function ecrireStockage(session: AuthSession | null): void {
     if (!hasLocalStorage) return;
-    localStorage.setItem('coopeca_auth_session', JSON.stringify(session));
+    try {
+      if (session === null) {
+        localStorage.removeItem(STORAGE_KEY);
+        return;
+      }
+      const persisted: PersistedSession = { session, token: getAccessToken() };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
+    } catch {
+      // Stockage indisponible (mode privé, quota) : la session reste en mémoire.
+    }
   }
 
-  function clearStoredSession(): void {
-    if (!hasLocalStorage) return;
-    localStorage.removeItem('coopeca_auth_session');
+  function roleDemo(identifier: string): UserRole {
+    if (identifier === 'admin.coopeca') return 'ADMIN';
+    if (identifier.startsWith('superv.')) return 'SUPERVISOR';
+    if (identifier.startsWith('cashier.')) return 'CASHIER';
+    return 'AGENT';
   }
 
-  loadStoredSession();
+  function sessionDemo(identifier: string): AuthSession {
+    const role = roleDemo(identifier);
+    return {
+      profile: {
+        identity: identifier,
+        roles: [role],
+        agency: 'Démonstration',
+      },
+      user: {
+        id: identifier.replace('.', '-'),
+        username: identifier,
+        role,
+      },
+      createdAt: new Date(),
+    };
+  }
 
-  // ── Service public ──────────────────────────────────────────────
-  const service: AuthenticationService = {
-    getUser: () => storedSession?.user ?? null,
-    getToken: () => storedSession?.token ?? '',
-    getRole: () => storedSession?.role ?? 'ANONYMOUS',
-    getBranchId: () => storedSession?.branchId ?? null,
-    isAuthenticated: () => !!storedSession?.token,
-    authenticate: async credentials => {
-      // Mode démo : accepter tout identifiant répertorié
-      if (process.env.EXPO_PUBLIC_DEMO_MODE === 'true') {
+  function sessionDepuisProfil(
+    profil: Awaited<ReturnType<typeof getProfile>>,
+    expiresAt?: Date,
+  ): AuthSession {
+    const agences = profil.branches.map(({ code, name }) => (code ? `${code} — ${name}` : name));
+
+    return {
+      profile: {
+        identity: profil.fullName.trim() !== '' ? profil.fullName : profil.username,
+        roles: [profil.role],
+        agency: agences.length > 0 ? agences.join(', ') : 'Aucune agence attribuée',
+      },
+      user: {
+        id: profil.id,
+        username: profil.username,
+        role: profil.role,
+        branchId: profil.branches[0]?.id,
+      },
+      expiresAt,
+      createdAt: new Date(),
+    };
+  }
+
+  function retenirSession(session: AuthSession | null): void {
+    storedSession = session;
+    ecrireStockage(session);
+  }
+
+  lireStockage();
+
+  return {
+    async authenticate(credentials) {
+      if (DEMO_MODE) {
         if (!DEMO_IDENTIFIERS.includes(credentials.identifier)) {
           throw new Error(
             'Identifiant inconnu en mode démo. Identifiants valides : ' +
-              DEMO_IDENTIFIERS.join(', ')
+              DEMO_IDENTIFIERS.join(', '),
           );
         }
-        // Construire une session démo selon le rôle de l'identifiant
-        const isParis1 = credentials.identifier.includes('paris1');
-        const isParis2 = credentials.identifier.includes('paris2');
-        const isAdmin = credentials.identifier === 'admin.coopeca';
-
-        let role: AuthSession['role'];
-        let branchId: AuthSession['branchId'];
-
-        if (isAdmin) {
-          role = 'ADMIN';
-          branchId = 'AGENCY-ROOT';
-        } else if (isParis1) {
-          role = 'AGENT';
-          branchId = 'BRANCH-P1';
-        } else if (isParis2) {
-          role = 'AGENT';
-          branchId = 'BRANCH-P2';
-        } else {
-          role = 'AGENT';
-          branchId = null;
-        }
-
-        const session: AuthSession = {
-          user: {
-            id: credentials.identifier.replace('.', '-'),
-            username: credentials.identifier,
-            role,
-            branchId,
-          },
-          token: 'coopeca-demo-token-' + Math.random().toString(36).substring(2, 15),
-          role,
-          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          createdAt: new Date(),
-          sessionId: 'demo-' + Date.now(),
-        };
-        storedSession = session;
-        saveStoredSession(session);
+        const session = sessionDemo(credentials.identifier);
+        retenirSession(session);
         return session;
       }
 
-      // Mode réel : appeler l'API backend
-      const response = await fetch('http://10.0.2.2:3000/api/v1/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials),
-      });
+      try {
+        const jeton = await createSession(credentials.identifier, credentials.password);
+        setAccessToken(jeton.accessToken);
 
-      const data = await response.json();
-      if (!response.ok || !data.token) {
-        throw new Error(data.message || 'Échec de l\'authentification');
+        const profil = await getProfile();
+        const session = sessionDepuisProfil(
+          profil,
+          new Date(Date.now() + jeton.expiresIn * 1000),
+        );
+        retenirSession(session);
+        return session;
+      } catch (erreur) {
+        setAccessToken(null);
+        if (erreur instanceof ApiError && erreur.isNetworkError) {
+          throw new AuthenticationUnavailableError(erreur.message);
+        }
+        throw erreur;
       }
-
-      storedSession = {
-        user: {
-          id: data.user.id,
-          username: data.user.username,
-          role: data.user.role,
-          branchId: data.user.branchId,
-        },
-        token: data.token,
-        role: data.user.role,
-        expiresAt: data.expiresAt ? new Date(data.expiresAt) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        createdAt: new Date(),
-        sessionId: data.sessionId,
-      };
-      saveStoredSession(storedSession);
-      return storedSession;
     },
-    logout: async () => {
-      storedSession = null;
-      clearStoredSession();
+
+    async getCurrentSession() {
+      if (DEMO_MODE) return sessionCourante();
+
+      const jeton = getAccessToken();
+      if (!jeton) return null;
+
+      try {
+        const profil = await getProfile();
+        // L'échéance d'origine est conservée : la relecture du profil ne
+        // prolonge pas la session.
+        const session = sessionDepuisProfil(profil, sessionCourante()?.expiresAt);
+        retenirSession(session);
+        return session;
+      } catch (erreur) {
+        if (erreur instanceof ApiError && erreur.isUnauthorized) {
+          retenirSession(null);
+          setAccessToken(null);
+          return null;
+        }
+
+        // Hors ligne : une session déjà ouverte reste utilisable (COOPECA est
+        // pensé pour le terrain, sans réseau permanent).
+        const session = sessionCourante();
+        if (session !== null) return session;
+
+        if (erreur instanceof ApiError) {
+          throw new AuthenticationUnavailableError(erreur.message);
+        }
+        throw erreur;
+      }
+    },
+
+    async logout() {
+      retenirSession(null);
+      setAccessToken(null);
+      ecrireStockage(null);
     },
   };
-
-  return service;
 })();
 
-export default authService;
+/** Alias historique du service d'authentification. */
+export const authService = authenticationService;
+
+export default authenticationService;

@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   eyebrow: {
-    color: colors.accent,
+    color: colors.primary,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.8,

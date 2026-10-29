@@ -1,13 +1,18 @@
 import { Redirect, Tabs } from 'expo-router';
 import { ClipboardCheck, Home, Receipt, Users, Wallet } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
+import type { ColorValue } from 'react-native';
 import { AppScreen } from '../../src/components/AppScreen';
 import { StatusPill } from '../../src/components/StatusPill';
 import { colors } from '../../src/components/theme';
 import { authenticationService } from '../../src/features/auth';
 
 interface TabIconProps {
-  color: string;
+  /**
+   * Couleur fournie par `tabBarIcon` : depuis React Native 0.88 le type est
+   * `ColorValue` (chaîne ou couleur opaque), et non plus `string`.
+   */
+  color: ColorValue;
   focused: boolean;
   size: number;
 }
@@ -16,10 +21,14 @@ type TabIconComponent = typeof Home;
 
 const tabIcon = (Icon: TabIconComponent) =>
   function TabIcon({ color, focused, size }: TabIconProps) {
+    // lucide n'accepte que des chaînes : les couleurs opaques retombent sur le
+    // gris neutre de la palette plutôt que d'être ignorées silencieusement.
+    const tint = typeof color === 'string' ? color : colors.muted;
+
     return (
       <Icon
         accessible={false}
-        color={color}
+        color={tint}
         size={size}
         strokeWidth={focused ? 2.2 : 1.8}
       />
@@ -72,7 +81,7 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.accent,
+        tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
         tabBarIconStyle: { marginTop: 2 },
         tabBarLabelStyle: {

@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { colors } from './theme';
+import { absoluteFill, colors } from './theme';
 import { StatusPill } from './StatusPill';
 
 /**
@@ -92,7 +92,7 @@ export function SelecteurDossier({
   const pillKind = (sync: DossierResume['syncStatus']) => {
     switch (sync) {
       case 'SYNCED':
-        return 'success';
+        return 'online';
       case 'PENDING':
         return 'pending';
       case 'CONFLICT':
@@ -125,10 +125,7 @@ export function SelecteurDossier({
                 kind={pillKind(dossierSelectionne.syncStatus)}
                 label={dossierSelectionne.syncStatus}
               />
-              <StatusPill
-                kind="warning"
-                label={dossierSelectionne.statut}
-              />
+              <StatusPill kind="pending" label={dossierSelectionne.statut} />
             </View>
           ) : null}
           <Text style={styles.fleche}>{ouvert ? '▲' : '▾'}</Text>
@@ -269,7 +266,7 @@ const styles = StyleSheet.create({
     marginTop: -1,
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...absoluteFill,
     backgroundColor: 'transparent',
   },
   listePanel: {

@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { colors } from './theme';
+import { absoluteFill, colors } from './theme';
 import { StatusPill } from './StatusPill';
 
 /**
@@ -85,9 +85,9 @@ export function SelecteurClient({
   const statutPillKind = (statut: ClientResume['statut']) => {
     switch (statut) {
       case 'CONFIRME':
-        return 'success';
+        return 'online';
       case 'PROVISOIRE':
-        return 'warning';
+        return 'pending';
       default:
         return 'unknown';
     }
@@ -131,7 +131,7 @@ export function SelecteurClient({
                 label={clientSelectionne.statut}
               />
               {clientSelectionne.doublonPotentiel ? (
-                <StatusPill kind="warning" label="Doublon potentiel" />
+                <StatusPill kind="pending" label="Doublon potentiel" />
               ) : null}
             </View>
           ) : null}
@@ -201,7 +201,7 @@ export function SelecteurClient({
                       label={client.statut}
                     />
                     {client.doublonPotentiel ? (
-                      <StatusPill kind="warning" label="Doublon" />
+                      <StatusPill kind="pending" label="Doublon" />
                     ) : null}
                   </View>
                 </Pressable>
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     marginTop: -1,
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...absoluteFill,
     backgroundColor: 'transparent',
   },
   listePanel: {

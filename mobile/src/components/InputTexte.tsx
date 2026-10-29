@@ -29,6 +29,11 @@ export interface InputTexteProps {
   keyboardType?: string;
   /** Libellé d'accessibilité pour le champ. */
   accessibilityLabel?: string;
+  /**
+   * Callback appelé à la perte de focus (ex. vérification de doublon côté
+   * serveur). Peut être asynchrone : la valeur de retour est ignorée.
+   */
+  onBlur?: () => void;
 }
 
 export function InputTexte({
@@ -42,6 +47,7 @@ export function InputTexte({
   disabled = false,
   keyboardType = 'default',
   accessibilityLabel,
+  onBlur,
 }: InputTexteProps) {
   const estVide = value.trim() === '';
   const depasseLongueur = maxLength !== undefined && value.length > maxLength;
@@ -70,9 +76,10 @@ export function InputTexte({
         style={[styles.input, !estValide && styles.inputError]}
         value={value}
         onChangeText={onChangeText}
+        onBlur={onBlur}
         placeholder={placeholder}
         keyboardType={keyboardType as any}
-        disabled={disabled}
+        editable={!disabled}
         maxLength={maxLength}
         accessibilityLabel={accessibilityLabel ?? label}
         accessibilityRole="text"

@@ -39,7 +39,7 @@ export function InputRecherche({
         onChangeText={onChangeText}
         placeholder={placeholder}
         keyboardType="default"
-        disabled={disabled}
+        editable={!disabled}
         accessibilityLabel={accessibilityLabel}
         accessibilityRole="search"
         returnKeyType="search"

@@ -4,7 +4,6 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
-import { promisify } from 'node:util';
 import { PrismaService } from '../database/prisma.service';
 import { AccessTokenClaims } from './auth.types';
 

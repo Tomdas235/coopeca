@@ -1,11 +1,10 @@
-import {
+﻿import {
   Controller,
   Get,
   Post,
   Body,
   Query,
   UseGuards,
-  ParseIntPipe,
   BadRequestException,
 } from '@nestjs/common';
 import { z } from 'zod';
@@ -15,11 +14,11 @@ import { AuthenticatedPrincipal } from '../auth/auth.types';
 import { RemittancesService, RemittanceFilters } from './remittances.service';
 
 const pageSchema = z.object({
-  page: z.string().regex(/^[1-9]\d*$/).transform(Number).default(1 as unknown as number),
+  page: z.string().regex(/^[1-9]\d*$/, 'Page invalide.').default('1').transform(Number),
 });
 
 const limitSchema = z.object({
-  limit: z.string().regex(/^[1-9]\d{0,1}$/, 'Limite max: 100.').transform(Number).default(20 as unknown as number),
+  limit: z.string().regex(/^[1-9]\d{0,1}$/, 'Limite max: 100.').default('20').transform(Number),
 });
 
 const filterSchema = z.object({
@@ -49,8 +48,8 @@ export class RemittancesController {
   @Get()
   list(
     @CurrentUser() _actor: AuthenticatedPrincipal,
-    @Query('page', ParseIntPipe) page: number,
-    @Query('limit', ParseIntPipe) limit: number,
+    @Query('page') page: string | undefined,
+    @Query('limit') limit: string | undefined,
     @Query() filters: RemittanceFilters,
   ) {
     const pageParams = pageSchema.safeParse({ page });
@@ -86,3 +85,4 @@ export class RemittancesController {
     return this.remittancesService.create(actor, input.data);
   }
 }
+

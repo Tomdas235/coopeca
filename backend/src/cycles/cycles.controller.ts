@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   Body,
   Controller,
@@ -231,3 +231,4 @@ export class CyclesController {
     return this.cyclesService.changeCycleState(actor, cycleId, action, input.data);
   }
 }
+

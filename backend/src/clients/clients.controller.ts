@@ -7,7 +7,6 @@ import {
   Patch,
   Query,
   UseGuards,
-  ParseIntPipe,
   BadRequestException,
 } from '@nestjs/common';
 import { z } from 'zod';
@@ -30,11 +29,11 @@ const createSchema = z.object({
 
 
 const pageSchema = z.object({
-  page: z.string().regex(/^[1-9]\d*$/).transform(Number).default(1 as unknown as number),
+  page: z.string().regex(/^[1-9]\d*$/, 'Page invalide.').default('1').transform(Number),
 });
 
 const limitSchema = z.object({
-  limit: z.string().regex(/^[1-9]\d{0,1}$/, 'Limite max: 100.').transform(Number).default(20 as unknown as number),
+  limit: z.string().regex(/^[1-9]\d{0,1}$/, 'Limite max: 100.').default('20').transform(Number),
 });
 
 const sortSchema = z.object({
@@ -64,7 +63,7 @@ const updateSchema = z.object({
   collectionAgentId: z.string().uuid().optional(),
   rejectionReason: z.string().max(1000).optional(),
   reviewedById: z.string().uuid().optional(),
-  reviewedAt: z.string().datetime({ offset: true }).optional(),
+  reviewedAt: z.string().datetime({ offset: true }).transform((value) => new Date(value)).optional(),
 });
 
 @Controller('clients')
@@ -75,10 +74,10 @@ export class ClientsController {
   @Get()
   list(
     @CurrentUser() _actor: AuthenticatedPrincipal,
-    @Query('page', ParseIntPipe) page: number,
-    @Query('limit', ParseIntPipe) limit: number,
-    @Query('sortBy') sortBy: string,
-    @Query('sortOrder') sortOrder: 'asc' | 'desc',
+    @Query('page') page: string | undefined,
+    @Query('limit') limit: string | undefined,
+    @Query('sortBy') sortBy: string | undefined,
+    @Query('sortOrder') sortOrder: string | undefined,
     @Query() filters: ClientFilters,
   ) {
     const pageParams = pageSchema.safeParse({ page });

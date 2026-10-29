@@ -19,6 +19,7 @@ import {
   remiseRepository,
   collecteRepository,
 } from '../../src/database/repositories';
+import { BusinessStatusRemise, SyncStatus } from '../../src/database/schema';
 
 /**
  * Écran Remises COOPECA.
@@ -88,9 +89,9 @@ export default function RemisesScreen() {
       id: cleIdempotence,
       agence_id: agenceId,
       montant_total_xaf: montantTotal,
-      statut: 'DÉCLARÉE' as const,
+      statut: BusinessStatusRemise.DÉCLARÉE,
       cle_idempotence: cleIdempotence,
-      sync_status: 'DRAFT' as const,
+      sync_status: SyncStatus.DRAFT,
       date_declaree: new Date().toISOString(),
       date_confirmee_caisse: null,
       motif_ecart: null,
@@ -124,7 +125,7 @@ export default function RemisesScreen() {
   const statutPillKind = (s: string) => {
     switch (s) {
       case 'CONFIRMÉE':
-        return 'success' as const;
+        return 'online' as const;
       case 'DÉCLARÉE':
         return 'pending' as const;
       case 'EN_ATTENTE_CAISSIER':
@@ -204,8 +205,9 @@ export default function RemisesScreen() {
             ))
           )}
           <View style={styles.resumeRemise}>
-            <Text style={styles.libelleResume}>
-              Total de la remise ({collectesSelectionnees.length} collecte)
+            <View style={styles.resumeLigne}>
+              <Text style={styles.libelleResume}>
+                Total de la remise ({collectesSelectionnees.length} collecte)
               </Text>
               <Text style={styles.valeurResume}>
                 {formatMontantXAF(montantTotal)}
@@ -249,11 +251,7 @@ export default function RemisesScreen() {
                 <View style={styles.badgesRemise}>
                   <StatusPill kind={statutPillKind(r.statut)} label={r.statut} />
                   <StatusPill
-                    kind={
-                      r.sync_status === 'SYNCED'
-                        ? ('success' as const)
-                        : ('pending' as const)
-                    }
+                    kind={r.sync_status === 'SYNCED' ? 'online' : 'pending'}
                     label={r.sync_status}
                   />
                 </View>
@@ -287,3 +285,199 @@ export default function RemisesScreen() {
     </AppScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  content: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  heading: {
+    gap: 8,
+    paddingTop: 4,
+  },
+  eyebrow: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  title: {
+    color: colors.text,
+    fontSize: 28,
+    fontWeight: '800',
+  },
+  subtitle: {
+    color: colors.muted,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  chargement: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  texteChargement: {
+    color: colors.muted,
+    fontSize: 14,
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 16,
+  },
+  cardTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  sousTitreCard: {
+    color: colors.muted,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 6,
+    marginBottom: 10,
+  },
+  vide: {
+    padding: 24,
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 14,
+  },
+  texteVide: {
+    color: colors.muted,
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  ligneCollecte: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+  },
+  ligneSelectionnee: {
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.action,
+  },
+  infosCollecte: {
+    flex: 1,
+    gap: 2,
+  },
+  refCollecte: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  montantCollecte: {
+    color: colors.muted,
+    fontSize: 13,
+  },
+  texteSelectionnee: {
+    color: colors.accent,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  resumeRemise: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    gap: 10,
+    backgroundColor: colors.gold,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 4,
+  },
+  resumeLigne: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    gap: 10,
+  },
+  libelleResume: {
+    color: colors.primary,
+    fontSize: 13,
+    flexShrink: 1,
+    fontWeight: '700',
+  },
+  valeurResume: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  boutonCreer: {
+    backgroundColor: colors.accent,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  texteBoutonCreer: {
+    color: colors.surface,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  noteDistinction: {
+    color: colors.muted,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 10,
+  },
+  section: {
+    marginTop: 20,
+    gap: 8,
+  },
+  sectionTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  ligneRemise: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+  },
+  infosRemise: {
+    flex: 1,
+    gap: 2,
+  },
+  idRemise: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  montantRemise: {
+    color: colors.muted,
+    fontSize: 13,
+  },
+  badgesRemise: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  noteBas: {
+    marginTop: 16,
+    padding: 14,
+    backgroundColor: colors.accentSoft,
+    borderRadius: 10,
+  },
+  texteNote: {
+    color: colors.accent,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+});
+

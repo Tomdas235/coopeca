@@ -46,6 +46,7 @@ describe('validateEnv (configuration)', () => {
   it('applique les valeurs par défaut pour PORT et NODE_ENV', () => {
     const env = validateEnv({
       DATABASE_URL: base.DATABASE_URL,
+      JWT_SECRET: base.JWT_SECRET,
     });
     expect(env.PORT).toBe(3000);
     expect(env.NODE_ENV).toBe('development');

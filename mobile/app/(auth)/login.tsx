@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 16,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   brandName: {
-    color: colors.accent,
+    color: colors.primary,
     fontSize: 18,
     fontWeight: '900',
     letterSpacing: 1.2,

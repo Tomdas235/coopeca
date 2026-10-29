@@ -98,7 +98,6 @@ CREATE TABLE IF NOT EXISTS clients (
   sync_status TEXT NOT NULL CHECK (sync_status IN ('DRAFT','PENDING','SYNCED','CONFLICT','ERROR')),
   date_maj TEXT NOT NULL
 );
-`;
 
 -- Dossiers (un seul ouvert par client et par agence)
 CREATE TABLE IF NOT EXISTS dossiers (

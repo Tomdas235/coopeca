@@ -15,6 +15,7 @@ import { DialogConfirmation } from '../../src/components/DialogConfirmation';
 import { AppNotice } from '../../src/components/AppNotice';
 import { colors } from '../../src/components/theme';
 import { clientRepository } from '../../src/database/repositories';
+import { StatutClient, SyncStatus } from '../../src/database/schema';
 
 /**
  * Écran Clients COOPECA.
@@ -81,12 +82,12 @@ export default function ClientsScreen() {
       nom,
       prenom,
       telephone_normalise: telephone,
-      statut: 'PROVISOIRE',
+      statut: StatutClient.PROVISOIRE,
       agence_id: agenceId,
       date_creation_declaree: new Date().toISOString(),
       doublon_potentiel: doublonAvertissement,
       cle_idempotence: cleIdempotence,
-      sync_status: 'DRAFT' as const,
+      sync_status: SyncStatus.DRAFT,
       date_maj: new Date().toISOString(),
     };
 
@@ -114,7 +115,7 @@ export default function ClientsScreen() {
   }
 
   const statutPillKind = (s: string) =>
-    s === 'CONFIRME' ? ('success' as const) : ('warning' as const);
+    s === 'CONFIRME' ? ('online' as const) : ('pending' as const);
 
   return (
     <AppScreen>
@@ -219,15 +220,11 @@ export default function ClientsScreen() {
                     label={c.statut}
                   />
                   <StatusPill
-                    kind={
-                      c.sync_status === 'SYNCED'
-                        ? ('success' as const)
-                        : ('pending' as const)
-                    }
+                    kind={c.sync_status === 'SYNCED' ? 'online' : 'pending'}
                     label={c.sync_status}
                   />
                   {c.doublon_potentiel ? (
-                    <StatusPill kind="warning" label="Doublon" />
+                    <StatusPill kind="pending" label="Doublon" />
                   ) : null}
                 </View>
               </View>
@@ -270,7 +267,7 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   eyebrow: {
-    color: colors.accent,
+    color: colors.primary,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1,

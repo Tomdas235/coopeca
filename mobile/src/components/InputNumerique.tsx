@@ -83,7 +83,7 @@ export function InputNumerique({
         onChangeText={onChangeText}
         placeholder={placeholder}
         keyboardType={integer ? 'numeric' : 'decimal-pad'}
-        disabled={disabled}
+        editable={!disabled}
         accessibilityLabel={accessibilityLabel ?? label}
         accessibilityRole="text"
       />

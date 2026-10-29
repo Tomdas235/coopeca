@@ -18,6 +18,7 @@ import {
   dossierRepository,
   clientRepository,
 } from '../../src/database/repositories';
+import { StatutDossier, SyncStatus } from '../../src/database/schema';
 
 /**
  * Écran Dossiers COOPECA.
@@ -89,10 +90,10 @@ export default function DossiersScreen() {
       reference_provisoire: reference,
       client_id: clientId,
       agence_id: agenceId,
-      statut: 'OUVERT' as const,
+      statut: StatutDossier.OUVERT,
       date_creation_declaree: dateCreation,
       cle_idempotence: cleIdempotence,
-      sync_status: 'DRAFT' as const,
+      sync_status: SyncStatus.DRAFT,
       date_maj: new Date().toISOString(),
     };
 
@@ -121,9 +122,9 @@ export default function DossiersScreen() {
   const statutPillKind = (s: string) => {
     switch (s) {
       case 'OUVERT':
-        return 'warning' as const;
+        return 'pending' as const;
       case 'FERME':
-        return 'success' as const;
+        return 'online' as const;
       case 'REJETE':
         return 'error' as const;
       default:
@@ -220,11 +221,7 @@ export default function DossiersScreen() {
                 <View style={styles.badgesDossier}>
                   <StatusPill kind={statutPillKind(d.statut)} label={d.statut} />
                   <StatusPill
-                    kind={
-                      d.sync_status === 'SYNCED'
-                        ? ('success' as const)
-                        : ('pending' as const)
-                    }
+                    kind={d.sync_status === 'SYNCED' ? 'online' : 'pending'}
                     label={d.sync_status}
                   />
                 </View>
@@ -269,7 +266,7 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   eyebrow: {
-    color: colors.accent,
+    color: colors.primary,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1,
