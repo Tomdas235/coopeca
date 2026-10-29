@@ -25,7 +25,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD doit être défini dans infra/docker/.env}
     ports:
       # Exposition locale uniquement. Ne jamais publier ce port en production.
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - coopeca_pgdata_dev:/var/lib/postgresql/data
     healthcheck:
@@ -34,6 +34,21 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+
+  redis:
+    image: redis:alpine
+    container_name: coopeca-redis-dev
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - coopeca_redis_dev:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
 
   api:
     build:
@@ -45,12 +60,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       NODE_ENV: development
       PORT: 3000
       JWT_SECRET: ${JWT_SECRET:-replace-this-development-secret-with-a-random-value}
       # Pointée vers le service « postgres » du réseau Compose, pas localhost.
       DATABASE_URL: postgresql://${POSTGRES_USER:-coopeca}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-coopeca}?schema=public&sslmode=disable
+      REDIS_URL: redis://redis:6379
     ports:
       - "127.0.0.1:3000:3000"
     healthcheck:
@@ -63,3 +81,5 @@ services:
 volumes:
   coopeca_pgdata_dev:
     name: coopeca_pgdata_dev
+  coopeca_redis_dev:
+    name: coopeca_redis_dev
