@@ -52,6 +52,8 @@ curl http://localhost:3000/api/v1/health
 | POST | `/api/v1/tontine-cycles/{id}/withdrawals` | Demander un retrait (AGENT affecté) |
 | GET | `/api/v1/withdrawals/pending` | File des demandes à examiner (SUPERVISOR) |
 | POST | `/api/v1/withdrawals/{id}/review` | Approuver/rejeter le retrait (SUPERVISOR) |
+| GET | `/api/v1/financial-summary` | Synthèse financière par agence et période (ADMIN/SUPERVISOR/ACCOUNTANT/AUDITOR) |
+| GET | `/api/v1/reconciliation-report` | Rapport de rapprochement paginé par cycle (ADMIN/SUPERVISOR/ACCOUNTANT/AUDITOR) |
 
 Les routes `/me` exigent `Authorization: Bearer <accessToken>`. Les agences sont relues en base à chaque requête ; le jeton ne porte pas les droits d'agence.
 

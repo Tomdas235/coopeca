@@ -16,6 +16,15 @@ import { CyclesService } from './cycles.service';
 const uuid = z.string().uuid();
 const amount = z.string().regex(/^[1-9][0-9]*$/, 'Le montant XAF doit être un entier positif sérialisé en chaîne.');
 
+const pageSchema = z.object({
+  page: z.string().regex(/^[1-9]\d*$/, 'Page invalide.').default('1').transform(Number),
+});
+
+const limitSchema = z.object({
+  limit: z.string().regex(/^[1-9]\d{0,1}$/, 'Limite max: 100.').default('20').transform(Number),
+});
+
+
 const marketSchema = z.object({
   code: z.string().trim().min(1).max(40),
   name: z.string().trim().min(1).max(160),
@@ -201,6 +210,59 @@ export class CyclesController {
   @Get('withdrawals/pending')
   listPendingWithdrawals(@CurrentUser() actor: AuthenticatedPrincipal) {
     return this.cyclesService.listPendingWithdrawals(actor);
+  }
+
+  @Get('financial-summary')
+  getFinancialSummary(
+    @CurrentUser() actor: AuthenticatedPrincipal,
+    @Query('fromDate') fromDate: string | undefined,
+    @Query('toDate') toDate: string | undefined,
+    @Query('branchId') branchId: string | undefined,
+  ) {
+    if (fromDate && !z.string().datetime({ offset: true }).safeParse(fromDate).success) {
+      throw new BadRequestException('Date de début invalide.');
+    }
+    if (toDate && !z.string().datetime({ offset: true }).safeParse(toDate).success) {
+      throw new BadRequestException('Date de fin invalide.');
+    }
+    if (branchId && !uuid.safeParse(branchId).success) {
+      throw new BadRequestException('Identifiant d\'agence invalide.');
+    }
+    return this.cyclesService.getFinancialSummary(actor, { fromDate, toDate, branchId });
+  }
+
+  @Get('reconciliation-report')
+  getReconciliationReport(
+    @CurrentUser() actor: AuthenticatedPrincipal,
+    @Query('page') page: string | undefined,
+    @Query('limit') limit: string | undefined,
+    @Query('fromDate') fromDate: string | undefined,
+    @Query('toDate') toDate: string | undefined,
+    @Query('branchId') branchId: string | undefined,
+    @Query('status') status: string | undefined,
+  ) {
+    const pageParams = pageSchema.safeParse({ page });
+    const limitParams = limitSchema.safeParse({ limit });
+    if (!pageParams.success || !limitParams.success) {
+      throw new BadRequestException('Paramètres de pagination invalides.');
+    }
+    if (fromDate && !z.string().datetime({ offset: true }).safeParse(fromDate).success) {
+      throw new BadRequestException('Date de début invalide.');
+    }
+    if (toDate && !z.string().datetime({ offset: true }).safeParse(toDate).success) {
+      throw new BadRequestException('Date de fin invalide.');
+    }
+    if (branchId && !uuid.safeParse(branchId).success) {
+      throw new BadRequestException('Identifiant d\'agence invalide.');
+    }
+    return this.cyclesService.getReconciliationReport(actor, {
+      page: pageParams.data.page,
+      limit: limitParams.data.limit,
+      fromDate,
+      toDate,
+      branchId,
+      status,
+    });
   }
 
   @Post('withdrawals/:withdrawalRequestId/review')

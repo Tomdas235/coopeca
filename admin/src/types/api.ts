@@ -166,3 +166,71 @@ export interface UserProfile {
     name: string
   }>
 }
+
+
+export interface FinancialSummaryBranch {
+  id: string
+  code: string
+  name: string
+}
+
+export interface FinancialSummary {
+  period: {
+    from: string | null
+    to: string | null
+  }
+  branches: FinancialSummaryBranch[]
+  summary: {
+    totalCycles: number
+    activeCycles: number
+    completedCycles: number
+    closedCycles: number
+    suspendedCycles: number
+    totalCollectedXaf: string
+    totalWithdrawnXaf: string
+    totalCommissionXaf: string
+    totalAvailableBalanceXaf: string
+    pendingWithdrawals: number
+    approvedWithdrawals: number
+    rejectedWithdrawals: number
+  }
+}
+
+export interface ReconciliationReportItem {
+  cycleId: string
+  clientId: string
+  clientCode: string
+  clientName: string
+  branchId: string
+  branchCode: string
+  branchName: string
+  marketId: string
+  marketCode: string
+  marketName: string
+  status: string
+  fixedAmountXaf: string
+  targetInstallments: number
+  installmentCount: number
+  totalCollectedXaf: string
+  totalDepositedXaf: string
+  totalWithdrawnXaf: string
+  totalCommissionXaf: string
+  availableBalanceXaf: string
+  commissionPaid: boolean
+  openedAt: string
+  completedAt: string | null
+  closedAt: string | null
+  pendingWithdrawals: number
+  approvedWithdrawals: number
+  rejectedWithdrawals: number
+}
+
+export interface ReconciliationReport {
+  items: ReconciliationReportItem[]
+  meta: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+}

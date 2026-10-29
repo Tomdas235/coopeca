@@ -10,6 +10,7 @@ import Remittances from './pages/Remittances'
 import Markets from './pages/Markets'
 import Health from './pages/Health'
 import WithdrawalsPending from './pages/WithdrawalsPending'
+import AccountantDashboard from './pages/AccountantDashboard'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
@@ -61,6 +62,8 @@ function App() {
                   <Route path="remittances" element={<Remittances />} />
                   <Route path="markets" element={<Markets />} />
                   <Route path="health" element={<Health />} />
+                  <Route path="withdrawals" element={<WithdrawalsPending />} />
+                  <Route path="accountant" element={<AccountantDashboard />} />
                 </Routes>
               </MainLayout>
             ) : (

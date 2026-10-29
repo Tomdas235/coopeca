@@ -16,6 +16,7 @@ const navItems = [
   { path: '/cycles', label: 'Cycles', icon: CreditCard },
   { path: '/remittances', label: 'Remises', icon: RefreshCcw },
   { path: '/markets', label: 'Marchés', icon: Building2 },
+  { path: '/accountant', label: 'Espace comptable', icon: LayoutDashboard },
   { path: '/health', label: 'Santé API', icon: Activity },
 ]
 

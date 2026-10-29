@@ -289,6 +289,285 @@ export class CyclesService {
     }));
   }
 
+  async getBranchIdsForUser(actor: AuthenticatedPrincipal): Promise<string[]> {
+    return actor.branches.map(({ id }) => id);
+  }
+
+  async getFinancialSummary(
+    actor: AuthenticatedPrincipal,
+    params: { fromDate?: string; toDate?: string; branchId?: string },
+  ) {
+    this.requireRole(actor, ['ADMIN', 'SUPERVISOR', 'ACCOUNTANT', 'AUDITOR']);
+
+    let authorizedBranchIds: string[];
+    if (params.branchId) {
+      this.assertBranchAccess(actor, params.branchId);
+      authorizedBranchIds = [params.branchId];
+    } else {
+      authorizedBranchIds = actor.branches.map(({ id }) => id);
+    }
+
+    if (authorizedBranchIds.length === 0) {
+      return {
+        period: { from: params.fromDate ?? null, to: params.toDate ?? null },
+        branches: [],
+        summary: {
+          totalCycles: 0,
+          activeCycles: 0,
+          completedCycles: 0,
+          closedCycles: 0,
+          suspendedCycles: 0,
+          totalCollectedXaf: '0',
+          totalWithdrawnXaf: '0',
+          totalCommissionXaf: '0',
+          totalAvailableBalanceXaf: '0',
+          pendingWithdrawals: 0,
+          approvedWithdrawals: 0,
+          rejectedWithdrawals: 0,
+        },
+      };
+    }
+
+    const cycleDateFilter: Record<string, Date> = {};
+    if (params.fromDate) cycleDateFilter.gte = new Date(params.fromDate);
+    if (params.toDate) cycleDateFilter.lte = new Date(params.toDate);
+
+    const branches = await this.prisma.branch.findMany({
+      where: { id: { in: authorizedBranchIds } },
+      select: { id: true, code: true, name: true },
+      orderBy: [{ code: 'asc' }],
+    });
+
+    const cycleWhere: Record<string, unknown> = {
+      branchId: { in: authorizedBranchIds },
+    };
+    if (Object.keys(cycleDateFilter).length > 0) {
+      cycleWhere.openedAt = cycleDateFilter;
+    }
+
+    const cycleStatusGroups = await this.prisma.tontineCycle.groupBy({
+      by: ['status'],
+      where: cycleWhere,
+      _count: { id: true },
+    });
+
+    const statusCounts: Record<string, number> = {};
+    let totalCycles = 0;
+    for (const group of cycleStatusGroups) {
+      statusCounts[group.status] = group._count.id;
+      totalCycles += group._count.id;
+    }
+
+    const txWhere: Record<string, unknown> = {
+      cycle: {
+        branchId: { in: authorizedBranchIds },
+        ...(Object.keys(cycleDateFilter).length > 0 ? { openedAt: cycleDateFilter } : {}),
+      },
+    };
+
+    const txSums = await this.prisma.cycleTransaction.groupBy({
+      by: ['type'],
+      where: txWhere,
+      _sum: { amountXaf: true },
+    });
+
+    let totalCollected = 0n;
+    let totalWithdrawn = 0n;
+    let totalCommission = 0n;
+    for (const group of txSums) {
+      const sum = group._sum.amountXaf ?? 0n;
+      if (group.type === 'DEPOSIT') totalCollected += sum;
+      else if (group.type === 'WITHDRAWAL') totalWithdrawn += sum;
+      else if (group.type === 'COMMISSION') totalCommission += sum;
+    }
+
+    const wrWhere: Record<string, unknown> = {
+      cycle: {
+        branchId: { in: authorizedBranchIds },
+        ...(Object.keys(cycleDateFilter).length > 0 ? { openedAt: cycleDateFilter } : {}),
+      },
+    };
+
+    const wrStatusGroups = await this.prisma.withdrawalRequest.groupBy({
+      by: ['status'],
+      where: wrWhere,
+      _count: { id: true },
+    });
+
+    let pendingWithdrawals = 0;
+    let approvedWithdrawals = 0;
+    let rejectedWithdrawals = 0;
+    for (const group of wrStatusGroups) {
+      if (group.status === 'PENDING') pendingWithdrawals = group._count.id;
+      else if (group.status === 'APPROVED') approvedWithdrawals = group._count.id;
+      else if (group.status === 'REJECTED') rejectedWithdrawals = group._count.id;
+    }
+
+    const totalAvailableBalance = totalCollected - totalWithdrawn - totalCommission;
+
+    return {
+      period: { from: params.fromDate ?? null, to: params.toDate ?? null },
+      branches,
+      summary: {
+        totalCycles,
+        activeCycles: statusCounts['ACTIVE'] ?? 0,
+        completedCycles: statusCounts['COMPLETED'] ?? 0,
+        closedCycles: statusCounts['CLOSED'] ?? 0,
+        suspendedCycles: statusCounts['SUSPENDED'] ?? 0,
+        totalCollectedXaf: totalCollected.toString(),
+        totalWithdrawnXaf: totalWithdrawn.toString(),
+        totalCommissionXaf: totalCommission.toString(),
+        totalAvailableBalanceXaf: totalAvailableBalance.toString(),
+        pendingWithdrawals,
+        approvedWithdrawals,
+        rejectedWithdrawals,
+      },
+    };
+  }
+
+  async getReconciliationReport(
+    actor: AuthenticatedPrincipal,
+    params: { page: number; limit: number; fromDate?: string; toDate?: string; branchId?: string; status?: string },
+  ) {
+    this.requireRole(actor, ['ADMIN', 'SUPERVISOR', 'ACCOUNTANT', 'AUDITOR']);
+
+    let authorizedBranchIds: string[];
+    if (params.branchId) {
+      this.assertBranchAccess(actor, params.branchId);
+      authorizedBranchIds = [params.branchId];
+    } else {
+      authorizedBranchIds = actor.branches.map(({ id }) => id);
+    }
+
+    if (authorizedBranchIds.length === 0) {
+      return {
+        items: [],
+        meta: { page: params.page, limit: params.limit, total: 0, totalPages: 0 },
+      };
+    }
+
+    const cycleDateFilter: Record<string, Date> = {};
+    if (params.fromDate) cycleDateFilter.gte = new Date(params.fromDate);
+    if (params.toDate) cycleDateFilter.lte = new Date(params.toDate);
+
+    const where: Record<string, unknown> = {
+      branchId: { in: authorizedBranchIds },
+    };
+    if (Object.keys(cycleDateFilter).length > 0) {
+      where.openedAt = cycleDateFilter;
+    }
+    if (params.status) {
+      where.status = params.status;
+    }
+
+    const skip = (params.page - 1) * params.limit;
+
+    const [cycles, total] = await this.prisma.$transaction([
+      this.prisma.tontineCycle.findMany({
+        where,
+        skip,
+        take: params.limit,
+        include: {
+          client: { select: { id: true, clientCode: true, firstName: true, lastName: true } },
+          branch: { select: { id: true, code: true, name: true } },
+          market: { select: { id: true, code: true, name: true } },
+          commission: { select: { amountXaf: true } },
+        },
+        orderBy: { openedAt: 'desc' },
+      }),
+      this.prisma.tontineCycle.count({ where }),
+    ]);
+
+    if (cycles.length === 0) {
+      return {
+        items: [],
+        meta: { page: params.page, limit: params.limit, total, totalPages: Math.ceil(total / params.limit) },
+      };
+    }
+
+    const cycleIds = cycles.map((c) => c.id);
+
+    const txGroups = await this.prisma.cycleTransaction.groupBy({
+      by: ['cycleId', 'type'],
+      where: { cycleId: { in: cycleIds } },
+      _sum: { amountXaf: true },
+    });
+
+    const wrGroups = await this.prisma.withdrawalRequest.groupBy({
+      by: ['cycleId', 'status'],
+      where: { cycleId: { in: cycleIds } },
+      _count: { id: true },
+    });
+
+    const txMap = new Map<string, { deposits: bigint; withdrawals: bigint; commissions: bigint }>();
+    for (const g of txGroups) {
+      if (!txMap.has(g.cycleId)) {
+        txMap.set(g.cycleId, { deposits: 0n, withdrawals: 0n, commissions: 0n });
+      }
+      const entry = txMap.get(g.cycleId)!;
+      const sum = g._sum.amountXaf ?? 0n;
+      if (g.type === 'DEPOSIT') entry.deposits += sum;
+      else if (g.type === 'WITHDRAWAL') entry.withdrawals += sum;
+      else if (g.type === 'COMMISSION') entry.commissions += sum;
+    }
+
+    const wrMap = new Map<string, { pending: number; approved: number; rejected: number }>();
+    for (const g of wrGroups) {
+      if (!wrMap.has(g.cycleId)) {
+        wrMap.set(g.cycleId, { pending: 0, approved: 0, rejected: 0 });
+      }
+      const entry = wrMap.get(g.cycleId)!;
+      if (g.status === 'PENDING') entry.pending += g._count.id;
+      else if (g.status === 'APPROVED') entry.approved += g._count.id;
+      else if (g.status === 'REJECTED') entry.rejected += g._count.id;
+    }
+
+    const items = cycles.map((cycle) => {
+      const tx = txMap.get(cycle.id) ?? { deposits: 0n, withdrawals: 0n, commissions: 0n };
+      const wr = wrMap.get(cycle.id) ?? { pending: 0, approved: 0, rejected: 0 };
+      const availableBalance = tx.deposits - tx.withdrawals - tx.commissions;
+
+      return {
+        cycleId: cycle.id,
+        clientId: cycle.clientId,
+        clientCode: cycle.client.clientCode,
+        clientName: `${cycle.client.firstName} ${cycle.client.lastName}`,
+        branchId: cycle.branchId,
+        branchCode: cycle.branch.code,
+        branchName: cycle.branch.name,
+        marketId: cycle.marketId,
+        marketCode: cycle.market.code,
+        marketName: cycle.market.name,
+        status: cycle.status,
+        fixedAmountXaf: cycle.fixedAmountXaf.toString(),
+        targetInstallments: cycle.targetInstallments,
+        installmentCount: cycle.installmentCount,
+        totalCollectedXaf: cycle.totalCollectedXaf.toString(),
+        totalDepositedXaf: tx.deposits.toString(),
+        totalWithdrawnXaf: tx.withdrawals.toString(),
+        totalCommissionXaf: tx.commissions.toString(),
+        availableBalanceXaf: availableBalance.toString(),
+        commissionPaid: cycle.commission !== null,
+        openedAt: cycle.openedAt,
+        completedAt: cycle.completedAt,
+        closedAt: cycle.closedAt,
+        pendingWithdrawals: wr.pending,
+        approvedWithdrawals: wr.approved,
+        rejectedWithdrawals: wr.rejected,
+      };
+    });
+
+    return {
+      items,
+      meta: {
+        page: params.page,
+        limit: params.limit,
+        total,
+        totalPages: Math.ceil(total / params.limit),
+      },
+    };
+  }
+
   async deposit(actor: AuthenticatedPrincipal, cycleId: string, input: DepositInput) {
     this.requireRole(actor, ['AGENT']);
     const payloadHash = this.hashPayload({
