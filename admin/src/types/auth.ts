@@ -1,3 +1,5 @@
+import { UserProfile } from './api'
+
 export type UserRole = 'ADMIN' | 'SUPERVISOR' | 'ACCOUNTANT' | 'AGENT' | 'CASHIER' | 'AUDITOR'
 
 export interface AuthContextType {

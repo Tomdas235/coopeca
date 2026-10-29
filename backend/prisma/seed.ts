@@ -177,7 +177,7 @@ async function main() {
     },
   });
 
-  console.log('Seed data created successfully');
+  console.warn('Seed data created successfully');
 }
 
 main()
