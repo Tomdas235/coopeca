@@ -29,6 +29,7 @@
 - Ajout du CRUD d'agences (`GET /branches`, `POST /branches`, `PATCH /branches/:id`) réservé à ADMIN: création sur marché actif, modification des coordonnées, activation/désactivation, audit immuable. Le code/marché et les références historiques ne sont pas réécrits; aucune suppression physique.
 - Ajout du formulaire Marchés relié à `POST /markets`; ajout de `GET /markets/admin` pour lister les marchés actifs et inactifs avec leurs dates et compteurs, sans changer le `GET /markets` actif utilisé par le mobile.
 - Réorganisation des raccourcis du dashboard en « Administration » (Clients, Agents, Agences, Marchés, ADMIN seulement) et « Opérations » (Cycles, Remises historiques).
+- Ajout du raccourci « Retraits à valider » aux opérations visibles du rôle SUPERVISOR.
 - Pour les profils hors ADMIN/SUPERVISOR, l’écran Marchés reste consultable via la liste active; le formulaire de création est masqué selon les permissions backend.
 - Ajout d'un fallback `index.html` pour les routes profondes du SPA, notamment après actualisation de `/admin/clients`.
 - Correction de l'import Express par défaut qui faisait planter le bootstrap au lancement (`express.static` undefined).
@@ -56,6 +57,7 @@
 - En local, le backend démarre et `/api/v1/health` renvoie `status: ok`, `database: up`; vérifié aussi via le proxy Vite.
 - L'admin de développement est disponible sur `http://127.0.0.1:5173/` et redirige vers son formulaire `/login`.
 - Connexion du compte seed `admin` vérifiée dans le navigateur; le dashboard affiche le profil ADMIN.
+- Connexion du compte seed `supervisor1` vérifiée; le dashboard affiche Koffi Diallo, SUPERVISOR et une agence autorisée. La page `/withdrawals` s'ouvre et indique qu'il n'y a aucune demande en attente; aucune décision de retrait n'a été exécutée.
 - Formulaire Marchés et tableau complet vérifiés avec le compte ADMIN; `MARKET-A1` affiche désormais Actif et sa date, sans créer de nouveau marché lors du test.
 - Raccourcis dashboard vérifiés: Clients, Agents, Agences, Marchés regroupés sous Administration, puis Cycles et Remises historiques sous Opérations.
 - Navigation directe puis actualisation de `/clients` vérifiées; les noms de marchés/agences et dates sont lisibles.

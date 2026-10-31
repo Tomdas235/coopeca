@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Building2, CreditCard, History, Store, UserRound, Users } from 'lucide-react'
+import { BadgeCheck, Building2, CreditCard, History, Store, UserRound, Users } from 'lucide-react'
 import { apiErrorToMessage } from '../services/api'
 import { getProfile, getBranches } from '../services/auth'
 import { UserProfile } from '../types/api'
@@ -45,6 +45,9 @@ export default function Dashboard() {
     { to: '/markets', label: 'Marchés', Icon: Store },
   ]
   const operationsLinks = [
+    ...(profile?.role === 'SUPERVISOR'
+      ? [{ to: '/withdrawals', label: 'Retraits à valider', Icon: BadgeCheck }]
+      : []),
     { to: '/cycles', label: 'Cycles de tontine', Icon: CreditCard },
     { to: '/remittances', label: 'Remises historiques', Icon: History },
   ]

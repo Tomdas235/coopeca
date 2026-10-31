@@ -394,6 +394,20 @@
 			"isBackground": false,
 			"problemMatcher": [],
 			"group": "build"
+		},
+		{
+			"label": "Build supervisor dashboard",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"--prefix",
+				"admin",
+				"run",
+				"build"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
 		}
 	]
 }
