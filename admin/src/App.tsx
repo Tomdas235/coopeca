@@ -49,7 +49,7 @@ function AppContent() {
     <Routes>
       <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" replace />} />
       <Route
-        path="/"
+        path="/*"
         element={
           isAuthenticated ? (
             <MainLayout>

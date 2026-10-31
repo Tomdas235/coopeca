@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import express from 'express';
+import { static as serveStatic, type NextFunction, type Request, type Response } from 'express';
 import { existsSync } from 'node:fs';
 import { extname, resolve } from 'node:path';
 
@@ -20,8 +20,8 @@ async function bootstrap(): Promise<void> {
   ].find((directory) => existsSync(resolve(directory, 'index.html')));
 
   if (adminDirectory) {
-    app.use('/admin', express.static(adminDirectory, { index: false }));
-    app.use('/admin', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    app.use('/admin', serveStatic(adminDirectory, { index: false }));
+    app.use('/admin', (req: Request, res: Response, next: NextFunction) => {
       if (req.method !== 'GET' || extname(req.path) !== '') return next();
       res.sendFile(resolve(adminDirectory, 'index.html'), (error) => {
         if (error) next(error);

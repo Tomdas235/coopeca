@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { apiErrorToMessage } from '../services/api'
 import { getProfile, getBranches } from '../services/auth'
 import { UserProfile } from '../types/api'
@@ -64,44 +65,46 @@ export default function Dashboard() {
       <div className="dashboard-section">
         <h2>Accès rapides</h2>
         <div className="quick-actions">
-          <a href="/clients" className="action-card">
+          <Link to="/clients" className="action-card">
             <span className="action-icon">👥</span>
             <span className="action-label">Gestion des clients</span>
-          </a>
-          <a href="/cycles" className="action-card">
+          </Link>
+          <Link to="/cycles" className="action-card">
             <span className="action-icon">💳</span>
             <span className="action-label">Cycles de tontine</span>
-          </a>
-          <a href="/remittances" className="action-card">
+          </Link>
+          <Link to="/remittances" className="action-card">
             <span className="action-icon">💸</span>
             <span className="action-label">Remises de fonds</span>
-          </a>
-          <a href="/markets" className="action-card">
+          </Link>
+          <Link to="/markets" className="action-card">
             <span className="action-icon">🏢</span>
             <span className="action-label">Marchés</span>
-          </a>
+          </Link>
         </div>
       </div>
 
       {branches.length > 0 && (
         <div className="dashboard-section">
           <h2>Agences autorisées</h2>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Code</th>
-                <th>Nom</th>
-              </tr>
-            </thead>
-            <tbody>
-              {branches.map((b) => (
-                <tr key={b.id}>
-                  <td>{b.code}</td>
-                  <td>{b.name}</td>
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Nom</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {branches.map((b) => (
+                  <tr key={b.id}>
+                    <td>{b.code}</td>
+                    <td>{b.name}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

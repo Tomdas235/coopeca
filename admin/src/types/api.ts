@@ -21,6 +21,10 @@ export interface ClientListItem {
   status: string
   branchId: string | null
   marketId: string | null
+  branchCode?: string
+  branchName?: string
+  marketCode?: string | null
+  marketName?: string | null
   createdAt: string
 }
 

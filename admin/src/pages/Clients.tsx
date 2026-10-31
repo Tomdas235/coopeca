@@ -50,16 +50,19 @@ export default function Clients() {
             {clients.length === 0 ? (
               <tr><td colSpan={6} className="empty-cell">Aucun client trouvé.</td></tr>
             ) : (
-              clients.map((c) => (
-                <tr key={c.id}>
-                  <td>{c.clientCode}</td>
-                  <td>{c.fullName}</td>
-                  <td><span className="badge badge-info">{c.status}</span></td>
-                  <td>{c.branchId || '—'}</td>
-                  <td>{c.marketId || '—'}</td>
-                  <td>{new Date(c.createdAt).toLocaleDateString('fr-FR')}</td>
-                </tr>
-              ))
+              clients.map((c) => {
+                const createdAt = new Date(c.createdAt)
+                return (
+                  <tr key={c.id}>
+                    <td>{c.clientCode}</td>
+                    <td>{c.fullName}</td>
+                    <td><span className="badge badge-info">{c.status}</span></td>
+                    <td>{c.branchName ? `${c.branchCode} — ${c.branchName}` : '—'}</td>
+                    <td>{c.marketName ? `${c.marketCode} — ${c.marketName}` : '—'}</td>
+                    <td>{Number.isNaN(createdAt.getTime()) ? '—' : createdAt.toLocaleDateString('fr-FR')}</td>
+                  </tr>
+                )
+              })
             )}
           </tbody>
         </table>

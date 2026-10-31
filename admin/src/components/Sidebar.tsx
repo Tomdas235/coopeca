@@ -22,7 +22,7 @@ const navItems = [
   { path: '/health', label: 'Santé API', icon: Activity },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ onNavigate }: { onNavigate: () => void }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -40,6 +40,7 @@ export default function Sidebar() {
                 : 'nav-item'
             }
             end={item.path === '/'}
+            onClick={onNavigate}
           >
             <item.icon className="nav-icon" />
             <span className="nav-label">{item.label}</span>
@@ -47,7 +48,11 @@ export default function Sidebar() {
         ))}
       </nav>
       <div className="sidebar-footer">
-        <Link to="/login" onClick={clearToken} className="nav-item logout-item">
+        <Link
+          to="/login"
+          onClick={() => { clearToken(); onNavigate() }}
+          className="nav-item logout-item"
+        >
           <Shield className="nav-icon" />
           <span className="nav-label">Déconnexion</span>
         </Link>

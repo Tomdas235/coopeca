@@ -2,16 +2,17 @@ import { useState } from 'react'
 import { Menu, User, Bell } from 'lucide-react'
 
 interface NavbarProps {
+  onToggleMenu: () => void
   onLogout: () => void
 }
 
-export default function Navbar({ onLogout }: NavbarProps) {
+export default function Navbar({ onToggleMenu, onLogout }: NavbarProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
 
   return (
     <header className="navbar">
       <div className="navbar-content">
-        <button className="menu-toggle" aria-label="Menu">
+          <button className="menu-toggle" type="button" aria-label="Ouvrir le menu" onClick={onToggleMenu}>
           <Menu size={20} />
         </button>
         <div className="navbar-title">COOPECA Admin</div>
