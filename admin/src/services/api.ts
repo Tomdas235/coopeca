@@ -33,10 +33,14 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response: any) => response,
   (error: any) => {
-    if (error.response?.status === 401) {
+    const isLoginRequest = String(error.config?.url ?? '').includes('/auth/sessions')
+    if (error.response?.status === 401 && !isLoginRequest) {
       currentToken = null
       if (typeof window !== 'undefined') {
-        window.location.href = '/login'
+        const loginPath = `${import.meta.env.BASE_URL}login`
+        if (window.location.pathname !== loginPath) {
+          window.location.href = loginPath
+        }
       }
     }
     return Promise.reject(error)

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { api, apiErrorToMessage } from '../services/api'
+import { apiErrorToMessage } from '../services/api'
 import { TontineCycle } from '../types/api'
 
 export default function Cycles() {

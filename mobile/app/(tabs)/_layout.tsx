@@ -27,8 +27,7 @@ const tabIcon = (Icon: TabIconComponent) =>
 
     return (
       <Icon
-        accessible={false}
-        color={tint}
+        stroke={tint}
         size={size}
         strokeWidth={focused ? 2.2 : 1.8}
       />

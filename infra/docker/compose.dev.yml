@@ -50,34 +50,6 @@ services:
       retries: 5
       start_period: 5s
 
-  api:
-    build:
-      context: ../../backend
-      dockerfile: Dockerfile
-    container_name: coopeca-api-dev
-    restart: unless-stopped
-    env_file: .env
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      NODE_ENV: development
-      PORT: 3000
-      JWT_SECRET: ${JWT_SECRET:-replace-this-development-secret-with-a-random-value}
-      # Pointée vers le service « postgres » du réseau Compose, pas localhost.
-      DATABASE_URL: postgresql://${POSTGRES_USER:-coopeca}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-coopeca}?schema=public&sslmode=disable
-      REDIS_URL: redis://redis:6379
-    ports:
-      - "127.0.0.1:3000:3000"
-    healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/v1/health').then((r) => process.exit(r.status === 200 ? 0 : 1)).catch(() => process.exit(1))"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-
 volumes:
   coopeca_pgdata_dev:
     name: coopeca_pgdata_dev

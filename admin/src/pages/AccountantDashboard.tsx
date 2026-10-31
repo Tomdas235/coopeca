@@ -18,7 +18,7 @@ export default function AccountantDashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [showReport, setShowReport] = useState(false)
-  const [reportPage, setReportPage] = useState(1)
+  const [reportPage] = useState(1)
 
   const loadData = useCallback(async () => {
     setIsLoading(true)

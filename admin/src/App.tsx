@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { loadToken, clearToken, getProfile } from './services/auth'
 import MainLayout from './layouts/MainLayout'
 import Login from './pages/Login'
@@ -15,7 +15,6 @@ import CashierDashboard from './pages/CashierDashboard'
 import AuditorDashboard from './pages/AuditorDashboard'
 
 function AppContent() {
-  const location = useLocation()
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -65,6 +64,7 @@ function AppContent() {
                 <Route path="accountant" element={<AccountantDashboard />} />
                 <Route path="cashier" element={<CashierDashboard />} />
                 <Route path="auditor" element={<AuditorDashboard />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </MainLayout>
           ) : (
@@ -78,7 +78,7 @@ function AppContent() {
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <AppContent />
     </BrowserRouter>
   )

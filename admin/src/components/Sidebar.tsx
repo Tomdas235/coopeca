@@ -1,4 +1,5 @@
-import { Link, useLocation, NavLink } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
+import { clearToken } from '../services/auth'
 import {
   LayoutDashboard,
   Users,
@@ -7,7 +8,6 @@ import {
   Building2,
   Activity,
   Shield,
-  LogOut,
 } from 'lucide-react'
 
 const navItems = [
@@ -23,8 +23,6 @@ const navItems = [
 ]
 
 export default function Sidebar() {
-  const location = useLocation()
-
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -49,10 +47,10 @@ export default function Sidebar() {
         ))}
       </nav>
       <div className="sidebar-footer">
-        <a href="/login" className="nav-item logout-item">
+        <Link to="/login" onClick={clearToken} className="nav-item logout-item">
           <Shield className="nav-icon" />
           <span className="nav-label">Déconnexion</span>
-        </a>
+        </Link>
       </div>
     </aside>
   )

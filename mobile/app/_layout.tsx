@@ -12,7 +12,7 @@ import { Stack } from 'expo-router';
  */
 export default function RootLayout() {
   return (
-    <Stack initialRouteName="(auth)" screenOptions={{ headerShown: false }}>
+    <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(auth)" options={{ title: 'Connexion' }} />
       <Stack.Screen name="(tabs)" options={{ title: 'COOPECA' }} />
       <Stack.Screen name="recus/[id]" options={{ title: 'Reçu' }} />

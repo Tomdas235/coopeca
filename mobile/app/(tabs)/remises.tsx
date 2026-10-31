@@ -15,6 +15,7 @@ import { DialogConfirmation } from '../../src/components/DialogConfirmation';
 import { AppNotice } from '../../src/components/AppNotice';
 import { colors } from '../../src/components/theme';
 import { formatMontantXAF } from '../../src/utils/montants';
+import { BusinessStatusRemise, SyncStatus } from '../../src/database/schema';
 import {
   remiseRepository,
   collecteRepository,
@@ -88,9 +89,9 @@ export default function RemisesScreen() {
       id: cleIdempotence,
       agence_id: agenceId,
       montant_total_xaf: montantTotal,
-      statut: 'DÉCLARÉE' as const,
+      statut: BusinessStatusRemise.DÉCLARÉE,
       cle_idempotence: cleIdempotence,
-      sync_status: 'DRAFT' as const,
+      sync_status: SyncStatus.DRAFT,
       date_declaree: new Date().toISOString(),
       date_confirmee_caisse: null,
       motif_ecart: null,
@@ -124,7 +125,7 @@ export default function RemisesScreen() {
   const statutPillKind = (s: string) => {
     switch (s) {
       case 'CONFIRMÉE':
-        return 'success' as const;
+        return 'online' as const;
       case 'DÉCLARÉE':
         return 'pending' as const;
       case 'EN_ATTENTE_CAISSIER':
@@ -132,7 +133,7 @@ export default function RemisesScreen() {
       case 'ÉCART':
         return 'error' as const;
       case 'ANNULÉE':
-        return 'error' as const;
+        return 'offline' as const;
       default:
         return 'unknown' as const;
     }
@@ -250,7 +251,7 @@ export default function RemisesScreen() {
                   <StatusPill
                     kind={
                       r.sync_status === 'SYNCED'
-                        ? ('success' as const)
+                        ? ('online' as const)
                         : ('pending' as const)
                     }
                     label={r.sync_status}

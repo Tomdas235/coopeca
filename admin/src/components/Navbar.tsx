@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Menu, Sun, Moon, User, Bell } from 'lucide-react'
+import { Menu, User, Bell } from 'lucide-react'
 
 interface NavbarProps {
   onLogout: () => void

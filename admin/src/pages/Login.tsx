@@ -13,8 +13,7 @@ export default function Login() {
     setIsLoading(true)
     try {
       await login({ username, password })
-      // Force full reload to pick up auth state
-      window.location.href = '/'
+      window.location.href = import.meta.env.BASE_URL
     } catch (err: any) {
       setError(err.message || 'Identifiants invalides.')
     } finally {

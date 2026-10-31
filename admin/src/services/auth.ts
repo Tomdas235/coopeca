@@ -20,7 +20,9 @@ export function loadToken(): string | null {
   const token = getToken()
   if (token) return token
   try {
-    return sessionStorage.getItem(TOKEN_STORAGE_KEY)
+    const storedToken = sessionStorage.getItem(TOKEN_STORAGE_KEY)
+    setToken(storedToken)
+    return storedToken
   } catch {
     return null
   }

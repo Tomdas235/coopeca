@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { api, apiErrorToMessage } from '../services/api'
+import { apiErrorToMessage } from '../services/api'
 import { getProfile, getBranches } from '../services/auth'
 import { UserProfile } from '../types/api'
 
@@ -8,15 +8,6 @@ export default function Dashboard() {
   const [branches, setBranches] = useState<Array<{ id: string; code: string; name: string }>>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
-
-  // Stats étendues (chargées en parallèle)
-  const [stats, setStats] = useState({
-    totalClients: 0,
-    provisionalClients: 0,
-    activeCycles: 0,
-    totalCollected: '0',
-    pendingWithdrawals: 0,
-  })
 
   useEffect(() => {
     let mounted = true
@@ -27,27 +18,6 @@ export default function Dashboard() {
           setProfile(prof)
           setBranches(brs)
         }
-        // Charger les stats depuis les endpoints dédiés
-        const [clientsResp, withdrawalsResp] = await Promise.all([
-          api.get('/clients'),
-          api.get('/withdrawals/pending'),
-        ])
-        if (!mounted) return
-
-        const clients = clientsResp.data.items || clientsResp.data || []
-        // Les cycles sont par dossier, pas de liste globale
-        const cycles: any[] = []
-
-        setStats({
-          totalClients: clients.length,
-          provisionalClients: clients.filter((c: any) => c.status === 'PROVISOIRE').length,
-          activeCycles: cycles.filter((c: any) => c.status === 'ACTIVE').length,
-          totalCollected: (
-            cycles.reduce((sum: number, cy: any) => sum + (cy.totalCollectedXaf ? parseInt(cy.totalCollectedXaf, 10) : 0), 0) /
-            1000
-          ).toString(),
-          pendingWithdrawals: Array.isArray(withdrawalsResp.data) ? withdrawalsResp.data.length : (withdrawalsResp.data.items?.length || 0),
-        })
       } catch (err: any) {
         if (mounted) setError(apiErrorToMessage(err))
       } finally {

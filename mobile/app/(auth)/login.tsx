@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useRef, useState, useSyncExternalStore } from 'react';
+import { useRef, useState, useSyncExternalStore, type ElementRef } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { ActionCard } from '../../src/components/ActionCard';
 import { AppScreen } from '../../src/components/AppScreen';
-import { StatusPill } from '../../src/components/StatusPill';
 import { colors } from '../../src/components/theme';
 import { authenticationService } from '../../src/features/auth';
 import { LoginController } from '../../src/features/auth/LoginController';
@@ -18,7 +17,7 @@ import { LoginController } from '../../src/features/auth/LoginController';
 export default function LoginScreen() {
   const router = useRouter();
   const [controller] = useState(() => new LoginController(authenticationService));
-  const passwordRef = useRef<TextInput>(null);
+  const passwordRef = useRef<ElementRef<typeof TextInput>>(null);
   const form = useSyncExternalStore(
     controller.subscribe,
     controller.getSnapshot,
@@ -45,14 +44,6 @@ export default function LoginScreen() {
             Connexion
           </Text>
           <Text style={styles.intro}>Saisissez vos identifiants pour accéder à votre espace.</Text>
-        </View>
-
-        <View style={styles.statusBlock}>
-          <StatusPill kind="error" label="Service non configuré" />
-          <Text style={styles.statusDescription}>
-            Aucune connexion réelle ne peut être établie pour le moment. Les identifiants saisis
-            ne sont ni envoyés ni enregistrés.
-          </Text>
         </View>
 
         <View style={styles.field}>

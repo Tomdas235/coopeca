@@ -2,6 +2,8 @@ import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import express from 'express';
+import { existsSync } from 'node:fs';
+import { extname, resolve } from 'node:path';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
@@ -11,10 +13,21 @@ async function bootstrap(): Promise<void> {
   // API versionnée : toutes les routes publiques sont préfixées /api/v1.
   app.setGlobalPrefix('api/v1');
 
-  // Admin Web Dashboard : servir les fichiers statiques
-  app.use('/admin', (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    express.static('dist/admin-dashboard', { index: 'index.html' })(req, res, next);
-  });
+  // Servir le bundle empaqueté si présent, sinon le build local Vite.
+  const adminDirectory = [
+    resolve(process.cwd(), 'dist/admin-dashboard'),
+    resolve(process.cwd(), '../admin/dist'),
+  ].find((directory) => existsSync(resolve(directory, 'index.html')));
+
+  if (adminDirectory) {
+    app.use('/admin', express.static(adminDirectory, { index: false }));
+    app.use('/admin', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+      if (req.method !== 'GET' || extname(req.path) !== '') return next();
+      res.sendFile(resolve(adminDirectory, 'index.html'), (error) => {
+        if (error) next(error);
+      });
+    });
+  }
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);

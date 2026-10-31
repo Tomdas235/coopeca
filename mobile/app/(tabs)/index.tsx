@@ -55,35 +55,35 @@ export default function AccueilScreen() {
 <ActionCard
   title="Cycles"
   description="Nouveau produit à 31 versements"
-  icon={<Wallet size={20} color={colors.accent} strokeWidth={1.8} />}
+  icon={<Wallet size={20} stroke={colors.accent} strokeWidth={1.8} />}
   onPress={() => router.push('/(tabs)/cycles')}
 />
 
 <ActionCard
   title="Collectes"
   description="Parcours legacy des collectes journalières"
-  icon={<Folder size={20} color={colors.accent} strokeWidth={1.8} />}
+  icon={<Folder size={20} stroke={colors.accent} strokeWidth={1.8} />}
   onPress={() => router.push('/(tabs)/dossiers')}
 />
 
 <ActionCard
   title="Collectes"
   description="Parcours legacy des collectes journalières"
-  icon={<Receipt size={20} color={colors.accent} strokeWidth={1.8} />}
+  icon={<Receipt size={20} stroke={colors.accent} strokeWidth={1.8} />}
   onPress={() => router.push('/(tabs)/collectes')}
 />
 
 <ActionCard
   title="Remises"
   description="Parcours legacy des remises (reversements)"
-  icon={<Wallet size={20} color={colors.accent} strokeWidth={1.8} />}
+  icon={<Wallet size={20} stroke={colors.accent} strokeWidth={1.8} />}
   onPress={() => router.push('/(tabs)/remises')}
 />
 
 <ActionCard
   title="Clôture"
   description="Ancienne clôture — module en préparation"
-  icon={<ClipboardCheck size={20} color={colors.accent} strokeWidth={1.8} />}
+  icon={<ClipboardCheck size={20} stroke={colors.accent} strokeWidth={1.8} />}
   onPress={() => router.push('/(tabs)/cloture')}
 />
 </View>
@@ -100,13 +100,13 @@ export default function AccueilScreen() {
         <ActionCard
           title="Session et profil"
           description="Consulter la session sur cet appareil"
-          icon={<UserRound size={20} color={colors.accent} strokeWidth={1.8} />}
+          icon={<UserRound size={20} stroke={colors.accent} strokeWidth={1.8} />}
           onPress={() => router.push('/(auth)/session')}
         />
         <ActionCard
           title="Composants UI"
           description="Vitrine des composants de l’interface"
-          icon={<Blocks size={20} color={colors.accent} strokeWidth={1.8} />}
+          icon={<Blocks size={20} stroke={colors.accent} strokeWidth={1.8} />}
           onPress={() => router.push('/(tabs)/composants')}
         />
       </View>
