@@ -24,8 +24,11 @@ export default function WithdrawalsPending() {
     let mounted = true
     async function loadWithdrawals() {
       try {
-        const response = await api.get<{ items: WithdrawalRequest[]; meta: any }>('/withdrawals/pending')
-        if (mounted) setWithdrawals(response.data.items)
+        const response = await api.get<any>('/withdrawals/pending')
+        if (mounted) {
+          const data = response.data
+          setWithdrawals(Array.isArray(data) ? data : (data.items || []))
+        }
       } catch (err: any) {
         if (mounted) setError(apiErrorToMessage(err))
       } finally {

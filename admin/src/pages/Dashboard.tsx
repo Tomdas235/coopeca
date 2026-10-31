@@ -28,15 +28,15 @@ export default function Dashboard() {
           setBranches(brs)
         }
         // Charger les stats depuis les endpoints dédiés
-        const [clientsResp, cyclesResp, withdrawalsResp] = await Promise.all([
+        const [clientsResp, withdrawalsResp] = await Promise.all([
           api.get('/clients'),
-          api.get('/tontine-cycles'),
           api.get('/withdrawals/pending'),
         ])
         if (!mounted) return
 
         const clients = clientsResp.data.items || clientsResp.data || []
-        const cycles = cyclesResp.data.items || cyclesResp.data || []
+        // Les cycles sont par dossier, pas de liste globale
+        const cycles: any[] = []
 
         setStats({
           totalClients: clients.length,
@@ -46,7 +46,7 @@ export default function Dashboard() {
             cycles.reduce((sum: number, cy: any) => sum + (cy.totalCollectedXaf ? parseInt(cy.totalCollectedXaf, 10) : 0), 0) /
             1000
           ).toString(),
-          pendingWithdrawals: withdrawalsResp.data.length,
+          pendingWithdrawals: Array.isArray(withdrawalsResp.data) ? withdrawalsResp.data.length : (withdrawalsResp.data.items?.length || 0),
         })
       } catch (err: any) {
         if (mounted) setError(apiErrorToMessage(err))

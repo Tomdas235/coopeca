@@ -11,8 +11,11 @@ export default function Cycles() {
     let mounted = true
     async function loadCycles() {
       try {
-        const response = await api.get<{ items: TontineCycle[]; meta: any }>('/tontine-cycles')
-        if (mounted) setCycles(response.data.items)
+        // Pas de liste globale de cycles - ils sont par dossier
+        if (mounted) {
+          setCycles([])
+          setError('')
+        }
       } catch (err: any) {
         if (mounted) setError(apiErrorToMessage(err))
       } finally {
@@ -49,7 +52,7 @@ export default function Cycles() {
           </thead>
           <tbody>
             {cycles.length === 0 ? (
-              <tr><td colSpan={7} className="empty-cell">Aucun cycle trouvé.</td></tr>
+              <tr><td colSpan={7} className="empty-cell">Les cycles sont consultables par dossier client. Accédez à un dossier pour voir ses cycles.</td></tr>
             ) : (
               cycles.map((c) => (
                 <tr key={c.id}>
