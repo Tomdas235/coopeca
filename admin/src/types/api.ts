@@ -238,3 +238,34 @@ export interface ReconciliationReport {
     totalPages: number
   }
 }
+
+export interface AgentAccount {
+  id: string
+  username: string
+  fullName: string
+  phone: string | null
+  role: 'AGENT'
+  isActive: boolean
+  createdAt: string
+  branchAccesses: Array<{
+    branchId: string
+    branchCode: string
+    branchName: string
+    isPrimary: boolean
+    marketIds: string[]
+  }>
+}
+
+export interface BranchAccount {
+  id: string
+  code: string
+  name: string
+  address: string | null
+  phone: string | null
+  isActive: boolean
+  marketId: string
+  createdAt: string
+  updatedAt: string
+  market: Pick<Market, 'id' | 'code' | 'name' | 'isActive'>
+  _count: { clients: number; userAccesses: number }
+}

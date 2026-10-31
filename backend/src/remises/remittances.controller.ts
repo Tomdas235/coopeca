@@ -1,8 +1,6 @@
 ﻿import {
   Controller,
   Get,
-  Post,
-  Body,
   Query,
   UseGuards,
   BadRequestException,
@@ -30,16 +28,6 @@ const filterSchema = z.object({
   toDate: z.string().datetime({ offset: true }).optional(),
 });
 
-const remittanceCreateSchema = z.object({
-  agentId: z.string().uuid(),
-  branchId: z.string().uuid(),
-  marketId: z.string().uuid(),
-  periodStart: z.string().datetime({ offset: true }),
-  periodEnd: z.string().datetime({ offset: true }),
-  declaredAmountXaf: z.string().regex(/^[1-9][0-9]*$/, 'Montant entier XAF requis.'),
-  description: z.string().max(500).optional(),
-});
-
 @Controller('remittances')
 @UseGuards(AuthGuard)
 export class RemittancesController {
@@ -47,7 +35,7 @@ export class RemittancesController {
 
   @Get()
   list(
-    @CurrentUser() _actor: AuthenticatedPrincipal,
+    @CurrentUser() actor: AuthenticatedPrincipal,
     @Query('page') page: string | undefined,
     @Query('limit') limit: string | undefined,
     @Query() filters: RemittanceFilters,
@@ -60,7 +48,7 @@ export class RemittancesController {
       throw new BadRequestException('Paramètres de pagination ou filtres invalides.');
     }
 
-    return this.remittancesService.findAll({
+    return this.remittancesService.findAll(actor, {
       page: pageParams.data.page,
       limit: limitParams.data.limit,
       status: filterParams.data.status,
@@ -72,17 +60,5 @@ export class RemittancesController {
     });
   }
 
-  @Post()
-  create(
-    @CurrentUser() actor: AuthenticatedPrincipal,
-    @Body() body: unknown,
-  ) {
-    const input = remittanceCreateSchema.safeParse(body);
-    if (!input.success) {
-      throw new BadRequestException('Données de la remise invalides.');
-    }
-
-    return this.remittancesService.create(actor, input.data);
-  }
 }
 

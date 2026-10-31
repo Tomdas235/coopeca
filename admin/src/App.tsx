@@ -13,6 +13,8 @@ import WithdrawalsPending from './pages/WithdrawalsPending'
 import AccountantDashboard from './pages/AccountantDashboard'
 import CashierDashboard from './pages/CashierDashboard'
 import AuditorDashboard from './pages/AuditorDashboard'
+import Agents from './pages/Agents'
+import Branches from './pages/Branches'
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(true)
@@ -56,6 +58,8 @@ function AppContent() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="clients" element={<Clients />} />
+                <Route path="agents" element={<Agents />} />
+                <Route path="branches" element={<Branches />} />
                 <Route path="cycles" element={<Cycles />} />
                 <Route path="remittances" element={<Remittances />} />
                 <Route path="markets" element={<Markets />} />

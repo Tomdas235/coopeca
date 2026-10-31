@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { Building2, CreditCard, History, Store, UserRound, Users } from 'lucide-react'
 import { apiErrorToMessage } from '../services/api'
 import { getProfile, getBranches } from '../services/auth'
 import { UserProfile } from '../types/api'
@@ -37,6 +38,17 @@ export default function Dashboard() {
     return <div className="empty-state"><p>{error}</p></div>
   }
 
+  const administrationLinks = [
+    { to: '/clients', label: 'Clients', Icon: Users },
+    { to: '/agents', label: 'Agents', Icon: UserRound },
+    { to: '/branches', label: 'Agences', Icon: Building2 },
+    { to: '/markets', label: 'Marchés', Icon: Store },
+  ]
+  const operationsLinks = [
+    { to: '/cycles', label: 'Cycles de tontine', Icon: CreditCard },
+    { to: '/remittances', label: 'Remises historiques', Icon: History },
+  ]
+
   return (
     <div className="dashboard">
       <div className="dashboard-header">
@@ -62,25 +74,29 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {profile?.role === 'ADMIN' && (
+        <div className="dashboard-section">
+          <h2>Administration</h2>
+          <div className="quick-actions">
+            {administrationLinks.map(({ to, label, Icon }) => (
+              <Link key={to} to={to} className="action-card">
+                <Icon className="action-icon" aria-hidden="true" />
+                <span className="action-label">{label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="dashboard-section">
-        <h2>Accès rapides</h2>
+        <h2>Opérations</h2>
         <div className="quick-actions">
-          <Link to="/clients" className="action-card">
-            <span className="action-icon">👥</span>
-            <span className="action-label">Gestion des clients</span>
-          </Link>
-          <Link to="/cycles" className="action-card">
-            <span className="action-icon">💳</span>
-            <span className="action-label">Cycles de tontine</span>
-          </Link>
-          <Link to="/remittances" className="action-card">
-            <span className="action-icon">💸</span>
-            <span className="action-label">Remises de fonds</span>
-          </Link>
-          <Link to="/markets" className="action-card">
-            <span className="action-icon">🏢</span>
-            <span className="action-label">Marchés</span>
-          </Link>
+          {operationsLinks.map(({ to, label, Icon }) => (
+            <Link key={to} to={to} className="action-card">
+              <Icon className="action-icon" aria-hidden="true" />
+              <span className="action-label">{label}</span>
+            </Link>
+          ))}
         </div>
       </div>
 

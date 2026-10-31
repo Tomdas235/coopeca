@@ -79,6 +79,11 @@ export class MarketsController {
     return this.cyclesService.listMarkets();
   }
 
+  @Get('admin')
+  listForAdministration(@CurrentUser() actor: AuthenticatedPrincipal) {
+    return this.cyclesService.listMarketsForAdministration(actor);
+  }
+
   @Post()
   create(@CurrentUser() actor: AuthenticatedPrincipal, @Body() body: unknown) {
     const input = marketSchema.safeParse(body);

@@ -47,7 +47,22 @@ export class CyclesService {
     return this.prisma.market.findMany({
       where: { isActive: true },
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
-      select: { id: true, code: true, name: true },
+      select: { id: true, code: true, name: true, isActive: true, createdAt: true },
+    });
+  }
+
+  async listMarketsForAdministration(actor: AuthenticatedPrincipal) {
+    this.requireRole(actor, ['ADMIN', 'SUPERVISOR']);
+    return this.prisma.market.findMany({
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        isActive: true,
+        createdAt: true,
+        _count: { select: { branches: true } },
+      },
     });
   }
 

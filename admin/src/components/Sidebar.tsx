@@ -3,9 +3,11 @@ import { clearToken } from '../services/auth'
 import {
   LayoutDashboard,
   Users,
+  UserRound,
   CreditCard,
   RefreshCcw,
   Building2,
+  Building,
   Activity,
   Shield,
 } from 'lucide-react'
@@ -13,6 +15,8 @@ import {
 const navItems = [
   { path: '/', label: 'Tableau de bord', icon: LayoutDashboard },
   { path: '/clients', label: 'Clients', icon: Users },
+  { path: '/agents', label: 'Agents', icon: UserRound },
+  { path: '/branches', label: 'Agences', icon: Building },
   { path: '/cycles', label: 'Cycles', icon: CreditCard },
   { path: '/remittances', label: 'Remises', icon: RefreshCcw },
   { path: '/markets', label: 'Marchés', icon: Building2 },

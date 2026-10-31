@@ -74,6 +74,14 @@ La hiérarchie numérique est indicative. Les permissions réelles sont vérifi�
 | `POST /api/v1/auth/sessions` | Public |
 | `GET /api/v1/me` | Authentifié |
 | `GET /api/v1/markets` | Authentifié |
+| `GET /api/v1/markets/admin` | ADMIN, SUPERVISOR |
+| `GET /api/v1/users?role=AGENT` | ADMIN |
+| `GET /api/v1/users/:id` | ADMIN |
+| `POST /api/v1/users/agents` | ADMIN |
+| `PATCH /api/v1/users/:id` | ADMIN (agent uniquement) |
+| `GET /api/v1/branches` | ADMIN |
+| `POST /api/v1/branches` | ADMIN |
+| `PATCH /api/v1/branches/:id` | ADMIN |
 | `POST /api/v1/markets` | ADMIN, SUPERVISOR |
 | `POST /api/v1/clients/:id/cycle-assignment` | ADMIN, SUPERVISOR |
 | `GET /api/v1/tontine-cycles/:id` | AGENT (affecté), ADMIN, SUPERVISOR, ACCOUNTANT, AUDITOR |
@@ -84,3 +92,9 @@ La hiérarchie numérique est indicative. Les permissions réelles sont vérifi�
 | `GET /api/v1/financial-summary` | ADMIN, SUPERVISOR, ACCOUNTANT, AUDITOR |
 | `GET /api/v1/reconciliation-report` | ADMIN, SUPERVISOR, ACCOUNTANT, AUDITOR |
 | `GET /api/v1/remittances` | Authentifié |
+
+La gestion des agents permet la création, la consultation, la modification du nom/téléphone et la désactivation/réactivation. La suppression physique d'un compte est volontairement absente: les références historiques et financières doivent rester valides. Une mutation d'agent est auditée. L'agence principale est attribuée à la création et n'est pas modifiable depuis ce CRUD, afin d'éviter de déplacer implicitement les dossiers et opérations historiques.
+
+Les remises sont exposées en lecture historique seulement dans ce parcours. La création HTTP de remise n'est pas publiée tant que son contrat n'apporte pas de clé idempotente et ne respecte pas les décisions canoniques du nouveau parcours de cycles.
+
+La gestion des agences permet la consultation globale, la création liée à un marché actif, la modification du nom et des coordonnées, et l'activation/désactivation. Le code et le marché ne sont pas modifiables après création; la suppression physique est exclue pour conserver les références historiques. Chaque mutation est inscrite dans le journal d'audit.

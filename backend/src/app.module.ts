@@ -8,6 +8,9 @@ import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { CyclesModule } from './cycles/cycles.module';
 import { ClientsModule } from './clients/clients.module';
+import { RemittancesModule } from './remises/remittances.module';
+import { UsersModule } from './users/users.module';
+import { BranchesModule } from './branches/branches.module';
 
 /**
  * Module racine de l'API COOPECA.
@@ -32,6 +35,9 @@ import { ClientsModule } from './clients/clients.module';
     AuthModule,
     CyclesModule,
     ClientsModule,
+    RemittancesModule,
+    UsersModule,
+    BranchesModule,
   ],
 })
 export class AppModule {}

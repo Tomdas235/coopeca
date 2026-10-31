@@ -1,6 +1,7 @@
-﻿import { Injectable } from "@nestjs/common";
+﻿import { ForbiddenException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../database/prisma.service";
 import { RemittanceStatus } from "@prisma/client";
+import { AuthenticatedPrincipal } from "../auth/auth.types";
 
 export interface RemittanceFilters {
   status?: string | null;
@@ -15,9 +16,16 @@ export interface RemittanceFilters {
 export class RemittancesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findMany(filters: RemittanceFilters, page: number, limit: number) {
+  async findMany(actor: AuthenticatedPrincipal, filters: RemittanceFilters, page: number, limit: number) {
+    if (!['AGENT', 'CASHIER', 'SUPERVISOR', 'ADMIN', 'ACCOUNTANT', 'AUDITOR'].includes(actor.role)) {
+      throw new ForbiddenException('Consultation des remises non autorisée.');
+    }
     const skip = (page - 1) * limit;
     const where: Record<string, unknown> = {};
+    const branchIds = actor.branches.map(({ id }) => id);
+    if (branchIds.length === 0) return { items: [], meta: { page, limit, total: 0, totalPages: 0 } };
+    where.branchId = { in: branchIds };
+    if (actor.role === 'AGENT') where.agentId = actor.id;
 
     if (filters.status) {
       where.status = { equals: filters.status as RemittanceStatus };
@@ -26,7 +34,13 @@ export class RemittancesService {
       where.agentId = { equals: filters.agentId };
     }
     if (filters.branchId) {
+      if (!branchIds.includes(filters.branchId)) {
+        return { items: [], meta: { page, limit, total: 0, totalPages: 0 } };
+      }
       where.branchId = { equals: filters.branchId };
+    }
+    if (filters.marketId) {
+      where.branch = { marketId: filters.marketId };
     }
     if (filters.fromDate || filters.toDate) {
       where.createdAt = {};
@@ -44,7 +58,7 @@ export class RemittancesService {
         skip,
         take: limit,
         include: {
-          branch: { select: { id: true, code: true, name: true } },
+          branch: { select: { id: true, code: true, name: true, marketId: true } },
           agent: { select: { id: true, fullName: true } },
           cashier: { select: { id: true, fullName: true } },
         },
@@ -54,7 +68,12 @@ export class RemittancesService {
     ]);
 
     return {
-      data,
+      items: data.map((item) => ({
+        ...item,
+        declaredTotalXaf: item.declaredTotalXaf.toString(),
+        receivedTotalXaf: item.receivedTotalXaf?.toString() ?? null,
+        marketId: item.branch.marketId,
+      })),
       meta: {
         page,
         limit,
@@ -64,8 +83,9 @@ export class RemittancesService {
     };
   }
 
-  async findAll(params: { page: number; limit: number; status?: string; agentId?: string; branchId?: string; marketId?: string; fromDate?: string; toDate?: string }) {
+  async findAll(actor: AuthenticatedPrincipal, params: { page: number; limit: number; status?: string; agentId?: string; branchId?: string; marketId?: string; fromDate?: string; toDate?: string }) {
     return this.findMany(
+      actor,
       {
         status: params.status ?? null,
         agentId: params.agentId ?? null,
