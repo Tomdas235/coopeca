@@ -2,7 +2,7 @@
 
 **Statut :** document de travail. Aucune interface déclarée validée au-delà des sources. Ne modifie ni code, ni SQL v1.1, ni `schema.prisma` ; aucune migration.
 
-**Conventions :** `MOB-xxx` = mobile Android (Expo Router), `WEB-xxx` = dashboard Web (projet inexistant — voir §0.3). **Origine :** `Documentée` (source explicite), `Déduite` (nécessaire au parcours, non nommée), `Squelette` (route posée, fonction non implémentée). Un écran compté une fois. Dialogues et états alternatifs rattachés au parent, **non comptés**. Statuts : `À concevoir`, `À développer`, `En cours`, `À tester`, `Terminé` (§0.4).
+**Conventions :** `MOB-xxx` = mobile Android (Expo Router), `WEB-xxx` = interface Web admin (`admin/`, React/Vite). **Origine :** `Documentée` (source explicite), `Déduite` (nécessaire au parcours, non nommée), `Squelette` (route posée, fonction non implémentée). Un écran compté une fois. Dialogues et états alternatifs rattachés au parent, **non comptés**. Statuts : `À concevoir`, `À développer`, `En cours`, `À tester`, `Terminé` (§0.4). **Mise à jour de l'état d'implémentation : 01/11/2026.**
 
 ## 0. Constats préalables
 
@@ -12,14 +12,28 @@
 - Absents du dépôt (UX §15) : `COOPECA_UX_UI_Design_Concept_v1.0.pptx`, `COOPECA_Wireframes_Ecrans_v1.0.pptx`, `COOPECA_Wireframes_Web_v1.0.pptx`, `COOPECA_Parcours_Web_Fonctionnels_v1.0.docx` — écrans issus de ces maquettes **non vérifiables**.
 
 ### 0.2 Routes mobile réelles (contenu lu)
-`_layout.tsx` (Stack `(auth)`, `(tabs)`, `recus/[id]`) ; `(auth)/login.tsx` ; `(tabs)/_layout.tsx` (5 onglets : index, clients, collectes, remises, cloture ; `dossiers` en `href: null`, hors barre) ; `(tabs)/{index,clients,dossiers,collectes,remises,cloture}.tsx` ; `recus/[id].tsx`. **8 routes.** Contenu : login et recus = `ScreenPlaceholder` ; les 5 autres = `FeatureScreen` ; index = démo (`src/features/accueil`, **aucune donnée réelle**). **Aucune route n'est terminée.** Backend : répertoires métier présents mais seuls `health.controller/service` existent.
+Routes Expo Router présentes : `(auth)/login`, `(auth)/session`, `(tabs)/index`, `clients`, `dossiers`, `collectes`, `remises`, `cloture`, `cycles`, `composants` et `recus/[id]`. L'authentification peut appeler `POST /auth/sessions` et `GET /me`; un mode local de démonstration distinct existe. `cycles.tsx` consulte les marchés, un cycle et envoie des versements au backend. `clients.tsx` et certains écrans legacy utilisent les repositories locaux SQLite. La synchronisation générale et plusieurs workflows terrain restent incomplets; ne pas assimiler écran présent à parcours validé de bout en bout. Voir le [README mobile](../mobile/README.md).
 
 ### 0.3 Projet Web
-**Aucun répertoire `web/`, `frontend/` ou `dashboard/` à la racine** (vérifié). Toutes les fiches `WEB-xxx` sont `À concevoir`, d'origine `Documentée (fonctions envisagées APP_FLOW §12)` ou `Déduite`.
+L'application Web est dans `admin/` (React, TypeScript, Vite), servie en développement sur le port Vite et en production sous `/admin`. Elle couvre actuellement connexion, tableau de bord par rôle, clients en liste, marchés, cycles (vue limitée), remises historiques en lecture, gestion limitée des agents/agences, retraits en attente pour superviseur, et espaces comptable/caissier/auditeur. Les parcours détaillés restants dans cet inventaire ne sont pas réputés implémentés. Les maquettes Web officielles citées au §0.1 demeurent absentes.
 
 ### 0.4 Statuts
-- `À concevoir` : besoin identifié, spécification/maquettage restant (tous les squelettes mobile, tout le Web).
-- `À développer`, `En cours`, `À tester`, `Terminé` : non attribués (aucune implémentation constatée).
+- `À concevoir` : spécification/maquettage restant.
+- `En cours` : écran présent, mais sous-ensemble des actions ou états attendus seulement.
+- `À tester` : code présent, mais parcours non vérifié dans l'environnement visé.
+- `Terminé` : exigences et tests d'acceptation satisfaits; aucun écran Web n'est déclaré terminé par ce snapshot.
+- État Web vérifié : WEB-001, WEB-002, WEB-003, WEB-009, WEB-014, WEB-015 et WEB-016 sont **En cours**. WEB-010 (confirmation caisse), WEB-004 à WEB-008 (dossiers, détails, collectes/reçus), WEB-011/012 (clôtures), WEB-013 (conflits), WEB-017/018 (audit/paramètres) restent **À concevoir** ou **À développer**, selon la fiche. Cette liste décrit le Web actuel, pas l'état des routes mobiles.
+
+### 0.4.1 Couverture Web connue (01/11/2026)
+| Surface | Routes/écrans constatés | Limite actuelle |
+|---|---|---|
+| Connexion et accueil | `/login`, `/` | Session réelle par API; accueil affiche profil/agences et raccourcis, pas de tableau de bord opérationnel multi-indicateurs. |
+| Clients | `/clients` | Liste seulement; pas de recherche, détail ou revue des doublons dans l'admin. |
+| Agents | `/agents`, API `/users` | CRUD limité aux comptes AGENT; modification nom/téléphone, activation/désactivation; pas de déplacement d'agence ni suppression physique. |
+| Agences et marchés | `/branches`, `/markets` | CRUD agence limité et création marché; pas de suppression, réaffectation d'agents ou modification code/marché d'une agence. |
+| Cycles et retraits | `/cycles`, `/withdrawals` | Le tableau cycles reste informatif/limité; la file retrait superviseur est consultable et permet décisions selon l'écran. |
+| Remises historiques | `/remittances`, `/cashier` | Lecture seulement; aucune confirmation de caisse Web publiée dans ce lot. |
+| Comptabilité/audit | `/accountant`, `/auditor` | Synthèse et rapprochement de cycles disponibles; audit général/export non présents. |
 
 ### 0.5 Terminologie
 `APP_FLOW.md` §9 et `UX_UI_DESIGN.md` §10 : **remises** ; `remises.tsx` : **« Reversements »** ; registre : **remise**. Retenu : **« Remises (reversements) »** en attente d'arbitrage (§5.2).
@@ -30,18 +44,18 @@
 - **Rôle :** tous. **Objectif :** saisir identifiants, ouvrir fonctions autorisées (rôle + agence).
 - **Actions :** saisir identifiant/mot de passe ; soumettre ; (à trancher) mémorisation, récupération.
 - **États :** chargement ; erreur ; hors ligne (première connexion impossible, session existante selon politique à valider) ; accès refusé.
-- **Dépendances :** session, agences, backend `auth`. **Source :** Documentée (APP_FLOW §4, UX §6) + Squelette (`(auth)/login.tsx`, aucune auth active). **Statut :** À concevoir. **Origine :** Documentée + Squelette.
+- **Dépendances :** session, agences, backend `auth`. **Source :** Documentée (APP_FLOW §4, UX §6) + implémentation (`(auth)/login.tsx`). **Statut :** En cours — login backend réel ou mode démo explicite; persistance sécurisée native et politique offline restent à faire. **Origine :** Documentée + Squelette.
 
 ### MOB-002 — Session / profil et déconnexion (mobile)
 - **Rôle :** utilisateur connecté. **Objectif :** voir identité, agence, rôles ; gérer session (verrouillage, déconnexion, changement de compte).
 - **Actions :** consulter profil ; se déconnecter ; (à trancher) changer d'agence, appareil perdu.
 - **États :** hors ligne (derniers droits) ; accès refusé après révocation ; file non vide au changement de compte.
-- **Dépendances :** MOB-001, politique de session, file de synchronisation. **Source :** Déduite (APP_FLOW §4 « À valider », §11 « changements de compte »). **Statut :** À concevoir. **Origine :** Déduite. **Note :** aucune route existante.
+- **Dépendances :** MOB-001, politique de session, file de synchronisation. **Source :** Déduite (APP_FLOW §4 « À valider », §11 « changements de compte »). **Statut :** En cours — profil et déconnexion présents; persistance sécurisée Android, verrouillage, révocation et changements de compte restent à concevoir. **Origine :** Déduite.
 
 ### WEB-001 — Connexion (Web)
 - **Rôle :** superviseur, caissier, comptable/contrôleur, administrateur, direction/auditeur. **Objectif :** authentifier les rôles de bureau.
 - **Actions :** saisir identifiants ; soumettre ; récupération (à trancher).
-- **États :** chargement ; erreur ; accès refusé. **Dépendances :** backend `auth`, rôles serveur. **Source :** Déduite (pré-requis APP_FLOW §12 ; parcours web non vérifiable). **Statut :** À concevoir. **Origine :** Déduite.
+- **États :** chargement ; erreur ; accès refusé. **Dépendances :** backend `auth`, rôles serveur. **Source :** Déduite (pré-requis APP_FLOW §12). **Statut :** En cours — login JWT réel pour les comptes actifs; récupération de mot de passe non disponible. **Origine :** Déduite.
 
 ## 2. Accueil et navigation
 
@@ -49,12 +63,12 @@
 - **Rôle :** agent. **Objectif :** activité du jour, état réseau/synchronisation, accès rapides.
 - **Actions :** naviguer vers Clients, Dossiers, Collectes, Reversements, Clôture ; lire l'état de connexion.
 - **États :** hors ligne (bannière) ; synchronisation en attente (compteur) ; vide ; erreur locale.
-- **Dépendances :** tous modules mobile ; état réseau + file. **Source :** Documentée (APP_FLOW §3, UX §5) + Squelette (`(tabs)/index.tsx`, démo). **Statut :** À concevoir. **Origine :** Documentée + Squelette.
+- **Dépendances :** modules mobile ; état réseau + file. **Source :** Documentée (APP_FLOW §3, UX §5) + implémentation (`(tabs)/index.tsx`). **Statut :** En cours — navigation et raccourcis présents; statistiques et état réseau sont informatifs/non mesurés. **Origine :** Documentée + Squelette.
 
 ### WEB-002 — Tableau de bord (accueil Web)
 - **Rôle :** selon permissions. **Objectif :** synthèse multi-agence : volumes, clôtures, remises en attente, conflits.
 - **Actions :** filtrer par agence/période ; naviguer vers modules ; exporter (à trancher).
-- **États :** chargement ; vide ; erreur ; accès refusé par périmètre. **Dépendances :** tous modules Web ; accès serveur par agence. **Source :** Documentée (APP_FLOW §12, UX §11). **Statut :** À concevoir. **Origine :** Documentée.
+- **États :** chargement ; vide ; erreur ; accès refusé par périmètre. **Dépendances :** tous modules Web ; accès serveur par agence. **Source :** Documentée (APP_FLOW §12, UX §11). **Statut :** En cours — profil, rôle, agences et accès rapides; les filtres/indicateurs de synthèse envisagés ne sont pas présents. **Origine :** Documentée.
 
 ## 3. Clients
 
@@ -62,7 +76,7 @@
 - **Rôle :** agent (périmètre autorisé). **Objectif :** retrouver un client, voir statut (dont `PROVISOIRE`), initier création/consultation.
 - **Actions :** rechercher ; filtrer (à trancher) ; ouvrir le détail ; initier création.
 - **États :** chargement ; vide ; hors ligne (locaux seuls) ; en attente (badge provisoire) ; erreur.
-- **Dépendances :** MOB-005, MOB-006 ; base locale ; backend `clients`. **Source :** Documentée (APP_FLOW §5, UX §7) + Squelette (`(tabs)/clients.tsx`). **Statut :** À concevoir. **Origine :** Documentée + Squelette.
+- **Dépendances :** MOB-005, MOB-006 ; base locale ; backend `clients`. **Source :** Documentée (APP_FLOW §5, UX §7) + implémentation locale (`(tabs)/clients.tsx`). **Statut :** En cours — consultation/création SQLite locale; synchronisation et acceptation serveur non terminées. **Origine :** Documentée + Squelette.
 
 ### MOB-005 — Détail d'un client
 - **Rôle :** agent. **Objectif :** identité, statut de synchronisation, dossiers ; agir (nouveau dossier, nouvelle collecte).
@@ -74,12 +88,12 @@
 - **Rôle :** agent autorisé. **Objectif :** enregistrer sans connexion (statut `PROVISOIRE`, identifiant stable).
 - **Actions :** saisir champs requis ; validation locale ; enregistrement durable.
 - **États :** hors ligne (local explicite) ; validation champ par champ ; conflit/rejet ultérieur (MOB-005/MOB-019).
-- **Dépendances :** MOB-004 ; revue des doublons §3.8 (téléphone normalisé + nom/prénom, sans fusion automatique) ; backend `clients`. **Source :** Documentée (AGENTS.md §3, APP_FLOW §5, UX §7). **Statut :** À concevoir. **Origine :** Documentée. **Note :** écran ou modal — compté une fois.
+- **Dépendances :** MOB-004 ; revue des doublons §3.8 (téléphone normalisé + nom/prénom, sans fusion automatique) ; backend `clients`. **Source :** Documentée (AGENTS.md §3, APP_FLOW §5, UX §7) + implémentation SQLite locale. **Statut :** En cours — création locale provisoire; soumission/synchronisation backend et résolution de revue à compléter. **Origine :** Documentée.
 
 ### WEB-003 — Clients (liste et recherche)
 - **Rôle :** superviseur, comptable/contrôleur, admin (lecture selon périmètre). **Objectif :** consulter clients et statut de validation/duplication.
 - **Actions :** rechercher, filtrer par agence/statut ; ouvrir le détail ; examiner les doublons potentiels et, pour un superviseur habilité, décider une fusion auditée en conservant la fiche source comme alias.
-- **États :** chargement ; vide ; erreur ; accès refusé. **Dépendances :** WEB-004, backend `clients`. **Source :** Documentée (APP_FLOW §12). **Statut :** À concevoir. **Origine :** Documentée.
+- **États :** chargement ; vide ; erreur ; accès refusé. **Dépendances :** WEB-004, backend `clients`. **Source :** Documentée (APP_FLOW §12). **Statut :** En cours — liste affichée; filtres, recherche et détail/revue des doublons non présents. **Origine :** Documentée.
 
 ### WEB-004 — Détail d'un client (Web)
 - **Rôle :** superviseur, comptable/contrôleur. **Objectif :** historique client : dossiers successifs, collectes, statut.
@@ -115,6 +129,18 @@
 - **Rôle :** superviseur, comptable/contrôleur. **Objectif :** cycle de vie (ouvertures, fermetures, réouvertures), collectes, audit.
 - **Actions :** parcourir historique ; (à trancher) valider un rattachement, autoriser une réouverture.
 - **États :** conflit affiché ; historique partiel ; accès refusé. **Dépendances :** WEB-005, WEB-013, WEB-017. **Source :** Déduite. **Statut :** À concevoir. **Origine :** Déduite.
+
+## 4 bis. Cycles d'épargne à 31 versements
+
+### MOB-021 — Consultation et versement sur un cycle
+- **Rôle :** AGENT affecté au client; lecture selon les rôles du backend.
+- **Objectif :** consulter compteur/solde et enregistrer un versement fixe sur un cycle existant.
+- **Actions présentes :** liste de marchés actifs; saisie manuelle d'un UUID de cycle; lecture de progression; envoi d'un versement entier XAF.
+- **États :** chargement/erreur API; cycle trouvé/non trouvé; montant invalide; versement accepté/rejoué; relecture de progression.
+- **Dépendances :** session API, dossier/cycle déjà créé et agent affecté; backend `cycles`.
+- **Source :** décision validée `DECISIONS_METIER.md` §3.15 et écran `mobile/app/(tabs)/cycles.tsx`.
+- **Statut :** En cours — l'écran appelle des routes backend, mais ne couvre pas client → dossier → ouverture du cycle; la clé d'idempotence n'est pas conservée durablement par l'écran.
+- **Écart de permission à corriger :** l'écran affiche encore un formulaire « Nouveau marché » dans le parcours agent, alors que le backend limite cette création à ADMIN/SUPERVISOR.
 
 ## 5. Collectes et reçus
 
@@ -169,7 +195,7 @@
 ### WEB-009 — Déclarations de remise (suivi)
 - **Rôle :** caissier, superviseur, comptable. **Objectif :** suivre déclarations en attente de réception, par agent et agence.
 - **Actions :** filtrer ; ouvrir le détail ; préparer la réception.
-- **États :** chargement ; vide ; accès refusé. **Dépendances :** WEB-010, backend `remises`. **Source :** Documentée (APP_FLOW §12). **Statut :** À concevoir. **Origine :** Documentée.
+- **États :** chargement ; vide ; accès refusé. **Dépendances :** WEB-010, backend `remises`. **Source :** Documentée (APP_FLOW §12). **Statut :** En cours — consultation historique en lecture seule; réception caisse/écarts non implémentés dans le Web. **Origine :** Documentée.
 
 ### WEB-010 — Réception de caisse (confirmation)
 - **Rôle réservé :** caissier (et habilités explicites). **Objectif :** vérifier fonds reçus, confirmer réception ou signaler écart — acte distinct de la déclaration.
@@ -225,19 +251,19 @@
 ### WEB-014 — Agences
 - **Rôle réservé :** administrateur (lecture superviseur selon droits). **Objectif :** administrer agences, rattachements, autorisations d'accès (base de l'isolation).
 - **Actions :** lister ; créer/modifier (selon droits) ; gérer rattachements et autorisations.
-- **États :** accès refusé ; erreur ; vide. **Dépendances :** backend `agencies`, accès serveur (AGENTS.md §4). **Source :** Déduite (multi-agences AGENTS.md §3–4 + répertoire backend `agencies` ; parcours web non vérifiable). **Statut :** À concevoir. **Origine :** Déduite.
+- **États :** accès refusé ; erreur ; vide. **Dépendances :** backend `branches`, accès serveur (AGENTS.md §4). **Source :** Déduite (multi-agences AGENTS.md §3–4). **Statut :** En cours — liste, création sur marché actif, coordonnées et activation/désactivation; code/marché immuables, pas de suppression ni d'affectation d'accès utilisateur depuis cet écran. **Origine :** Déduite.
 
 ### WEB-015 — Utilisateurs et rôles
 - **Rôle réservé :** administrateur. **Objectif :** comptes, rôles (agent, superviseur, caissier, comptable, admin, direction), révocations.
 - **Actions :** créer/désactiver ; attribuer rôles et agences ; révoquer une session.
-- **États :** accès refusé ; erreur ; confirmation sensible. **Dépendances :** WEB-014, backend `users`/`auth`. **Source :** Déduite (APP_FLOW §2 « permissions exactes à valider », AGENTS.md §7 ; répertoire `users`). **Statut :** À concevoir. **Origine :** Déduite.
+- **États :** accès refusé ; erreur ; confirmation sensible. **Dépendances :** WEB-014, backend `users`/`auth`. **Source :** Déduite (APP_FLOW §2 « permissions exactes à valider », AGENTS.md §7). **Statut :** En cours — création/liste/modification limitée aux comptes AGENT; pas de CRUD de tous les rôles, révocation de jeton ou transfert d'agence. **Origine :** Déduite.
 
 ## 10. Rapports et audit
 
 ### WEB-016 — Rapports
 - **Role :** direction/auditeur, comptable/controleur, superviseur (selon perimetre). **Objectif :** rapports d'activite : collectes, remises, clotures, ecarts, par agence et periode.
 - **Actions :** choisir periode/agence ; comparer synthese et detail ; exporter (format a trancher).
-- **Etats :** vide ; chargement ; totaux XAF et periodes visibles ; acces refuse. **Dependances :** WEB-007/009/011, backend (rapports a definir). **Source :** Documentee (APP_FLOW §12, UX §11). **Statut :** A concevoir. **Origine :** Documentee.
+- **Etats :** vide ; chargement ; totaux XAF et periodes visibles ; acces refuse. **Dependances :** WEB-007/009/011, backend (rapports a definir). **Source :** Documentee (APP_FLOW §12, UX §11). **Statut :** En cours — synthèse cycles et rapprochement pour ACCOUNTANT/AUDITOR; pas d'export ni de rapports legacy complets. **Origine :** Documentee.
 
 ### WEB-017 — Piste d'audit
 - **Role :** auditeur/direction, administrateur (lecture restreinte). **Objectif :** tracer operations sensibles : corrections, annulations, reouvertures, arbitrages, confirmations de caisse.
@@ -261,18 +287,19 @@
 
 ## 12. Synthese et livrables
 
-### 4.1 Comptes issus de l'inventaire reel (pas d'estimation)
-- **Ecrans Android (MOB) : 20** — MOB-001 a MOB-020.
-- **Ecrans Web (WEB) : 18** — WEB-001 a WEB-018.
-- **Total : 38 interfaces** (20 + 18). Dialogues et etats alternatifs rattaches aux parents, **non comptes**.
+### 4.1 Comptes issus de l'inventaire de besoins
+- **Références de besoins Android (MOB) : 21** — MOB-001 à MOB-021 (MOB-021 ajouté pour la décision cycle §3.15).
+- **Références de besoins Web (WEB) : 18** — WEB-001 à WEB-018. Ce décompte décrit le périmètre fonctionnel prévu, pas le nombre de routes React.
+- **Total de référence : 39 interfaces** (21 + 18). Dialogues et états alternatifs rattachés aux parents, **non comptés**.
 - **Ecrans communs ou transversaux : 7 paires** — connexion (MOB-001/WEB-001) ; accueil (MOB-003/WEB-002) ; clients liste (MOB-004/WEB-003) ; client detail (MOB-005/WEB-004) ; dossiers liste (MOB-007/WEB-005) ; dossier detail (MOB-008/WEB-006) ; collectes/recus (MOB-010 + MOB-012 / WEB-007 + WEB-008). Sync (MOB-018/019 vers WEB-013) et clotures (MOB-016/017 vers WEB-011) : **transversales partielles**, non fusionnees.
-- **Ecrans reellement implementes : 0.** Les 8 routes mobile sont des squelettes/demo — statut **A concevoir**.
-- **Ecrans manquants : 30** — tout le Web (18), sync/conflits (MOB-018/019, WEB-013), back-office (WEB-014/015/017/018), details/creations mobile (MOB-002, MOB-005/006/008/009/011/014/015/017/020).
+- **État Web au 01/11/2026 :** 7 fiches WEB en cours (§0.4.1); elles ne sont pas déclarées terminées. Les autres besoins Web restent à concevoir/développer.
+- **État mobile :** 11 routes utilisateur sont présentes, avec authentification réelle, une vue cycles partiellement connectée et plusieurs parcours locaux/legacy. Synchronisation générale, flux offline-vers-serveur complet et acceptation métier restent à développer/tester.
 
 ### 4.2 Fichiers consultes et verifications effectuees (reelles)
-- Lus : `AGENTS.md` ; `docs/APP_FLOW.md` ; `docs/UX_UI_DESIGN.md` ; 7 routes `mobile/app/**` + 3 layouts ; listages `docs/`, racine (absence de `web/`), `mobile/src/features`, `backend/src` (seuls `health` en controleurs).
+- Lus : `AGENTS.md` ; `docs/APP_FLOW.md` ; `docs/UX_UI_DESIGN.md` ; routes `mobile/app/**` ; sources des pages `admin/src/**` ; contrôleurs et services `backend/src/**` ; guides de permissions et rapport de tests.
 - Non depouilles (binaires) : 5 `.docx` de `docs/` ; 4 sources UX §15 absentes du depot — signalees, non inventees.
-- Interdictions respectees : aucun code, SQL ou `schema.prisma` modifie ; aucune migration ; aucun `prisma db push` ; aucun commit.
+- Parcours navigateur vérifiés le 01/11/2026 : comptes seed ADMIN, SUPERVISOR, ACCOUNTANT, CASHIER et AUDITOR; synthèse comptable/audit, caisse et file de retraits.
+- Cette révision met à jour le statut documentaire seulement; aucun schéma SQL, migration ou seed modifié.
 
 ## 13. Ambiguites a arbitrer
 
@@ -288,7 +315,7 @@
 2. **Dossiers hors barre d'onglets** (`href: null`) contre parcours central (APP_FLOW §6) : confirmer.
 3. **Granularite** : creation = ecran contre modal ; MOB-017 onglet contre ecran ; MOB-018 dedie contre banniere ; WEB-012 ecran contre dialogue.
 4. **Perimetre Web** conditionnel au parcours officiel absent (APP_FLOW §12).
-5. **Backend** sans controleurs metier — aucune interface deduite (correctement evite).
+5. **Couverture backend/Web partielle** : vérifier les contrôles d'agence et les permissions route par route avant d'étendre les écrans non listés comme opérationnels en §0.4.1.
 
 ## 14. Prochaine action recommandee
 1. Depouiller les 5 `.docx` et recuperer les 4 sources §15, puis reviser l'inventaire (tout le Web).

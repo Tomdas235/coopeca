@@ -1,6 +1,7 @@
 # Rapport de correctifs — Alignement backend, mobile et admin
 
 **Date :** 31/10/2026  
+**Mise à jour :** 01/11/2026  
 **Objectif :** corriger les défauts de redirection et les principaux décalages de contrat API avant démonstration.
 
 ## Implémentations réalisées
@@ -55,9 +56,12 @@
 - L'écran Agences a chargé `BR-A1` et ses compteurs depuis l'API; aucun changement d'agence n'a été appliqué pendant le contrôle.
 - Un test d'autorisation vérifie que SUPERVISOR ne peut pas lire le catalogue global des agences et qu'aucune requête DB n'est faite.
 - En local, le backend démarre et `/api/v1/health` renvoie `status: ok`, `database: up`; vérifié aussi via le proxy Vite.
-- L'admin de développement est disponible sur `http://127.0.0.1:5173/` et redirige vers son formulaire `/login`.
+- L'admin de développement a été inspecté sur `http://127.0.0.1:5174/` (5173 était occupé); le login renvoie vers `/login` quand aucune session valide n'est présente.
 - Connexion du compte seed `admin` vérifiée dans le navigateur; le dashboard affiche le profil ADMIN.
 - Connexion du compte seed `supervisor1` vérifiée; le dashboard affiche Koffi Diallo, SUPERVISOR et une agence autorisée. La page `/withdrawals` s'ouvre et indique qu'il n'y a aucune demande en attente; aucune décision de retrait n'a été exécutée.
+- Connexion du compte seed `accountant1` vérifiée; le profil ACCOUNTANT et l'espace comptable s'ouvrent, avec synthèse des cycles, filtres agence/période et rapport de rapprochement.
+- Connexion du compte seed `cashier1` vérifiée; le profil CASHIER et l'espace caisse s'ouvrent, avec l'agence autorisée et aucune remise en attente.
+- Connexion du compte seed `auditor1` vérifiée; le profil AUDITOR et le rapport de rapprochement en lecture seule s'ouvrent.
 - Formulaire Marchés et tableau complet vérifiés avec le compte ADMIN; `MARKET-A1` affiche désormais Actif et sa date, sans créer de nouveau marché lors du test.
 - Raccourcis dashboard vérifiés: Clients, Agents, Agences, Marchés regroupés sous Administration, puis Cycles et Remises historiques sous Opérations.
 - Navigation directe puis actualisation de `/clients` vérifiées; les noms de marchés/agences et dates sont lisibles.
@@ -66,11 +70,11 @@
 - Rendu du dashboard vérifié à 390 px et 1440 px; le menu mobile s'ouvre/se ferme et le document ne déborde plus horizontalement.
 - `mobile`: `npm.cmd run typecheck` réussi après les corrections.
 - `mobile`: Jest a été lancé, mais la console n'a fourni aucun résumé exploitable; résultat des suites non confirmé.
-- Les tests métier backend et un parcours HTTP réel avec base de données n'ont pas été exécutés. Aucun compte de démonstration, secret ni état de base n'a été inventé.
+- Les tests unitaires métier complets et les scénarios e2e ne sont pas exhaustifs; les tests ciblés de permissions Agents/Agences ont été exécutés. Aucun secret ni mutation de démonstration n'a été inventé.
 
 ## À vérifier avant la démonstration
 
-1. Vérifier la déconnexion et les autres rôles depuis l'admin; le login ADMIN, le dashboard et l'actualisation de `/clients` ont été confirmés.
+1. Le login et les espaces ADMIN, SUPERVISOR, ACCOUNTANT, CASHIER et AUDITOR ont été contrôlés en lecture; vérifier encore la matrice des permissions sur tous les écrans avant recette.
 2. Pour Android physique, définir `EXPO_PUBLIC_API_BASE_URL` sur l'adresse réseau joignable du backend; `10.0.2.2` ne convient qu'à l'émulateur Android.
 3. Vérifier la connexion mobile avec un utilisateur actif et un JWT secret configuré.
 4. Tester un versement sur un cycle d'essai et vérifier que le serveur renvoie un succès. La clé générée par défaut par le client n'est pas encore conservée durablement par l'écran entre une tentative échouée et une nouvelle tentative.
@@ -79,5 +83,8 @@
 
 - Le parcours historique remises/collectes reste local/legacy et n'est pas la voie financière des cycles; il ne doit pas être présenté comme un retrait du nouveau produit.
 - L'écran mobile de cycle dépend d'un identifiant de cycle saisi; le parcours complet client → dossier → ouverture de cycle → versement n'est pas encore démontré de bout en bout.
+- L'écran mobile Cycles expose encore un formulaire « Nouveau marché » bien que le backend réserve `POST /markets` aux rôles ADMIN/SUPERVISOR; côté agent cette action est refusée et doit être retirée ou déplacée avant la recette mobile.
+- Le token mobile est actuellement conservé en mémoire sur Android; la persistance sécurisée de session native reste à implémenter avant de présenter la session hors ligne.
+- Le backend n'active pas CORS actuellement. L'essai Expo Web appelle l'API cross-origin et sera bloqué par le navigateur jusqu'à l'autorisation d'une origine locale précise; l'admin Vite ne rencontre pas ce cas grâce à son proxy `/api`.
 - Le rendu final sur appareil Android et les droits réels par rôle restent à valider dans l'environnement de démonstration.
 - Les props de couleur/épaisseur Lucide ont été retirées des icônes concernées pour rester compatibles avec la version installée; leur harmonisation visuelle nécessite un arbitrage de dépendance.

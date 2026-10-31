@@ -1,6 +1,6 @@
 # COOPECA — Backend (NestJS)
 
-Socle technique du backend COOPECA. L'API métier n'est pas encore implémentée ; le modèle Prisma cible et une migration additive sont préparés pour revue dans le cadre de la conception de la base.
+Backend NestJS de COOPECA. L'API comprend l'authentification, les profils, les clients, les marchés, les cycles, les retraits, les synthèses, une lecture historique des remises et les opérations admin limitées sur agents/agences. La couverture métier reste partielle; se référer à la matrice ci-dessous et aux décisions métier avant d'étendre un flux financier.
 
 ## Stack
 
@@ -12,21 +12,27 @@ Socle technique du backend COOPECA. L'API métier n'est pas encore implémentée
 ## Démarrage rapide
 
 ```bash
-cd backend
-cp .env.example .env        # puis renseigner les valeurs locales si besoin
-npm install
-npm run prisma:generate     # génère le client Prisma (requis avant les tests e2e)
-npm run prisma:validate     # valide schema.prisma
-npm run build
-npm test                    # tests unitaires
-npm run test:e2e            # tests end-to-end (health check)
-npm run start:dev           # API sur http://localhost:3000/api/v1
+npm --prefix backend install
+npm --prefix backend run prisma:generate
+npm --prefix backend run prisma:validate
+npm --prefix backend run build
+npm --prefix backend test -- --runInBand
+npm --prefix backend run test:e2e
+npm --prefix backend run start:dev
 ```
 
-Avec Docker (PostgreSQL + API) :
+Lancer les commandes depuis la racine du dépôt: la configuration locale est chargée depuis `backend/.env`. L'API écoute par défaut sur `http://localhost:3000/api/v1`.
+
+Avec Docker, ce compose démarre PostgreSQL et Redis uniquement; lancer l'API séparément avec la commande ci-dessus:
 
 ```bash
-docker compose -f ../infra/docker/compose.dev.yml up --build -d --wait
+docker compose -f infra/docker/compose.dev.yml up -d --wait
+```
+
+Dans un second terminal, depuis la racine du dépôt :
+
+```bash
+npm --prefix backend run start:dev
 curl http://localhost:3000/api/v1/health
 ```
 
@@ -40,9 +46,18 @@ curl http://localhost:3000/api/v1/health
 | POST | `/api/v1/auth/sessions` | Échange identifiant/mot de passe contre un jeton Bearer de 15 minutes |
 | GET | `/api/v1/me` | Profil authentifié et agences actives autorisées |
 | GET | `/api/v1/me/branches` | Agences actives accordées à l'utilisateur |
-| GET | `/api/v1/markets` | Marchés actifs |
+| GET | `/api/v1/markets` | Marchés actifs (lecture pour les clients métier) |
+| GET | `/api/v1/markets/admin` | Tous les marchés et compteurs d'agences (ADMIN/SUPERVISOR) |
 | POST | `/api/v1/markets` | Créer un marché (ADMIN/SUPERVISOR) |
 | POST | `/api/v1/markets/{id}/active` | Activer/désactiver un marché (ADMIN/SUPERVISOR) |
+| GET | `/api/v1/branches` | Liste globale des agences (ADMIN) |
+| POST | `/api/v1/branches` | Créer une agence sur un marché actif (ADMIN) |
+| PATCH | `/api/v1/branches/{id}` | Modifier nom/coordonnées ou activer/désactiver (ADMIN) |
+| GET | `/api/v1/users?role=AGENT` | Liste paginée des comptes (ADMIN) |
+| GET | `/api/v1/users/{id}` | Détail d'un compte (ADMIN) |
+| POST | `/api/v1/users/agents` | Créer un compte agent avec agence principale (ADMIN) |
+| PATCH | `/api/v1/users/{id}` | Modifier nom/téléphone ou activer/désactiver un agent (ADMIN) |
+| GET | `/api/v1/clients` | Liste paginée des clients autorisés |
 | POST | `/api/v1/clients/{id}/cycle-assignment` | Affecter explicitement un client à un marché et agent (ADMIN/SUPERVISOR) |
 | GET/POST | `/api/v1/dossiers/{id}/cycles` | Historique des cycles et ouverture d’un cycle (AGENT affecté) |
 | GET | `/api/v1/tontine-cycles/{id}` | Détail du cycle, solde disponible et commission payée |
@@ -54,8 +69,13 @@ curl http://localhost:3000/api/v1/health
 | POST | `/api/v1/withdrawals/{id}/review` | Approuver/rejeter le retrait (SUPERVISOR) |
 | GET | `/api/v1/financial-summary` | Synthèse financière par agence et période (ADMIN/SUPERVISOR/ACCOUNTANT/AUDITOR) |
 | GET | `/api/v1/reconciliation-report` | Rapport de rapprochement paginé par cycle (ADMIN/SUPERVISOR/ACCOUNTANT/AUDITOR) |
+| GET | `/api/v1/remittances` | Consultation historique des remises sur agences attribuées; lecture seule |
 
-Les routes `/me` exigent `Authorization: Bearer <accessToken>`. Les agences sont relues en base à chaque requête ; le jeton ne porte pas les droits d'agence.
+Les routes protégées exigent `Authorization: Bearer <accessToken>`. Les agences sont relues en base à chaque requête; le jeton ne porte pas les droits d'agence. Les écritures admin d'agents et d'agences sont auditées. Les suppressions physiques sont exclues. Le code et le marché d'une agence ne sont pas modifiables après création.
+
+**CORS :** le bootstrap Nest actuel n'active pas CORS. L'admin Vite fonctionne via son proxy `/api`; Expo Web appelle directement `localhost:3000` et sera bloqué par le navigateur tant qu'une origine de développement précise n'est pas autorisée. Avant l'essai mobile Web, configurer uniquement l'origine locale Expo nécessaire; ne pas activer un wildcard en production.
+
+La route `POST /api/v1/remittances` n'est pas exposée: la création legacy doit être réconciliée avec les contraintes d'idempotence et ne doit pas servir de substitut aux retraits du produit cycle.
 
 ## Configuration
 
@@ -72,6 +92,12 @@ src/
   config/           # configuration et validation d'environnement
   database/         # module Prisma (PrismaService)
   health/           # GET /api/v1/health
+  auth/              # sessions, profil et JWT guard
+  users/             # administration restreinte des comptes agent
+  branches/          # gestion admin des agences
+  clients/           # liste et opérations client disponibles
+  cycles/            # marchés, cycles, versements, retraits et rapports
+  remises/           # consultation historique en lecture seule
   app.module.ts
   main.ts
 prisma/
@@ -80,10 +106,7 @@ prisma/
 test/               # tests end-to-end
 ```
 
-Les emplacements `auth/`, `users/`, `agencies/`, `clients/`, `dossiers/`,
-`collectes/`, `recus/`, `remises/`, `clotures/`, `synchronisation/`,
-`audit/` seront peuplés après validation du modèle de données
-(cf. `docs/DECISIONS_METIER.md`, `docs/IMPACTS_SCHEMA_SQL.md`).
+Les répertoires `dossiers/`, `collectes/`, `recus/`, `clotures/`, `synchronisation/` et `audit/` n'ont pas encore une couverture complète de leurs parcours attendus. La présence d'un dossier ou d'un type Prisma ne signifie pas que son workflow est prêt pour démonstration.
 
 ## Règles COOPECA applicables à ce projet
 
@@ -124,4 +147,5 @@ La limitation des tentatives de connexion et la journalisation/audit des échecs
 
 - Une migration additive a été préparée pour revue ; aucune migration n'a été appliquée.
 - `prisma db push` et toute migration destructive sont proscrits.
-- Les guards d'authentification pour le profil sont implémentés ; les guards de rôles/agence sur les futurs endpoints métier restent à ajouter et à tester avant chaque fonctionnalité.
+- Les guards d'authentification, rôles et agence sont implémentés sur plusieurs routes; leur couverture est spécifique à chaque contrôleur. Toute nouvelle route doit ajouter et tester explicitement ses règles de rôle et de périmètre agence.
+- Les parcours legacy de collecte, de clôture et de réception/remise caisse ne doivent pas être présentés comme la voie financière active des cycles §3.15.

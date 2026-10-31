@@ -196,6 +196,8 @@ Fonctions envisagées :
 
 Cette liste reste à confronter au parcours web fonctionnel de référence. Les droits d'accès doivent être contrôlés côté serveur.
 
+**État d'implémentation au 01/11/2026 :** une application séparée existe dans `admin/` (React/Vite). Elle fournit le login JWT, l'accueil par rôle, une liste clients, les écrans de consultation cycles/remises historiques, la file de retraits superviseur, les espaces comptable/caissier/auditeur, ainsi que l'administration partielle des marchés, agents et agences. Ce lot ne réalise pas toute la liste ci-dessus : notamment détail dossier/client, collecte/reçu, confirmation caisse, clôture, conflits et piste d'audit complète restent à concevoir ou développer. Voir [INVENTAIRE_INTERFACES.md](./INVENTAIRE_INTERFACES.md) §0.3–0.4 pour l'état détaillé. Les collectes/remises/clôtures listées ici restent historiques pour les nouvelles opérations financières du cycle §3.15.
+
 ## 13. États et erreurs
 
 L'interface doit distinguer :

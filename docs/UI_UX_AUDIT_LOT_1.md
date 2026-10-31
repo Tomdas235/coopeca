@@ -4,6 +4,8 @@
 **Périmètre inspecté :** application mobile Expo existante, architecture, routes, composants, styles et documentation produit.  
 **Limite :** audit fondé sur le code et les documents, sans capture ni rendu exécuté. Il ne remplace pas une revue visuelle sur appareil.
 
+> **Note de mise à jour (01/11/2026) :** ce rapport est un instantané antérieur au développement du dashboard Web. L'application admin est maintenant présente sous `admin/`; ses capacités partielles et ses limites sont suivies dans [INVENTAIRE_INTERFACES.md](./INVENTAIRE_INTERFACES.md). Les constats ci-dessous sur l'absence de Web décrivent uniquement l'état observé le 23/10/2026.
+
 ## 1. Synthèse
 
 Le dépôt contient une application mobile React Native/Expo avec Expo Router, une petite bibliothèque interne de composants et un thème de couleurs provisoire. Il ne contient pas le tableau de bord Web annoncé dans les documents de produit. Les sources UX officielles (concept et wireframes PPTX, parcours Web) sont absentes ; le référentiel UX précise que l’identité officielle reste à confirmer.
