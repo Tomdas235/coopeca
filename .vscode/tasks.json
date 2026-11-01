@@ -408,6 +408,375 @@
 			"isBackground": false,
 			"problemMatcher": [],
 			"group": "build"
+		},
+		{
+			"label": "Get LAN IPv4",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127.*' -and $_.InterfaceOperationalStatus -eq 'Up' } | Select-Object InterfaceAlias,IPAddress | Format-Table -AutoSize"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Check IPv4 adapter",
+			"type": "shell",
+			"command": "ipconfig.exe",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Build CORS API",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"--prefix",
+				"backend",
+				"run",
+				"build"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Typecheck mobile platform config",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"--prefix",
+				"mobile",
+				"run",
+				"typecheck"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Mobile Jest checks",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"--prefix",
+				"mobile",
+				"test",
+				"--",
+				"--runInBand"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Backend env tests",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"--prefix",
+				"backend",
+				"test",
+				"--",
+				"--runInBand",
+				"config/env.validation.spec.ts"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Check mobile ports",
+			"type": "shell",
+			"command": "netstat.exe",
+			"args": [
+				"-ano",
+				"-p",
+				"tcp"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Install RN Jest preset",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"--prefix",
+				"mobile",
+				"install",
+				"--save-dev",
+				"@react-native/jest-preset@0.88.0"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Install RN Jest preset compatible",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"--prefix",
+				"mobile",
+				"install",
+				"--save-dev",
+				"@react-native/jest-preset@0.88.0",
+				"--legacy-peer-deps"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Run mobile Jest suite",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"--prefix",
+				"mobile",
+				"test",
+				"--",
+				"--runInBand"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "COOPECA API with dev CORS",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"backend/dist/main.js"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "COOPECA Mobile Web",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"--prefix",
+				"mobile",
+				"run",
+				"web",
+				"--",
+				"--host",
+				"0.0.0.0"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Find port 3000 owner",
+			"type": "shell",
+			"command": "netstat.exe",
+			"args": [
+				"-ano",
+				"-p",
+				"tcp"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Start updated API",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"backend/dist/main.js"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Start COOPECA Expo Web",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"--prefix",
+				"mobile",
+				"run",
+				"web"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Start isolated API 3001",
+			"type": "shell",
+			"command": "cmd.exe",
+			"args": [
+				"/d",
+				"/c",
+				"set PORT=3001&& node backend/dist/main.js"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Start Expo Web LAN",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"--prefix",
+				"mobile",
+				"run",
+				"web",
+				"--",
+				"--host",
+				"lan"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Probe Expo 8081",
+			"type": "shell",
+			"command": "curl.exe",
+			"args": [
+				"-sS",
+				"-I",
+				"--max-time",
+				"5",
+				"http://127.0.0.1:8081"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Check Expo related processes",
+			"type": "shell",
+			"command": "tasklist.exe",
+			"args": [
+				"/fi",
+				"IMAGENAME eq node.exe"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Check Expo listener",
+			"type": "shell",
+			"command": "cmd.exe",
+			"args": [
+				"/d",
+				"/c",
+				"netstat -ano | findstr :8081"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Inspect Expo node process",
+			"type": "shell",
+			"command": "wmic.exe",
+			"args": [
+				"process",
+				"where",
+				"name='node.exe'",
+				"get",
+				"ProcessId,CommandLine"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Start API 3002 mobile demo",
+			"type": "shell",
+			"command": "cmd.exe",
+			"args": [
+				"/d",
+				"/c",
+				"set PORT=3002&& node backend/dist/main.js"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Start Expo Web 8082",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"--prefix",
+				"mobile",
+				"run",
+				"web",
+				"--",
+				"--port",
+				"8082"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Probe Expo 8082",
+			"type": "shell",
+			"command": "curl.exe",
+			"args": [
+				"-sS",
+				"-I",
+				"--max-time",
+				"8",
+				"http://127.0.0.1:8082"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Expo diagnostics",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"--prefix",
+				"mobile",
+				"exec",
+				"expo",
+				"--",
+				"diagnostics"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Probe API 3002",
+			"type": "shell",
+			"command": "curl.exe",
+			"args": [
+				"-sS",
+				"-i",
+				"--max-time",
+				"8",
+				"-H",
+				"Origin: http://localhost:8082",
+				"http://127.0.0.1:3002/api/v1/health"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
 		}
 	]
 }

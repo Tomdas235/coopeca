@@ -6,6 +6,9 @@
     "orientation": "portrait",
     "scheme": "coopeca",
     "userInterfaceStyle": "automatic",
+    "web": {
+      "bundler": "metro"
+    },
     "icon": "./assets/icon.png",
     "ios": {
       "supportsTablet": false

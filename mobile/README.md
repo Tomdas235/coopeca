@@ -39,20 +39,19 @@ Depuis PowerShell, dans `mobile/`, définir l'URL de l'API sur l'hôte local ava
 de démarrer Expo Web :
 
 ```powershell
-$env:EXPO_PUBLIC_API_BASE_URL = "http://localhost:3000"
+$env:EXPO_PUBLIC_API_BASE_URL = "http://localhost:3002"
 $env:EXPO_PUBLIC_DEMO_MODE = "false"
-npm.cmd run start -- --web
+npm.cmd run web -- --port 8082
 ```
 
 L'API et PostgreSQL doivent déjà fonctionner. Le défaut `http://10.0.2.2:3000`
 du client est destiné à l'émulateur Android, pas au navigateur ni à un téléphone
 physique. Sur un appareil réel, utiliser une adresse LAN joignable par le
 téléphone. Le mode démo local `EXPO_PUBLIC_DEMO_MODE=true` contourne l'API et ne
-doit pas être présenté comme une connexion backend. **Blocage actuel :** le
-bootstrap Nest n'active pas CORS; Expo Web ne pourra pas appeler directement
-l'API depuis son origine tant qu'une origine de développement précise n'est pas
-autorisée. Voir `backend/README.md` avant d'interpréter un échec réseau comme un
-échec d'authentification.
+doit pas être présenté comme une connexion backend. Pour partager avec un
+client sur le même Wi-Fi, lui donner l'URL LAN affichée par Expo et garder
+l'origine correspondante inscrite explicitement dans `backend/.env` sous
+`CORS_ORIGINS`; ne pas remplacer cette liste par `*`.
 
 ## Structure de référence (ne pas remplacer par une organisation générique)
 

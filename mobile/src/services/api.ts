@@ -1,4 +1,5 @@
 import * as Crypto from 'expo-crypto';
+import { Platform } from 'react-native';
 import { getAccessToken } from './tokenStore';
 
 /**
@@ -81,12 +82,12 @@ export function generateIdempotencyKey(): string {
   return Crypto.randomUUID();
 }
 
-/** Base URL de l'API — lue depuis les variables d'environnement.
- * * Production/APK Android : COOPECA_API_URL=http://adresse-IP-serveur:3000
- * * Développement local : http://localhost:3000 ou http IP-local:3000
- * * Jamais 10.0.2.2 en production (émulateur uniquement).
+/** Base URL de l'API. EXPO_PUBLIC_API_BASE_URL est prioritaire.
+ * Web/iOS simulateur : localhost; émulateur Android : 10.0.2.2.
+ * Appareil physique : définir l'adresse LAN joignable du backend.
  */
-const apiBase = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://10.0.2.2:3000';
+const defaultApiBase = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+const apiBase = process.env.EXPO_PUBLIC_API_BASE_URL || defaultApiBase;
 
 /** Lecture de la base URL globale */
 export function getApiBase(): string {

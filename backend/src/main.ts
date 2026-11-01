@@ -13,6 +13,26 @@ async function bootstrap(): Promise<void> {
   // API versionnée : toutes les routes publiques sont préfixées /api/v1.
   app.setGlobalPrefix('api/v1');
 
+  const configuredOrigins = process.env.CORS_ORIGINS?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const corsOrigins = configuredOrigins ?? (
+    process.env.NODE_ENV === 'production'
+      ? []
+      : ['http://localhost:8081', 'http://127.0.0.1:8081']
+  );
+  if (corsOrigins.length > 0) {
+    if (corsOrigins.includes('*')) {
+      throw new Error('CORS_ORIGINS ne peut pas contenir un wildcard.');
+    }
+    app.enableCors({
+      origin: corsOrigins,
+      methods: ['GET', 'HEAD', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      optionsSuccessStatus: 204,
+    });
+  }
+
   // Servir le bundle empaqueté si présent, sinon le build local Vite.
   const adminDirectory = [
     resolve(process.cwd(), 'dist/admin-dashboard'),

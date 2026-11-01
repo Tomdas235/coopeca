@@ -6,9 +6,8 @@ import { Stack } from 'expo-router';
  * Trois branches : (auth) = connexion, (tabs) = écrans métier,
  * recus/[id] = détail d'un reçu numérique.
  *
- * Aucun garde d'authentification à ce stade : le module auth n'est pas
- * implémenté et ne doit pas être présenté comme fonctionnel
- * (cf. docs/DECISIONS_METIER.md, points À VALIDER).
+ * L'authentification réelle ou démo est gérée par le service auth; le groupe
+ * tabs vérifie la session avant d'afficher les écrans métier.
  */
 export default function RootLayout() {
   return (
