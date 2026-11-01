@@ -58,18 +58,214 @@ curl http://localhost:3000/api/v1/health
 | POST | `/api/v1/users/agents` | Créer un compte agent avec agence principale (ADMIN) |
 | PATCH | `/api/v1/users/{id}` | Modifier nom/téléphone ou activer/désactiver un agent (ADMIN) |
 | GET | `/api/v1/clients` | Liste paginée des clients autorisés |
-| POST | `/api/v1/clients/{id}/cycle-assignment` | Affecter explicitement un client à un marché et agent (ADMIN/SUPERVISOR) |
-| GET/POST | `/api/v1/dossiers/{id}/cycles` | Historique des cycles et ouverture d’un cycle (AGENT affecté) |
+| GET | `/api/v1/clients/profiles` | Liste les profils clients du périmètre |
+| POST | `/api/v1/clients/profiles` | Créer un client (statut PROVISSIOIR jusqu'à acceptation serveur) |
+| GET | `/api/v1/clients/profiles/{id}` | Détail d'un client |
+| PATCH | `/api/v1/clients/profiles/{id}` | Mettre à jour un client |
+| GET | `/api/v1/clients/profiles/doublons` | Vérifier les doublons potentiels (téléphone/nom dans la même agence) |
+| GET | `/api/v1/dossiers` | Liste paginée des dossiers du périmètre |
+| POST | `/api/v1/dossiers` | Créer un dossier (affectation client → marché, agent collecteur) |
+| GET | `/api/v1/dossiers/{id}` | Détail d'un dossier avec cycles et événements |
+| PATCH | `/api/v1/dossiers/{id}/close` | Clôturer un dossier (motif requis) |
+| PATCH | `/api/v1/dossiers/{id}/reopen` | Réouvrir un dossier (superviseur/admin, motif requis) |
 | GET | `/api/v1/tontine-cycles/{id}` | Détail du cycle, solde disponible et commission payée |
 | POST | `/api/v1/tontine-cycles/{id}/deposits` | Enregistrer un versement fixe (AGENT affecté) |
-| POST | `/api/v1/tontine-cycles/{id}/suspend` | Suspendre le cycle (AGENT affecté) |
-| POST | `/api/v1/tontine-cycles/{id}/resume` | Reprendre le même cycle (AGENT affecté) |
+| POST | `/tontine-cycles/{id}/deposits` | Compatibilité mobile (version simplifiée) |
 | POST | `/api/v1/tontine-cycles/{id}/withdrawals` | Demander un retrait (AGENT affecté) |
+| POST | `/tontine-cycles/{id}/withdrawals` | Compatibilité mobile (version simplifiée) |
 | GET | `/api/v1/withdrawals/pending` | File des demandes à examiner (SUPERVISOR) |
+| GET | `/withdrawals/pending` | Compatibilité mobile (version simplifiée) |
 | POST | `/api/v1/withdrawals/{id}/review` | Approuver/rejeter le retrait (SUPERVISOR) |
-| GET | `/api/v1/financial-summary` | Synthèse financière par agence et période (ADMIN/SUPERVISOR/ACCOUNTANT/AUDITOR) |
-| GET | `/api/v1/reconciliation-report` | Rapport de rapprochement paginé par cycle (ADMIN/SUPERVISOR/ACCOUNTANT/AUDITOR) |
-| GET | `/api/v1/remittances` | Consultation historique des remises sur agences attribuées; lecture seule |
+| POST | `/admin/cycles/withdrawals/{id}/review` | Compatibilité mobile (version simplifiée) |
+| POST | `/api/v1/tontine-cycles/{id}/suspend` | Suspendre le cycle (AGENT affecté, avec audit) |
+| POST | `/api/v1/tontine-cycles/{id}/resume` | Reprendre le cycle (AGENT affecté, avec audit) |
+| POST | `/tontine-cycles/{id}/suspend` | Compatibilité mobile (version simplifiée) |
+| POST | `/tontine-cycles/{id}/resume` | Compatibilité mobile (version simplifiée) |
+| GET | `/api/v1/financial-summary` | Synthèse financière par agence et période |
+| GET | `/api/v1/reconciliation-report` | Rapport de rapprochement paginé par cycle |
+| POST | `/api/v1/remittances` | Créer une remise historique (lecture/ancienne) |
+| GET | `/api/v1/remittances` | Consultation historique des remises |
+| PATCH | `/api/v1/remittances/{id}/receive` | Caissier confirme la réception |
+| PATCH | `/api/v1/remittances/{id}/discrepancy` | Caissier/déclare un écart |
+| POST | `/api/v1/closures` | Déclarer une clôture journalière (AGENT) |
+| GET | `/api/v1/closures` | Liste des clôtures (par agence et période) |
+| PATCH | `/api/v1/closures/{id}/review` | Réviser (SUPERVISOR) |
+| PATCH | `/api/v1/closures/{id}/reopen` | Réouvrir (SUPERVISOR) |
+| GET | `/api/v1/audit/logs` | Piste d'audit (ADMIN/AUDITOR uniquement) |
+| GET | `/api/v1/config/system-settings` | Lire les paramètres de configuration |
+| PUT | `/api/v1/config/system-settings/{key}` | Mettre à jour un paramètre (ADMIN/SUPERVISOR) |
+
+Les routes protégées exigent `Authorization: Bearer <accessToken>`. Les agences sont relues en base à chaque requête; le jeton ne porte pas les droits d'agence. Les écritures admin d'agents et d'agences sont auditées. Les suppressions physiques sont exclues. Le code et le marché d'une agence ne sont pas modifiables après création.
+
+**CORS :** le bootstrap Nest actuel n'active pas CORS. L'admin Vite fonctionne via son proxy `/api`; Expo Web appelle directement `localhost:3000` et sera bloqué par le navigateur tant qu'une origine de développement précise n'est pas autorisée. Avant l'essai mobile Web, configurer uniquement l'origine locale Expo nécessaire; ne pas activer un wildcard en production.
+
+La route `POST /api/v1/remittances` doit rester limitée à la conservation historique; elle ne doit pas servir de substitut aux retraits du produit cycle actif.
+| Méthode | Chemin | Description |
+| --- | --- | --- |
+| GET | `/api/v1/health` | Santé de l'API et de la base (200 ou 503) |
+| POST | `/api/v1/auth/sessions` | Échange identifiant/mot de passe contre un jeton Bearer de 15 minutes |
+| GET | `/api/v1/me` | Profil authentifié et agences actives autorisées |
+| GET | `/api/v1/me/branches` | Agences actives accordées à l'utilisateur |
+| GET | `/api/v1/markets` | Marchés actifs (lecture pour les clients métier) |
+| GET | `/api/v1/markets/admin` | Tous les marchés et compteurs d'agences (ADMIN/SUPERVISOR) |
+| POST | `/api/v1/markets` | Créer un marché (ADMIN/SUPERVISOR) |
+| POST | `/api/v1/markets/{id}/active` | Activer/désactiver un marché (ADMIN/SUPERVISOR) |
+| GET | `/api/v1/branches` | Liste globale des agences (ADMIN) |
+| POST | `/api/v1/branches` | Créer une agence sur un marché actif (ADMIN) |
+| PATCH | `/api/v1/branches/{id}` | Modifier nom/coordonnées ou activer/désactiver (ADMIN) |
+| GET | `/api/v1/users?role=AGENT` | Liste paginée des comptes (ADMIN) |
+| GET | `/api/v1/users/{id}` | Détail d'un compte (ADMIN) |
+| POST | `/api/v1/users/agents` | Créer un compte agent avec agence principale (ADMIN) |
+| PATCH | `/api/v1/users/{id}` | Modifier nom/téléphone ou activer/désactiver un agent (ADMIN) |
+| GET | `/api/v1/clients` | Liste paginée des clients autorisés |
+| GET | `/api/v1/clients/profiles` | Liste les profils clients du périmètre |
+| POST | `/api/v1/clients/profiles` | Créer un client (statut PROVISSIOIR jusqu'à acceptation serveur) |
+| GET | `/api/v1/clients/profiles/{id}` | Détail d'un client |
+| PATCH | `/api/v1/clients/profiles/{id}` | Mettre à jour un client |
+| GET | `/api/v1/clients/profiles/doublons` | Vérifier les doublons potentiels (téléphone/nom dans la même agence) |
+| GET | `/api/v1/dossiers` | Liste paginée des dossiers du périmètre |
+| POST | `/api/v1/dossiers` | Créer un dossier (affectation client → marché, agent collecteur) |
+| GET | `/api/v1/dossiers/{id}` | Détail d'un dossier avec cycles et événements |
+| PATCH | `/api/v1/dossiers/{id}/close` | Clôturer un dossier (motif requis) |
+| PATCH | `/api/v1/dossiers/{id}/reopen` | Réouvrir un dossier (superviseur/admin, motif requis) |
+
+Les routes protégées exigent `Authorization: Bearer <accessToken>`. Les agences sont relues en base à chaque requête; le jeton ne porte pas les droits d'agence. Les écritures admin d'agents et d'agences sont auditées. Les suppressions physiques sont exclues. Le code et le marché d'une agence ne sont pas modifiables après création.
+
+**CORS :** le bootstrap Nest actuel n'active pas CORS. L'admin Vite fonctionne via son proxy `/api`; Expo Web appelle directement `localhost:3000` et sera bloqué par le navigateur tant qu'une origine de développement précise n'est pas autorisée. Avant l'essai mobile Web, configurer uniquement l'origine locale Expo nécessaire; ne pas activer un wildcard en production.
+
+La route `POST /api/v1/remittances` doit rester limitée à la conservation historique; elle ne doit pas servir de substitut aux retraits du produit cycle actif.
+
+## Configuration
+
+Toutes les variables sont listées dans [.env.example](./.env.example).
+La configuration est validée au démarrage (`src/config/env.validation.ts`) :
+un démarrage avec une variable manquante ou mal formée échoue explicitement.
+`.env` est exclu du dépôt Git. Aucun secret réel n'est versionné ni journalisé.
+
+## Structure
+
+```text
+src/
+  common/           # composants transverses (filtres, pipes, guards)
+  config/           # configuration et validation d'environnement
+  database/         # module Prisma (PrismaService)
+  health/           # GET /api/v1/health
+  auth/              # sessions, profil et JWT guard
+  users/             # administration restreinte des comptes agent
+  branches/          # gestion admin des agences
+  clients/           # liste et opérations client
+  cycles/            # marchés, cycles, versements, retraits et rapports
+  dossiers/          # ouverture, clôture et réouverture de dossiers
+  remises/           # consultation historique et réception caisse
+  clotures/          # clôtures journalières
+  synchronisation/   # file d'attente et confirmation de sync
+  audit/             # traçabilité des opérations sensibles
+  config/            # paramètres généraux
+  app.module.ts
+  main.ts
+prisma/
+  schema.prisma     # modèle cible complet préparé pour revue
+  migrations/       # migration additive sur une base déjà au DDL v1.1
+test/               # tests end-to-end
+```
+
+Les répertoires `collectes/`, `recus/` et `synchronisation/` n'ont pas encore une couverture complète de leurs parcours attendus. La présence d'un dossier ou d'un type Prisma ne signifie pas que son workflow est prêt pour démonstration.
+
+## Règles COOPECA applicables à ce projet
+
+- Montants financiers en entiers XAF, jamais en flottant.
+- Contrôle d'accès par agence côté serveur.
+- Synchronisation idempotent.
+- Séparation date de collecte déclarée / date de réception serveur.
+- Séparation déclaration de remise / réception caisse.
+- Traçabilité des corrections et opérations sensibles.
+
+## Base de données et migrations
+## Endpoints disponibles
+
+| Méthode | Chemin | Description |
+| --- | --- | --- |
+| GET | `/api/v1/health` | Santé de l'API et de la base (200 ou 503) |
+| POST | `/api/v1/auth/sessions` | Échange identifiant/mot de passe contre un jeton Bearer de 15 minutes |
+| GET | `/api/v1/me` | Profil authentifié et agences actives autorisées |
+| GET | `/api/v1/me/branches` | Agences actives accordées à l'utilisateur |
+| GET | `/api/v1/markets` | Marchés actifs (lecture pour les clients métier) |
+| GET | `/api/v1/markets/admin` | Tous les marchés et compteurs d'agences (ADMIN/SUPERVISOR) |
+| POST | `/api/v1/markets` | Créer un marché (ADMIN/SUPERVISOR) |
+| POST | `/api/v1/markets/{id}/active` | Activer/désactiver un marché (ADMIN/SUPERVISOR) |
+| GET | `/api/v1/branches` | Liste globale des agences (ADMIN) |
+| POST | `/api/v1/branches` | Créer une agence sur un marché actif (ADMIN) |
+| PATCH | `/api/v1/branches/{id}` | Modifier nom/coordonnées ou activer/désactiver (ADMIN) |
+| GET | `/api/v1/users?role=AGENT` | Liste paginée des comptes (ADMIN) |
+| GET | `/api/v1/users/{id}` | Détail d'un compte (ADMIN) |
+| POST | `/api/v1/users/agents` | Créer un compte agent avec agence principale (ADMIN) |
+| PATCH | `/api/v1/users/{id}` | Modifier nom/téléphone ou activer/désactiver un agent (ADMIN) |
+| GET | `/api/v1/clients` | Liste paginée des clients autorisés |
+| GET | `/api/v1/clients/profiles` | Liste les profils clients du périmètre |
+| POST | `/api/v1/clients/profiles` | Créer un client (statut PROVISSIOIR jusqu'à acceptation serveur) |
+| GET | `/api/v1/clients/profiles/{id}` | Détail d'un client |
+| PATCH | `/api/v1/clients/profiles/{id}` | Mettre à jour un client |
+| GET | `/api/v1/clients/profiles/doublons` | Vérifier les doublons potentiels (téléphone/nom dans la même agence) |
+| GET | `/api/v1/dossiers` | Liste paginée des dossiers du périmètre |
+| POST | `/api/v1/dossiers` | Créer un dossier (affectation client → marché, agent collecteur) |
+| GET | `/api/v1/dossiers/{id}` | Détail d'un dossier avec cycles et événements |
+| PATCH | `/api/v1/dossiers/{id}/close` | Clôturer un dossier (motif requis) |
+| PATCH | `/api/v1/dossiers/{id}/reopen` | Réouvrir un dossier (superviseur/admin, motif requis) |
+| GET | `/api/v1/tontine-cycles/{id}` | Détail du cycle, solde disponible et commission payée |
+| POST | `/api/v1/tontine-cycles/{id}/deposits` | Enregistrer un versement fixe (AGENT affecté) |
+| POST | `/tontine-cycles/{id}/deposits` | Compatibilité mobile (version simplifiée) |
+| POST | `/api/v1/tontine-cycles/{id}/withdrawals` | Demander un retrait (AGENT affecté) |
+| POST | `/tontine-cycles/{id}/withdrawals` | Compatibilité mobile (version simplifiée) |
+| GET | `/api/v1/withdrawals/pending` | File des demandes à examiner (SUPERVISOR) |
+| GET | `/withdrawals/pending` | Compatibilité mobile (version simplifiée) |
+| POST | `/api/v1/withdrawals/{id}/review` | Approuver/rejeter le retrait (SUPERVISOR) |
+| POST | `/admin/cycles/withdrawals/{id}/review` | Compatibilité mobile (version simplifiée) |
+| POST | `/api/v1/tontine-cycles/{id}/suspend` | Suspendre le cycle (AGENT affecté, avec audit) |
+| POST | `/api/v1/tontine-cycles/{id}/resume` | Reprendre le cycle (AGENT affecté, avec audit) |
+| POST | `/tontine-cycles/{id}/suspend` | Compatibilité mobile (version simplifiée) |
+| POST | `/tontine-cycles/{id}/resume` | Compatibilité mobile (version simplifiée) |
+| GET | `/api/v1/financial-summary` | Synthèse financière par agence et période |
+| GET | `/api/v1/reconciliation-report` | Rapport de rapprochement paginé par cycle |
+| POST | `/api/v1/remittances` | Créer une remise historique (lecture/ancienne) |
+| GET | `/api/v1/remittances` | Consultation historique des remises |
+| PATCH | `/api/v1/remittances/{id}/receive` | Caissier confirme la réception |
+| PATCH | `/api/v1/remittances/{id}/discrepancy` | Caissier/déclare un écart |
+| POST | `/api/v1/closures` | Déclarer une clôture journalière (AGENT) |
+| GET | `/api/v1/closures` | Liste des clôtures (par agence et période) |
+| PATCH | `/api/v1/closures/{id}/review` | Réviser (SUPERVISOR) |
+| PATCH | `/api/v1/closures/{id}/reopen` | Réouvrir (SUPERVISOR) |
+| GET | `/api/v1/audit/logs` | Piste d'audit (ADMIN/AUDITOR uniquement) |
+| GET | `/api/v1/config/system-settings` | Lire les paramètres de configuration |
+| PUT | `/api/v1/config/system-settings/{key}` | Mettre à jour un paramètre (ADMIN/SUPERVISOR) |
+
+| Méthode | Chemin | Description |
+| --- | --- | --- |
+| GET | `/api/v1/health` | Santé de l'API et de la base (200 ou 503) |
+| POST | `/api/v1/auth/sessions` | Échange identifiant/mot de passe contre un jeton Bearer de 15 minutes |
+| GET | `/api/v1/me` | Profil authentifié et agences actives autorisées |
+| GET | `/api/v1/me/branches` | Agences actives accordées à l'utilisateur |
+| GET | `/api/v1/markets` | Marchés actifs (lecture pour les clients métier) |
+| GET | `/api/v1/markets/admin` | Tous les marchés et compteurs d'agences (ADMIN/SUPERVISOR) |
+| POST | `/api/v1/markets` | Créer un marché (ADMIN/SUPERVISOR) |
+| POST | `/api/v1/markets/{id}/active` | Activer/désactiver un marché (ADMIN/SUPERVISOR) |
+| GET | `/api/v1/branches` | Liste globale des agences (ADMIN) |
+| POST | `/api/v1/branches` | Créer une agence sur un marché actif (ADMIN) |
+| PATCH | `/api/v1/branches/{id}` | Modifier nom/coordonnées ou activer/désactiver (ADMIN) |
+| GET | `/api/v1/users?role=AGENT` | Liste paginée des comptes (ADMIN) |
+| GET | `/api/v1/users/{id}` | Détail d'un compte (ADMIN) |
+| POST | `/api/v1/users/agents` | Créer un compte agent avec agence principale (ADMIN) |
+| PATCH | `/api/v1/users/{id}` | Modifier nom/téléphone ou activer/désactiver un agent (ADMIN) |
+| GET | `/api/v1/clients` | Liste paginée des clients autorisés |
+| GET | `/api/v1/clients/profiles` | Liste les profils clients du périmètre |
+| POST | `/api/v1/clients/profiles` | Créer un client (statut PROVISSIOIR jusqu'à acceptation serveur) |
+| GET | `/api/v1/clients/profiles/{id}` | Détail d'un client |
+| PATCH | `/api/v1/clients/profiles/{id}` | Mettre à jour un client |
+| GET | `/api/v1/clients/profiles/doublons` | Vérifier les doublons potentiels (téléphone/nom dans la même agence) |
+| GET | `/api/v1/dossiers` | Liste paginée des dossiers du périmètre |
+| POST | `/api/v1/dossiers` | Créer un dossier (affectation client → marché, agent collecteur) |
+| GET | `/api/v1/dossiers/{id}` | Détail d'un dossier avec cycles et événements |
+| PATCH | `/api/v1/dossiers/{id}/close` | Clôturer un dossier (motif requis) |
+| PATCH | `/api/v1/dossiers/{id}/reopen` | Réouvrir un dossier (superviseur/admin, motif requis) |
 
 Les routes protégées exigent `Authorization: Bearer <accessToken>`. Les agences sont relues en base à chaque requête; le jeton ne porte pas les droits d'agence. Les écritures admin d'agents et d'agences sont auditées. Les suppressions physiques sont exclues. Le code et le marché d'une agence ne sont pas modifiables après création.
 
