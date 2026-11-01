@@ -145,6 +145,50 @@ La limitation des tentatives de connexion et la journalisation/audit des échecs
 
 ## Limites de cette étape
 
+## Sécurité, sauvegardes et configuration réseau
+
+### Règles de sécurité
+
+- **JWT_SECRET** : générer un secret différent par environnement (au moins 32 caractères), injecté via le gestionnaire de secrets en production. Jamais en dur dans le code ni versionné.
+- **PostgreSQL** : ne jamais exposer le port PostgreSQL (5432) en production. Restreindre l'accès à l'adresse IP de l'API uniquement.
+- **HTTPS** : obligatoire en production. Le mode HTTP en développement n'est pas sécurisé pour les jetons d'authentification.
+- **Chiffrement local mobile** : la base SQLite du mobile n'est pas chiffrée. Pour un déploiement production, activer le chiffrement SQLite ou stocker les données sensibles via une solution adaptée.
+- **Révocation de session** : les jetons JWT expirent après 15 minutes. Pour un retrait complet de session, il faut désactiver le compte utilisateur côtéAdministrateur.
+
+### Sauvegardes PostgreSQL
+
+- **Plan de sauvegarde** : exécuter un dump automatique quotidien (`pg_dump`) et un restore mensuel testé manuellement.
+- **Commande de sauvegarde** :
+  ```bash
+  pg_dump -h localhost -U coopeca -d coopeca --clean --no-owner > backup_$(date +%F).sql
+  ```
+- **Restauration** (sur une base jetable) :
+  ```bash
+  psql -h localhost -U coopeca -d coopeca_restore < backup_$(date +%F).sql
+  ```
+- **Volume persistant** : le Docker Compose de dev utilise un volume `coopeca_pgdata_dev`. Pour la production, configurer une sauvegarde régulière du volume ou de l'instance managed.
+
+### Configuration réseau
+
+- `CORS_ORIGINS` : ne jamais utiliser `*` en production. Lister uniquement les origines navigateur valides (ex. `http://localhost:3000`).
+- `DATABASE_URL` : utiliser `sslmode=require` en production.
+- **Reverse proxy** : en production, placer un proxy inverse (Nginx/Traefik) devant l'API NestJS pour terminer les connexions TLS et appliquer les headers de sécurité.
+
+### Procédure de déploiement
+
+1. Vérifier `npx prisma validate` et `npx prisma generate`.
+2. Construire l'image : `docker build -t coopeca-api:latest backend/`.
+3. Déployer sur le VPS : `docker compose up -d --build`.
+4. Vérifier `GET /api/v1/health`.
+5. Tester un parcours métier critique (connexion, ouverture client, ouverture cycle, versement, retrait, clôture).
+6. Vérifier les logs d'erreur et la configuration de monitoring.
+
+### Audit et traçabilité
+
+- Toutes les opérations sensibles (création, modification, suppression, clôture, réouverture) créent un enregistrement dans `audit_logs`.
+- Consulter la piste via `GET /api/v1/audit/logs` (rôle ADMIN ou AUDITOR uniquement).
+- Chaque enregistrement contient : acteur, agence, action, type d'entité, données avant/après, et identifiant de requête unique.
+
 - Une migration additive a été préparée pour revue ; aucune migration n'a été appliquée.
 - `prisma db push` et toute migration destructive sont proscrits.
 - Les guards d'authentification, rôles et agence sont implémentés sur plusieurs routes; leur couverture est spécifique à chaque contrôleur. Toute nouvelle route doit ajouter et tester explicitement ses règles de rôle et de périmètre agence.

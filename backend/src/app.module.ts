@@ -11,6 +11,12 @@ import { ClientsModule } from './clients/clients.module';
 import { RemittancesModule } from './remises/remittances.module';
 import { UsersModule } from './users/users.module';
 import { BranchesModule } from './branches/branches.module';
+import { DossiersModule } from './dossiers/dossiers.module';
+import { SynchronisationModule } from './synchronisation/synchronisation.module';
+import { ClientProfilesModule } from './clients/client-profiles.module';
+import { AuditModule } from './audit/audit.module';
+import { SystemSettingModule } from './config/system-setting.module';
+import { ClosuresModule } from './clotures/closures.module';
 
 /**
  * Module racine de l'API COOPECA.
@@ -38,6 +44,12 @@ import { BranchesModule } from './branches/branches.module';
     RemittancesModule,
     UsersModule,
     BranchesModule,
+    DossiersModule,
+    SynchronisationModule,
+    ClientProfilesModule,
+    ClosuresModule,
+    AuditModule,
+    SystemSettingModule,
   ],
 })
 export class AppModule {}
