@@ -5,12 +5,10 @@
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, RemittanceStatus } from '@prisma/client';
+import { RemittanceStatus } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { AuthenticatedPrincipal } from '../auth/auth.types';
 import { PrismaService } from '../database/prisma.service';
-
-type TransactionClient = Prisma.TransactionClient;
 
 export interface RemittanceFilters {
   status?: string | null;
