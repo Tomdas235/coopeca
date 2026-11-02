@@ -5,7 +5,6 @@ import {
   Get,
   Param,
   Post,
-  Query,
   UseGuards,
 } from '@nestjs/common';
 import { z } from 'zod';
@@ -48,7 +47,11 @@ export class CyclesCompatController {
     if (!input.success) {
       throw new BadRequestException('Données de versement invalides.');
     }
-    return this.cyclesService.deposit(actor, cycleId, input.data);
+    return this.cyclesService.deposit(actor, cycleId, {
+      amountXaf: BigInt(input.data.amountXaf),
+      idempotencyKey: input.data.idempotencyKey,
+      declaredAt: input.data.declaredAt ? new Date(input.data.declaredAt) : undefined,
+    });
   }
 
   @Post('tontine-cycles/:cycleId/withdrawals')
@@ -64,7 +67,12 @@ export class CyclesCompatController {
     if (!input.success) {
       throw new BadRequestException('Données de retrait invalides.');
     }
-    return this.cyclesService.requestWithdrawal(actor, cycleId, input.data);
+    return this.cyclesService.requestWithdrawal(actor, cycleId, {
+      amountXaf: BigInt(input.data.amountXaf),
+      closesCycle: input.data.closesCycle,
+      idempotencyKey: input.data.idempotencyKey,
+      reason: input.data.reason,
+    });
   }
 
   @Get('withdrawals/pending')

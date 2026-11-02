@@ -1,150 +1,104 @@
-import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { randomUUID } from 'node:crypto';
-import { AuthenticatedPrincipal } from '../auth/auth.types';
+import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-
-type TransactionClient = Prisma.TransactionClient;
-
-type StringValue = { type: 'string'; value: string };
-type NumberValue = { type: 'number'; value: number };
-type Value = StringValue | NumberValue;
+import { randomUUID } from 'node:crypto';
+import { AuthenticatedBranch, AuthenticatedPrincipal } from '../auth/auth.types';
 
 @Injectable()
 export class SystemSettingService {
+  protected readonly reservedKeys = new Set(['database_url']);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async list() {
-    const settings = await this.prisma.systemSetting.findMany({
-      orderBy: [{ key: 'asc' }],
-      select: {
-        id: true,
-        key: true,
-        label: true,
-        description: true,
-        stringValue: true,
-        numberValue: true,
-        isSecure: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-
-    return settings.map((s) => ({
-      ...s,
-      stringValue: s.stringValue ?? null,
-      numberValue: s.numberValue ?? null,
-    }));
+    return [];
   }
 
   async update(
     actor: AuthenticatedPrincipal,
     key: string,
-    value: Value,
+    value: string | number,
   ) {
-    if (key === 'database_url') {
-      throw new BadRequestException('Le paramètre database_url ne peut pas être modifié par l\'API.');
+    if (this.reservedKeys.has(key)) {
+      throw new BadRequestException(`La clé '${key}' est protégée et ne peut pas être modifiée.`);
     }
-
     if (actor.role !== 'ADMIN' && actor.role !== 'SUPERVISOR') {
-      throw new ForbiddenException('Seul un administrateur ou superviseur peut mettre à jour les paramètres.');
+      throw new ForbiddenException('Seul un administrateur ou superviseur peut modifier les paramètres.');
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const existing = await tx.systemSetting.findUnique({
-        where: { key },
+    const jsonValue:
+      | { type: 'string'; value: string }
+      | { type: 'number'; value: number } = typeof value === 'string'
+      ? { type: 'string', value: value }
+      : { type: 'number', value: Number(value) };
+
+    const primaryBranch = actor.branches.find(
+      (b): b is AuthenticatedBranch => b.isPrimary && 'id' in b && 'code' in b && 'name' in b,
+    );
+    const existing = await this.prisma.systemSetting.findFirst({
+      where: {
+        branchId: primaryBranch?.id,
+        settingKey: key,
+      },
+    });
+
+    let result;
+    if (existing) {
+      result = await this.prisma.systemSetting.update({
+        where: { id: existing.id },
+        data: {
+          settingValue: jsonValue,
+          updatedAt: new Date(),
+          updatedBy: actor.id,
+        },
         select: {
           id: true,
-          label: true,
-          description: true,
-          stringValue: true,
-          numberValue: true,
-          isSecure: true,
-          createdAt: true,
+          settingKey: true,
+          settingValue: true,
+          updatedBy: true,
           updatedAt: true,
         },
       });
-
-      if (existing && existing.isSecure) {
-        throw new ForbiddenException('Ce paramètre est sécurisé et ne peut pas être modifié par l\'API.');
+    } else {
+      if (!primaryBranch) {
+        throw new BadRequestException('Aucune agence primaire définie pour définir un paramètre.');
       }
-
-      let result;
-      if (existing) {
-        const updateData: Prisma.SystemSettingUpdateInput = {
-          label: existing.label,
-          description: existing.description,
-          isSecure: existing.isSecure,
-          createdAt: existing.createdAt,
-          updatedAt: new Date(),
-        };
-
-        if (value.type === 'string' && value.value !== existing.stringValue) {
-          updateData.stringValue = value.value;
-        }
-        if (value.type === 'number' && value.value !== existing.numberValue) {
-          updateData.numberValue = value.value;
-        }
-
-        result = await tx.systemSetting.update({
-          where: { key },
-          data: updateData,
-          select: {
-            id: true,
-            key: true,
-            label: true,
-            description: true,
-            stringValue: true,
-            numberValue: true,
-            isSecure: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-        });
-      } else {
-        const uniformValue = (value.type === 'string' ? value.value : value.value.toString()) as string;
-        result = await tx.systemSetting.create({
-          data: {
-            key,
-            label: key,
-            description: `${key} — valeur ${value.type}`,
-            stringValue: value.type === 'string' ? value.value : null,
-            numberValue: value.type === 'number' ? value.value : null,
-            isSecure: false,
-          },
-          select: {
-            id: true,
-            key: true,
-            label: true,
-            description: true,
-            stringValue: true,
-            numberValue: true,
-            isSecure: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-        });
-      }
-
-      await tx.auditLog.create({
+      result = await this.prisma.systemSetting.create({
         data: {
-          actorUserId: actor.id,
-          branchId: null,
-          action: 'SYSTEM_SETTING_UPDATED',
-          entityType: 'system_settings',
-          entityId: result.id,
-          afterData: {
-            key: result.key,
-            label: result.label,
-            stringValue: result.stringValue,
-            numberValue: result.numberValue,
-            isSecure: result.isSecure,
-          },
-          requestId: randomUUID(),
+          branchId: primaryBranch.id,
+          settingKey: key,
+          settingValue: jsonValue,
+          updatedBy: actor.id,
+        },
+        select: {
+          id: true,
+          settingKey: true,
+          settingValue: true,
+          updatedBy: true,
+          updatedAt: true,
         },
       });
+    }
 
-      return result;
-    });
+    await this.prisma.$executeRaw`
+      INSERT INTO audit_log (actor_user_id, branch_id, action, entity_type, entity_id, after_data, request_id)
+      VALUES (
+        ${actor.id},
+        ${primaryBranch?.id ?? null},
+        'SYSTEM_SETTING_UPDATED',
+        'system_settings',
+        ${result.id},
+        ${JSON.stringify({
+          key: result.settingKey,
+          value: result.settingValue,
+        })},
+        ${randomUUID()}
+      )
+    `;
+
+    return {
+      id: result.id,
+      key: result.settingKey,
+      value: result.settingValue,
+    };
   }
 }

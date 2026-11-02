@@ -26,9 +26,9 @@ const limitSchema = z.object({
 });
 
 const createClosureSchema = z.object({
-  businessDate: z.string().datetime({ offset: true }).optional(),
-  declaredCollectionTotalXaf: z.string().regex(/^[0-9][0-9]*$/, 'Montant total des collectes invalide.'),
-  declaredRemittanceTotalXaf: z.string().regex(/^[0-9][0-9]*$/, 'Montant total des remises invalide.'),
+  businessDate: z.coerce.date().optional(),
+  declaredCollectionTotalXaf: z.string().regex(/^\d+$/).transform((v) => BigInt(v)),
+  declaredRemittanceTotalXaf: z.string().regex(/^\d+$/).transform((v) => BigInt(v)),
   collectionCount: z.number().int().min(0).default(0),
   deviceId: z.string().trim().min(1).max(120),
 }).strict();

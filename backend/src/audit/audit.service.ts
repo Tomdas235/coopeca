@@ -1,13 +1,10 @@
 import {
-  BadRequestException,
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
-import { Prisma, AuditAction } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { AuthenticatedPrincipal } from '../auth/auth.types';
 import { PrismaService } from '../database/prisma.service';
-
-type TransactionClient = Prisma.TransactionClient;
 
 @Injectable()
 export class AuditService {
@@ -34,7 +31,7 @@ export class AuditService {
     const where: Prisma.AuditLogWhereInput = {};
 
     if (params.action) {
-      where.action = params.action as AuditAction;
+      where.action = params.action as string;
     }
     if (params.entityType) {
       where.entityType = params.entityType;

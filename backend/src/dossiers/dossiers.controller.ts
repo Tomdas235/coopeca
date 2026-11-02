@@ -2,9 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
-  ForbiddenException,
   Get,
-  NotFoundException,
   Param,
   Patch,
   Post,
@@ -59,7 +57,12 @@ export class DossiersController {
     if (!input.success) {
       throw new BadRequestException('Données de dossier invalides.');
     }
-    return this.dossiersService.create(actor, input.data);
+    return this.dossiersService.create(actor, {
+      ...input.data,
+      dailyAmountXaf: BigInt(input.data.dailyAmountXaf),
+      openedAtDeclared: input.data.openedAtDeclared ? new Date(input.data.openedAtDeclared) : undefined,
+      openingBusinessDate: input.data.openingBusinessDate ? new Date(input.data.openingBusinessDate) : undefined,
+    });
   }
 
   @Get()

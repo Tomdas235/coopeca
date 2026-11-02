@@ -2,6 +2,7 @@ export type AuthenticatedBranch = {
   id: string;
   code: string;
   name: string;
+  isPrimary: boolean;
 };
 
 export type AuthenticatedPrincipal = {

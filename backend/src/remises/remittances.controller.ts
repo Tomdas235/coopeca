@@ -2,9 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
-  ForbiddenException,
   Get,
-  NotFoundException,
   Param,
   Patch,
   Post,
@@ -66,7 +64,10 @@ export class RemittancesController {
     if (!input.success) {
       throw new BadRequestException('Données de remise invalides.');
     }
-    return this.remittancesService.create(actor, input.data);
+    return this.remittancesService.create(actor, {
+      ...input.data,
+      declaredAmountXaf: BigInt(input.data.declaredAmountXaf),
+    });
   }
 
   @Get()
@@ -109,7 +110,7 @@ export class RemittancesController {
     if (!input.success) {
       throw new BadRequestException('Montant reçu invalide.');
     }
-    return this.remittancesService.receive(actor, id, input.data.receivedTotalXaf, input.data.cashierNote);
+    return this.remittancesService.receive(actor, id, BigInt(input.data.receivedTotalXaf), input.data.cashierNote);
   }
 
   @Patch(':id/discrepancy')
@@ -125,7 +126,7 @@ export class RemittancesController {
     if (!input.success) {
       throw new BadRequestException('Données d\'écart invalides.');
     }
-    return this.remittancesService.declareDiscrepancy(actor, id, input.data.discrepancyAmountXaf, input.data.discrepancyReason);
+    return this.remittancesService.declareDiscrepancy(actor, id, BigInt(input.data.discrepancyAmountXaf), input.data.discrepancyReason);
   }
 }
 

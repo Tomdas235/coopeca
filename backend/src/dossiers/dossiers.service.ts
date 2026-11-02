@@ -62,7 +62,17 @@ export class DossiersService {
 
     const agent = await this.prisma.appUser.findUnique({
       where: { id: input.agentId },
-      select: { id: true, role: true, isActive: true, branchAccesses: true },
+      select: {
+        id: true,
+        role: true,
+        isActive: true,
+        branchAccesses: {
+          select: {
+            isPrimary: true,
+            branch: { select: { id: true, code: true, name: true } },
+          },
+        },
+      },
     });
 
     if (!agent || !agent.isActive) {

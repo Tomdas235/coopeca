@@ -8,8 +8,6 @@ import { Prisma, SyncStatus } from '@prisma/client';
 import { AuthenticatedPrincipal } from '../auth/auth.types';
 import { PrismaService } from '../database/prisma.service';
 
-type TransactionClient = Prisma.TransactionClient;
-
 @Injectable()
 export class SynchronisationService {
   constructor(private readonly prisma: PrismaService) {}

@@ -10,8 +10,6 @@ import { randomUUID } from 'node:crypto';
 import { AuthenticatedPrincipal } from '../auth/auth.types';
 import { PrismaService } from '../database/prisma.service';
 
-type TransactionClient = Prisma.TransactionClient;
-
 type CreateClosureInput = {
   businessDate?: Date;
   declaredCollectionTotalXaf: bigint;
@@ -59,6 +57,7 @@ export class ClosuresService {
           agentId: actor.id,
           businessDate,
           closureNo,
+          clientOperationId,
           declaredCollectionTotalXaf: input.declaredCollectionTotalXaf,
           declaredRemittanceTotalXaf: input.declaredRemittanceTotalXaf,
           collectionCount: input.collectionCount,

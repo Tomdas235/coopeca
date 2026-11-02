@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Body,
   Controller,
   Get,
@@ -13,8 +14,6 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { AuthenticatedPrincipal } from '../auth/auth.types';
 import { SystemSettingService } from './system-setting.service';
 
-const uuid = z.string().uuid();
-const keySchema = z.string().regex(/^[a-zA-Z0-9_-]+$/, 'Clé invalide (lettres, chiffres, underscore, hyphen).');
 const valueStringSchema = z.string().max(500).optional();
 const valueNumberSchema = z.number().int().min(0).max(2147483647).optional();
 
@@ -52,6 +51,12 @@ export class SystemSettingController {
       throw new BadRequestException('Données de paramètre invalides.');
     }
 
-    return this.systemSettingService.update(actor, key, input.data);
+    const jsonValue:
+      | { type: 'string'; value: string }
+      | { type: 'number'; value: number } = typeof input.data.stringValue === 'string'
+      ? { type: 'string', value: input.data.stringValue }
+      : { type: 'number', value: input.data.numberValue ?? 0 };
+
+    return this.systemSettingService.update(actor, key, jsonValue.value);
   }
 }

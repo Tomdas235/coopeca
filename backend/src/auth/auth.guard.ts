@@ -53,7 +53,7 @@ export class AuthGuard implements CanActivate {
       role: user.role,
       branches: user.branchAccesses
         .filter(({ branch }) => branch.isActive)
-        .map(({ branch }) => ({ id: branch.id, code: branch.code, name: branch.name })),
+        .map(({ branch, isPrimary }) => ({ id: branch.id, code: branch.code, name: branch.name, isPrimary })),
     };
 
     return true;
