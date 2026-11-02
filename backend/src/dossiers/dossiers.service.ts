@@ -429,3 +429,25 @@ export class DossiersService {
 
       return updated;
     });
+} // ← ferme reopen()
+
+  private async serializableTransaction<T>(
+    fn: (tx: TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    const maxRetries = 3;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await this.prisma.$transaction(fn, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        const isSerializationFailure =
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2034';
+        if (!isSerializationFailure || attempt >= maxRetries) {
+          throw error;
+        }
+      }
+    }
+  }
+} // ← ferme la classe
