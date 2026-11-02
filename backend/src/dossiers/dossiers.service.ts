@@ -431,8 +431,6 @@ export class DossiersService {
     });
   }
 
-  private async serializableTransaction<T>(
-    operation: (tx: TransactionClient) => Promise<T>,
-  ): Promise<T> {
+  private async serializableTransaction<T>(operation: (tx: TransactionClient) => Promise<T>): Promise<T> {
     return this.prisma.$transaction(operation);
   }
