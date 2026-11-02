@@ -63,6 +63,31 @@ export class ClosuresService {
           declaredRemittanceTotalXaf: input.declaredRemittanceTotalXaf,
           collectionCount: input.collectionCount,
           status: ClosureStatus.DRAFT,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorUserId: actor.id,
+          branchId,
+          action: 'CLOSURE_DECLARED',
+          entityType: 'daily_closures',
+          entityId: closure.id,
+          afterData: {
+            closureNo: closure.closureNo,
+            businessDate: closure.businessDate,
+            declaredCollectionTotalXaf: closure.declaredCollectionTotalXaf.toString(),
+            declaredRemittanceTotalXaf: closure.declaredRemittanceTotalXaf.toString(),
+            status: closure.status,
+          },
+          requestId: randomUUID(),
+        },
+      });
+
+      return closure;
+    });
+  }
+
   async list(
     actor: AuthenticatedPrincipal,
     params: {
@@ -133,6 +158,9 @@ export class ClosuresService {
       total,
       page: params.page,
       limit: params.limit,
+    };
+  }
+
   async review(
     actor: AuthenticatedPrincipal,
     id: string,
@@ -201,44 +229,6 @@ export class ClosuresService {
     });
   }
 
-    };
-  }
-
-          clientOperationId,
-        },
-        select: {
-          id: true,
-          closureNo: true,
-          businessDate: true,
-          declaredCollectionTotalXaf: true,
-          declaredRemittanceTotalXaf: true,
-          collectionCount: true,
-          status: true,
-          createdAt: true,
-        },
-      });
-
-      await tx.auditLog.create({
-        data: {
-          actorUserId: actor.id,
-          branchId,
-          action: 'CLOSURE_DECLARED',
-          entityType: 'daily_closures',
-          entityId: closure.id,
-          afterData: {
-            closureNo: closure.closureNo,
-            businessDate: closure.businessDate,
-            declaredCollectionTotalXaf: closure.declaredCollectionTotalXaf.toString(),
-            declaredRemittanceTotalXaf: closure.declaredRemittanceTotalXaf.toString(),
-            status: closure.status,
-          },
-          requestId: randomUUID(),
-        },
-      });
-
-      return closure;
-    });
-  }
   async reopen(
     actor: AuthenticatedPrincipal,
     id: string,
@@ -310,3 +300,5 @@ export class ClosuresService {
       return updated;
     });
   }
+
+}

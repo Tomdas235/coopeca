@@ -21,6 +21,11 @@ type CreateDossierInput = {
   openedAtDeclared?: Date;
   openingBusinessDate?: Date;
 };
+
+@Injectable()
+export class DossiersService {
+  constructor(private readonly prisma: PrismaService) {}
+
   async create(
     actor: AuthenticatedPrincipal,
     input: CreateDossierInput,
@@ -128,6 +133,79 @@ type CreateDossierInput = {
       });
 
       await tx.dossierStateEvent.create({
+        data: {
+          dossierId: dossier.id,
+          eventType: DossierEventType.OPENED,
+          previousStatus: null,
+          newStatus: DossierStatus.OPEN,
+          actorUserId: actor.id,
+          reason: 'Ouverture de dossier',
+          deviceId: input.deviceId,
+          requestId: randomUUID(),
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorUserId: actor.id,
+          branchId: client.branchId,
+          action: 'DOSSIER_OPENED',
+          entityType: 'dossiers',
+          entityId: dossier.id,
+          afterData: {
+            clientId: dossier.clientId,
+            agentId: dossier.agentId,
+            dossierNo: dossier.dossierNo,
+            status: dossier.status,
+          },
+          requestId: randomUUID(),
+        },
+      });
+
+      return dossier;
+    });
+  }
+
+  async findOne(actor: AuthenticatedPrincipal, id: string) {
+    const dossier = await this.prisma.dossier.findUnique({
+      where: { id },
+      include: {
+        client: {
+          select: { id: true, firstName: true, lastName: true, phone: true, branchId: true },
+        },
+        agent: {
+          select: { id: true, username: true, fullName: true, role: true },
+        },
+        cycles: {
+          select: { id: true, status: true, fixedAmountXaf: true, installmentCount: true },
+          orderBy: { openedAt: 'desc' },
+        },
+        events: {
+          select: { id: true, eventType: true, newStatus: true, reason: true, occurredAt: true, actorUserId: true },
+          orderBy: { occurredAt: 'desc' },
+        },
+      },
+    });
+
+    if (!dossier) {
+      throw new NotFoundException('Dossier introuvable.');
+    }
+
+    if (actor.role !== 'ADMIN') {
+      const hasAccess = actor.branches.some(
+        ({ id }) => id === dossier.client.branchId,
+      );
+      if (!hasAccess) {
+        throw new ForbiddenException('Accès refusé pour ce dossier.');
+      }
+    }
+
+    return {
+      ...dossier,
+      dailyAmountXaf: dossier.dailyAmountXaf.toString(),
+    };
+  }
+
   async list(
     actor: AuthenticatedPrincipal,
     params: {
@@ -198,84 +276,6 @@ type CreateDossierInput = {
       limit: params.limit,
     };
   }
-
-        data: {
-          dossierId: dossier.id,
-          eventType: DossierEventType.OPENED,
-          previousStatus: null,
-          newStatus: DossierStatus.OPEN,
-          actorUserId: actor.id,
-          reason: 'Ouverture de dossier',
-          deviceId: input.deviceId,
-          requestId: randomUUID(),
-        },
-      });
-
-      await tx.auditLog.create({
-        data: {
-          actorUserId: actor.id,
-          branchId: client.branchId,
-          action: 'DOSSIER_OPENED',
-  async findOne(actor: AuthenticatedPrincipal, id: string) {
-    const dossier = await this.prisma.dossier.findUnique({
-      where: { id },
-      include: {
-        client: {
-          select: { id: true, firstName: true, lastName: true, phone: true, branchId: true },
-        },
-        agent: {
-          select: { id: true, username: true, fullName: true, role: true },
-        },
-        cycles: {
-          select: { id: true, status: true, fixedAmountXaf: true, installmentCount: true },
-          orderBy: { openedAt: 'desc' },
-        },
-        events: {
-          select: { id: true, eventType: true, newStatus: true, reason: true, occurredAt: true, actorUserId: true },
-          orderBy: { occurredAt: 'desc' },
-        },
-      },
-    });
-
-    if (!dossier) {
-      throw new NotFoundException('Dossier introuvable.');
-    }
-
-    if (actor.role !== 'ADMIN') {
-      const hasAccess = actor.branches.some(
-        ({ id }) => id === dossier.client.branchId,
-      );
-      if (!hasAccess) {
-        throw new ForbiddenException('Accès refusé pour ce dossier.');
-      }
-    }
-
-    return {
-      ...dossier,
-      dailyAmountXaf: dossier.dailyAmountXaf.toString(),
-    };
-  }
-
-          entityType: 'dossiers',
-          entityId: dossier.id,
-          afterData: {
-            clientId: dossier.clientId,
-            agentId: dossier.agentId,
-            dossierNo: dossier.dossierNo,
-            status: dossier.status,
-          },
-          requestId: randomUUID(),
-        },
-      });
-
-      return dossier;
-    });
-  }
-
-
-@Injectable()
-export class DossiersService {
-  constructor(private readonly prisma: PrismaService) {}
 
   async close(
     actor: AuthenticatedPrincipal,
@@ -434,7 +434,5 @@ export class DossiersService {
   private async serializableTransaction<T>(
     operation: (tx: TransactionClient) => Promise<T>,
   ): Promise<T> {
-    return this.prisma.$transaction(operation, {
-      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-    });
+    return this.prisma.$transaction(operation);
   }
