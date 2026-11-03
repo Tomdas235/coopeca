@@ -53,7 +53,7 @@ describe('AuthGuard', () => {
       username: 'agent.one',
       fullName: 'Agent One',
       role: 'AGENT',
-      branches: [{ id: 'branch-a', code: 'A', name: 'Agence A' }],
+      branches: [{ id: 'branch-a', code: 'A', name: 'Agence A', isPrimary: true }],
     });
   });
 

@@ -12,7 +12,7 @@ describe('BranchesService administration', () => {
       username: 'supervisor1',
       fullName: 'Supervisor Test',
       role: 'SUPERVISOR',
-      branches: [{ id: 'branch-id', code: 'BR-1', name: 'Agence test' }],
+      branches: [{ id: 'branch-id', code: 'BR-1', name: 'Agence test', isPrimary: true }],
     };
 
     await expect(service.findAll(supervisor)).rejects.toBeInstanceOf(ForbiddenException);

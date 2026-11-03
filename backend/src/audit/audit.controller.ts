@@ -44,26 +44,21 @@ export class AuditController {
   ) {
     const pageParams = pageSchema.safeParse({ page });
     const limitParams = limitSchema.safeParse({ limit });
-    const action = filters.action;
-    const entityType = filters.entityType;
-    const entityId = filters.entityId;
-    const branchId = filters.branchId;
-    const fromDate = filters.fromDate;
-    const toDate = filters.toDate;
+    const filterParams = filterSchema.safeParse(filters);
 
-    if (!pageParams.success || !limitParams.success) {
-      throw new BadRequestException('Paramètres de pagination invalides.');
+    if (!pageParams.success || !limitParams.success || !filterParams.success) {
+      throw new BadRequestException('Paramètres de pagination ou filtres invalides.');
     }
 
     return this.auditService.list(actor, {
       page: pageParams.data.page,
       limit: limitParams.data.limit,
-      action,
-      entityType,
-      entityId,
-      branchId,
-      fromDate,
-      toDate,
+      action: filterParams.data.action,
+      entityType: filterParams.data.entityType,
+      entityId: filterParams.data.entityId,
+      branchId: filterParams.data.branchId,
+      fromDate: filterParams.data.fromDate,
+      toDate: filterParams.data.toDate,
     });
   }
 }
