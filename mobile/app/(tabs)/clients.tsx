@@ -21,7 +21,7 @@ export default function ClientsScreen() {
     setErreur(null);
     try {
       const session = await authenticationService.getCurrentSession();
-      const branchId = session?.user?.branches?.[0]?.id;
+      const branchId = session?.user?.branchId;
       const resultat = await listClients({
         search: recherche.trim() || undefined,
         status: statutFiltre === 'TOUS' ? undefined : statutFiltre,
@@ -158,7 +158,7 @@ function ClientCard({
 
   return (
     <View style={styles.cardContainer}>
-      <Card elevation="sm" padding={14} style={styles.card} onPress={onPress}>
+      <Card elevation="sm" padding={14} onPress={onPress}>
         <View style={styles.cardContent}>
           <View style={styles.cardInfos}>
             <View style={styles.cardNom}>
