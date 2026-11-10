@@ -89,14 +89,14 @@ export default function AccueilAgentScreen() {
       <SyncStatusBanner state={etatReseau} />
 
       <View style={styles.grilleMetriques}>
-        <Card elevation="sm" padding={16} style={styles.metricCard}>
+        <Card elevation="sm" padding={16}>
           <Text style={styles.metricLabel}>Clients enregistrés</Text>
           <Text style={styles.metricValue}>
             {nbClients !== null ? String(nbClients) : '—'}
           </Text>
           <Text style={styles.metricNote}>Portefeuille actif</Text>
         </Card>
-        <Card elevation="sm" padding={16} style={styles.metricCard}>
+        <Card elevation="sm" padding={16}>
           <Text style={styles.metricLabel}>Dossiers ouverts</Text>
           <Text style={styles.metricValue}>
             {nbDossiers !== null ? String(nbDossiers) : '—'}
@@ -163,7 +163,7 @@ function ActionCardRef({
   onPress: () => void;
 }) {
   return (
-    <Card elevation="sm" padding={14} style={styles.actionCard} onPress={onPress}>
+    <Card elevation="sm" padding={14} onPress={onPress}>
       <View style={styles.actionCardContent}>
         <View style={styles.actionCardIcon}>{icon}</View>
         <View style={styles.actionCardCopy}>

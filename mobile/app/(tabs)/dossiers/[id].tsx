@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { FlatList, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
-import { Badge, Button, EmptyState, LoadingState } from '../../src/components/ui';
-import { colors } from '../../src/components/ui/colors';
-import { getDossier, listDossierCycles } from '../../src/services/api';
-import { authenticationService } from '../../src/features/auth';
+import { Badge, Button, EmptyState, LoadingState } from '../../../src/components/ui';
+import { colors } from '../../../src/components/ui/colors';
+import { getDossier, listDossierCycles } from '../../../src/services/api';
+import { authenticationService } from '../../../src/features/auth';
 
 export default function DossierDetailScreen({
   route,
@@ -25,7 +25,7 @@ export default function DossierDetailScreen({
     setErreur(null);
     try {
       const session = await authenticationService.getCurrentSession();
-      const branchId = session?.user?.branches?.[0]?.id;
+      const branchId = session?.user?.branchId;
       const [dossierResult, cyclesResult] = await Promise.all([
         getDossier(dossierId),
         listDossierCycles(dossierId),

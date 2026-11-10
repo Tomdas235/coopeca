@@ -25,7 +25,7 @@ export default function CollectesScreen() {
     setErreur(null);
     try {
       const session = await authenticationService.getCurrentSession();
-      const branchId = session?.user?.branches?.[0]?.id;
+      const branchId = session?.user?.branchId;
       const resultat = await listDossiers({ status: 'OPEN', branchId, limit: 50 });
       setDossiers(resultat.items);
       if (resultat.items.length > 0 && !dossierIdChoisi) {

@@ -21,7 +21,7 @@ export default function DossiersScreen() {
     setErreur(null);
     try {
       const session = await authenticationService.getCurrentSession();
-      const branchId = session?.user?.branches?.[0]?.id;
+      const branchId = session?.user?.branchId;
       const resultat = await listDossiers({
         status: statutFiltre === 'TOUS' ? undefined : statutFiltre,
         branchId,
@@ -152,7 +152,7 @@ function DossierCard({
 
   return (
     <View style={styles.cardContainer}>
-      <Card elevation="sm" padding={14} style={styles.card} onPress={onPress}>
+      <Card elevation="sm" padding={14} onPress={onPress}>
         <View style={styles.cardContent}>
           <View style={styles.cardInfos}>
             <View style={styles.cardNom}>
