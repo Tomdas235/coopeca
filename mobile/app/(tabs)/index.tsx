@@ -1,40 +1,100 @@
+import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Blocks, ClipboardCheck, Folder, Receipt, UserRound, Users, Wallet } from 'lucide-react-native';
+import {
+  Blocks,
+  ClipboardCheck,
+  Folder,
+  Receipt,
+  UserRound,
+  Users,
+  Wallet,
+} from 'lucide-react-native';
 import { StyleSheet, Text, View } from 'react-native';
 import { ActionCard } from '../../src/components/ActionCard';
 import { AppButton } from '../../src/components/AppButton';
 import { AppCard } from '../../src/components/AppCard';
 import { AppNotice } from '../../src/components/AppNotice';
 import { AppScreen } from '../../src/components/AppScreen';
-import { SyncStatusBanner } from '../../src/components/SyncStatusBanner';
+import { MetricCard } from '../../src/components/MetricCard';
+import { SyncStatusBanner, type SyncDisplayState } from '../../src/components/SyncStatusBanner';
 import { colors } from '../../src/components/theme';
+import { listClients, listDossiers } from '../../src/services/api';
+import { authenticationService } from '../../src/features/auth';
 
 export default function AccueilScreen() {
   const router = useRouter();
+
+  const [nomAgent, setNomAgent] = useState('Agent');
+  const [nbClients, setNbClients] = useState<number | null>(null);
+  const [nbDossiers, setNbDossiers] = useState<number | null>(null);
+  const [etatReseau, setEtatReseau] = useState<SyncDisplayState>('unknown');
+
+  useEffect(() => {
+    let monte = true;
+
+    async function initialiserTableauBord() {
+      try {
+        const session = await authenticationService.getCurrentSession();
+        if (session && monte) {
+          setNomAgent(session.profile?.identity || session.user?.username || 'Agent');
+        }
+
+        const [clientsRes, dossiersRes] = await Promise.all([
+          listClients({ limit: 1 }),
+          listDossiers({ limit: 1 }),
+        ]);
+
+        if (monte) {
+          setNbClients(clientsRes.total);
+          setNbDossiers(dossiersRes.total);
+          setEtatReseau('online');
+        }
+      } catch (err: unknown) {
+        if (monte) {
+          setEtatReseau('offline');
+        }
+      }
+    }
+
+    void initialiserTableauBord();
+    return () => {
+      monte = false;
+    };
+  }, []);
 
   return (
     <AppScreen>
       <View style={styles.heading}>
         <Text style={styles.eyebrow}>COOPECA · ESPACE AGENT</Text>
         <Text accessibilityRole="header" style={styles.title}>
-          Bonjour
+          Bonjour, {nomAgent}
         </Text>
-        <Text style={styles.subtitle}>Choisissez l’écran de travail à ouvrir.</Text>
+        <Text style={styles.subtitle}>
+          Collecte de tontine et suivi des cycles à 31 versements.
+        </Text>
       </View>
 
-      <AppNotice
-        title="Suivi d’activité indisponible"
-        body="Aucune statistique fiable n’est connectée pour le moment. Les chiffres seront affichés uniquement quand une source réelle sera disponible."
-        kind="info"
-      />
+      <SyncStatusBanner state={etatReseau} />
 
-      <SyncStatusBanner />
+      {/* Cartes métriques réelles */}
+      <View style={styles.grilleMetriques}>
+        <MetricCard
+          label="Clients enregistrés"
+          value={nbClients !== null ? String(nbClients) : '…'}
+          note="Portefeuille actif"
+        />
+        <MetricCard
+          label="Dossiers ouverts"
+          value={nbDossiers !== null ? String(nbDossiers) : '…'}
+          note="Cycles de tontine"
+        />
+      </View>
 
       <AppCard>
-        <Text style={styles.actionEyebrow}>ACTION PRINCIPALE</Text>
-        <Text style={styles.actionTitle}>Clients</Text>
+        <Text style={styles.actionEyebrow}>PARCOURS PRINCIPAL</Text>
+        <Text style={styles.actionTitle}>Gestion des Clients</Text>
         <Text style={styles.actionDescription}>
-          Accéder à la liste pour retrouver ou créer un client.
+          Créer un nouveau client, retrouver un profil existant ou ouvrir son dossier.
         </Text>
         <AppButton
           label="Ouvrir les clients"
@@ -45,53 +105,48 @@ export default function AccueilScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Accès rapides</Text>
         <ActionCard
-          title="Dossiers"
-          description="Consulter ou créer un dossier"
+          title="Dossiers & Cycles"
+          description="Consulter les dossiers et suivre la progression des 31 versements"
+          icon={<Folder size={20} color={colors.primary} />}
           onPress={() => router.push('/(tabs)/dossiers')}
         />
         <ActionCard
-          title="Cycles"
-          description="Nouveau produit à 31 versements"
-          icon={<Wallet size={20} />}
-          onPress={() => router.push('/(tabs)/cycles')}
-        />
-        <ActionCard
-          title="Collectes"
-          description="Parcours legacy des collectes journalières"
-          icon={<Receipt size={20} />}
+          title="Enregistrer une collecte"
+          description="Saisie directe d’un versement fixe sur cycle actif avec reçu officiel"
+          icon={<Receipt size={20} color={colors.primary} />}
           onPress={() => router.push('/(tabs)/collectes')}
         />
         <ActionCard
-          title="Remises"
-          description="Parcours legacy des remises (reversements)"
+          title="Cycles d'épargne"
+          description="Consultation technique et gestion des cycles à 31 versements"
+          icon={<Wallet size={20} color={colors.primary} />}
+          onPress={() => router.push('/(tabs)/cycles')}
+        />
+      </View>
+
+      <View style={styles.secondarySection}>
+        <Text style={styles.secondaryTitle}>Modules d'audit et historiques</Text>
+        <ActionCard
+          title="Remises caisse (Legacy)"
+          description="Consultation historique des anciennes remises de fonds"
           icon={<Wallet size={20} />}
           onPress={() => router.push('/(tabs)/remises')}
         />
         <ActionCard
-          title="Clôture"
-          description="Ancienne clôture — module en préparation"
+          title="Clôture (En préparation)"
+          description="Module de récapitulatif journalier de caisse en cours de cadrage"
           icon={<ClipboardCheck size={20} />}
           onPress={() => router.push('/(tabs)/cloture')}
         />
-      </View>
-
-      <AppNotice
-        title="Parcours financier"
-        body="Les collectes, remises et clôtures affichées ici sont des parcours legacy. Elles ne représentent pas les versements ou retraits des nouveaux cycles."
-        kind="warning"
-      />
-
-      <View style={styles.secondarySection}>
-        <Text style={styles.secondaryTitle}>Autres accès</Text>
         <ActionCard
-          title="Session et profil"
-          description="Consulter la session sur cet appareil"
+          title="Session & Profil agent"
+          description="Identifiants, agence de rattachement et déconnexion"
           icon={<UserRound size={20} />}
           onPress={() => router.push('/(auth)/session')}
         />
         <ActionCard
           title="Composants UI"
-          description="Vitrine des composants de l’interface"
+          description="Vitrine des composants de l’interface COOPECA"
           icon={<Blocks size={20} />}
           onPress={() => router.push('/(tabs)/composants')}
         />
@@ -113,13 +168,17 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '700',
   },
   subtitle: {
     color: colors.muted,
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  grilleMetriques: {
+    flexDirection: 'row',
+    gap: 12,
   },
   actionEyebrow: {
     color: colors.muted,
@@ -148,11 +207,11 @@ const styles = StyleSheet.create({
   },
   secondarySection: {
     gap: 10,
-    paddingTop: 4,
+    marginTop: 8,
   },
   secondaryTitle: {
     color: colors.muted,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     marginBottom: 2,
   },

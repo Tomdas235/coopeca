@@ -1,4 +1,4 @@
-﻿import {
+import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
@@ -967,7 +967,7 @@ export class CyclesService {
 
   private serializeCycle(
     cycle: { id: string; status: string; fixedAmountXaf: bigint; installmentCount: number; totalCollectedXaf: bigint },
-    transactions: readonly { type: 'DEPOSIT' | 'COMMISSION' | 'WITHDRAWAL'; amountXaf: bigint }[],
+    transactions: readonly { type: 'DEPOSIT' | 'COMMISSION' | 'WITHDRAWAL'; amountXaf: bigint; id?: string; occurredAt?: Date }[],
     balanceXaf = calculateAvailableBalance(transactions),
     commissionPaid = transactions.some(({ type }) => type === 'COMMISSION'),
   ) {
@@ -980,6 +980,12 @@ export class CyclesService {
       targetInstallments: 31,
       availableBalanceXaf: balanceXaf.toString(),
       commissionPaid,
+      transactions: transactions.map((t) => ({
+        id: (t as any).id,
+        type: t.type,
+        amountXaf: t.amountXaf.toString(),
+        occurredAt: (t as any).occurredAt ? ((t as any).occurredAt instanceof Date ? (t as any).occurredAt.toISOString() : String((t as any).occurredAt)) : undefined,
+      })),
     };
   }
 }

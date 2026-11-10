@@ -19,25 +19,24 @@ interface SyncStatusBannerProps {
 
 const libelles: Record<SyncDisplayState, { titre: string; detail: string }> = {
   unknown: {
-    titre: 'État réseau non mesuré',
-    detail:
-      'Version de démonstration : la connexion et la synchronisation réelles ne sont pas configurées. Aucune opération n’est envoyée.',
+    titre: 'Vérification réseau',
+    detail: 'Vérification de la connexion au serveur COOPECA en cours…',
   },
   online: {
-    titre: 'En ligne (exemple)',
-    detail: 'Exemple visuel uniquement — non mesuré dans cette version.',
+    titre: 'Connecté au serveur COOPECA',
+    detail: 'Le serveur est accessible. Les opérations financières sont validées en ligne.',
   },
   offline: {
-    titre: 'Hors ligne (exemple)',
-    detail: 'Exemple visuel uniquement — non mesuré dans cette version.',
+    titre: 'Mode hors ligne',
+    detail: 'Aucune connexion active. Les opérations locales sont conservées pour synchronisation ultérieure.',
   },
   pending: {
-    titre: 'Synchronisation en attente (exemple)',
-    detail: 'Exemple visuel uniquement — aucune file réelle dans cette version.',
+    titre: 'Synchronisation en attente',
+    detail: 'Des opérations locales sont en cours de transmission vers le serveur.',
   },
   error: {
-    titre: 'Erreur (exemple)',
-    detail: 'Exemple visuel uniquement — aucune erreur réelle dans cette version.',
+    titre: 'Erreur réseau',
+    detail: 'Impossible de joindre le serveur. Vérifiez votre connexion Internet.',
   },
 };
 

@@ -1,148 +1,165 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Receipt, CheckCircle, ArrowRight, FolderPlus } from 'lucide-react-native';
 import { AppScreen } from '../../src/components/AppScreen';
 import { InputTexte } from '../../src/components/InputTexte';
-import { InputMontantXAF } from '../../src/components/InputMontantXAF';
-import { SelecteurDossier } from '../../src/components/SelecteurDossier';
+import { SelecteurSimple } from '../../src/components/SelecteurSimple';
 import { StatusPill } from '../../src/components/StatusPill';
 import { DialogConfirmation } from '../../src/components/DialogConfirmation';
 import { AppNotice } from '../../src/components/AppNotice';
 import { colors } from '../../src/components/theme';
 import { formatMontantXAF } from '../../src/utils/montants';
 import {
-  collecteRepository,
-  dossierRepository,
-} from '../../src/database/repositories';
-import {
-  BusinessStatusCollecte,
-  PrintStatus,
-  SyncStatus,
-} from '../../src/database/schema';
+  ApiError,
+  depositToCycle,
+  getCycle,
+  listDossiers,
+  type CycleSummary,
+  type DossierListItem,
+} from '../../src/services/api';
 
-/**
- * Écran Collectes COOPECA.
- *
- * Permet d'enregistrer une collecte journalière rattachée à un dossier.
- *
- * Règles métier appliquées :
- * - Une collecte référence un dossier ; le client est dérivé du dossier.
- * - Montant en entier XAF, jamais de flottant.
- * - Référence provisoire générée localement ; numéro officiel alloué serveur.
- * - Date/heure déclarée sur l'appareil distincte de l'instant de réception serveur.
- * - Trois axes d'état : sync / métier / impression.
- * - Enregistrement hors ligne, en attente de synchronisation.
- */
 export default function CollectesScreen() {
-  const [collectes, setCollectes] = useState<any[]>([]);
-  const [dossiers, setDossiers] = useState<any[]>([]);
+  const router = useRouter();
+
+  const [dossiers, setDossiers] = useState<DossierListItem[]>([]);
+  const [dossierIdChoisi, setDossierIdChoisi] = useState<string | null>(null);
+  const [cycleActif, setCycleActif] = useState<CycleSummary | null>(null);
+  const [montant, setMontant] = useState('');
   const [chargement, setChargement] = useState(true);
-  const [agenceId, setAgenceId] = useState('agence-centre');
-  const [dossierId, setDossierId] = useState<string | null>(null);
-  const [montant, setMontant] = useState<string>('');
-  const [dateHeureDeclaree, setDateHeureDeclaree] = useState(
-    new Date().toISOString(),
-  );
-  const [referenceProvisoire, setReferenceProvisoire] = useState('');
-  const [collecteACréer, setCollecteACréer] = useState<any | null>(null);
-  const [dialogVisible, setDialogVisible] = useState(false);
+  const [chargementCycle, setChargementCycle] = useState(false);
+  const [soumissionEnCours, setSoumissionEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
-  useEffect(() => {
-    chargerDonnees();
-  }, []);
+  const [dialogVisible, setDialogVisible] = useState(false);
+  const [recuOperation, setRecuOperation] = useState<{
+    transactionId: string;
+    montant: number;
+    numero: number;
+  } | null>(null);
 
-  async function chargerDonnees() {
+  const chargerDossiers = useCallback(async () => {
+    setChargement(true);
+    setErreur(null);
     try {
-      setChargement(true);
-      const [listeDossiers, listeCollectes] = await Promise.all([
-        dossierRepository.findByAgence(agenceId),
-        collecteRepository.findByDossier(dossierId || ''),
-      ]);
-      setDossiers(listeDossiers);
-      setCollectes(listeCollectes);
-    } catch (e) {
-      setDossiers([]);
-      setCollectes([]);
+      const res = await listDossiers({ status: 'OPEN', limit: 50 });
+      setDossiers(res.items);
+      if (res.items.length > 0 && !dossierIdChoisi) {
+        setDossierIdChoisi(res.items[0].id);
+      }
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setErreur(err.message);
+      } else {
+        setErreur('Impossible de charger les dossiers ouverts.');
+      }
     } finally {
       setChargement(false);
     }
-  }
+  }, [dossierIdChoisi]);
 
-  async function genererReferenceProvisoire() {
-    const seq = Date.now().toString().slice(-6);
-    setReferenceProvisoire(`REC-${new Date().toISOString().slice(0, 10)}-${seq}`);
-  }
+  useEffect(() => {
+    void chargerDossiers();
+  }, [chargerDossiers]);
 
-  async function creerCollecte() {
-    if (!dossierId || !montant || !referenceProvisoire) return;
-
-    const montantEntier = parseInt(montant, 10);
-    if (isNaN(montantEntier) || montantEntier <= 0) {
-      setErreur('Le montant doit être un entier positif en XAF.');
+  useEffect(() => {
+    if (!dossierIdChoisi) {
+      setCycleActif(null);
+      setMontant('');
       return;
     }
 
-    const cleIdempotence = `collecte-${Date.now()}`;
-    const nouvelleCollecte = {
-      id: cleIdempotence,
-      reference_provisoire: referenceProvisoire,
-      client_receipt_no: null,
-      dossier_id: dossierId,
-      client_id: '', // dérivé du dossier, conservé pour compatibilité
-      montant_xaf: montantEntier,
-      date_heure_declaree: dateHeureDeclaree,
-      statut: BusinessStatusCollecte.ENREGISTRÉE_LOCAL,
-      cle_idempotence: cleIdempotence,
-      sync_status: SyncStatus.DRAFT,
-      print_status: PrintStatus.NON_IMPRIMÉ,
-      date_maj: new Date().toISOString(),
+    let estMonte = true;
+    async function chargerCycleDossier() {
+      setChargementCycle(true);
+      setErreur(null);
+      try {
+        const { getDossier } = await import('../../src/services/api');
+        const d = await getDossier(dossierIdChoisi!);
+        if (estMonte) {
+          if (d.cycles && d.cycles.length > 0) {
+            const premierCycle = d.cycles[0];
+            const cycle = await getCycle(premierCycle.id);
+            if (estMonte) {
+              setCycleActif(cycle);
+              setMontant(cycle.fixedAmountXaf);
+            }
+          } else {
+            setCycleActif(null);
+            setMontant('');
+          }
+        }
+      } catch (err: unknown) {
+        if (estMonte) {
+          setCycleActif(null);
+          setMontant('');
+        }
+      } finally {
+        if (estMonte) setChargementCycle(false);
+      }
+    }
+
+    void chargerCycleDossier();
+    return () => {
+      estMonte = false;
     };
+  }, [dossierIdChoisi]);
+
+  async function handleEnregistrerVersement() {
+    if (!cycleActif) {
+      setErreur('Aucun cycle actif associé à ce dossier.');
+      return;
+    }
+
+    const montantInt = parseInt(montant.replace(/\s/g, ''), 10);
+    const montantAttendu = parseInt(cycleActif.fixedAmountXaf, 10);
+
+    if (montantInt !== montantAttendu) {
+      setErreur(`Le montant doit correspondre exactement au montant fixe du cycle (${formatMontantXAF(montantAttendu)}).`);
+      return;
+    }
+
+    setSoumissionEnCours(true);
+    setErreur(null);
 
     try {
-      await collecteRepository.create(nouvelleCollecte);
-      setCollecteACréer(nouvelleCollecte);
+      const res = await depositToCycle(cycleActif.id, montantInt);
+      const prochainNumero = cycleActif.installmentCount + 1;
+
+      setRecuOperation({
+        transactionId: res.transactionId,
+        montant: montantInt,
+        numero: prochainNumero,
+      });
       setDialogVisible(true);
-      setMontant('');
-      setReferenceProvisoire('');
-      setErreur(null);
-      await chargerDonnees();
-    } catch (e) {
-      setErreur("Impossible d'enregistrer la collecte.");
+
+      // Recharger le cycle
+      const cycleMaj = await getCycle(cycleActif.id);
+      setCycleActif(cycleMaj);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setErreur(err.message);
+      } else if (err instanceof Error) {
+        setErreur(err.message);
+      } else {
+        setErreur('Erreur lors de l’enregistrement de la collecte.');
+      }
+    } finally {
+      setSoumissionEnCours(false);
     }
   }
 
-  function confirmerCreation() {
-    setDialogVisible(false);
-    setCollecteACréer(null);
-  }
-
-  function annulerCreation() {
-    setDialogVisible(false);
-    setCollecteACréer(null);
-  }
-
-  const statutPillKind = (s: string) => {
-    switch (s) {
-      case 'ACCEPTÉE':
-        return 'online' as const;
-      case 'ENREGISTRÉE_LOCAL':
-        return 'pending' as const;
-      case 'EN_ATTENTE':
-        return 'pending' as const;
-      case 'REJETÉE':
-      case 'CONFLIT':
-        return 'error' as const;
-      default:
-        return 'unknown' as const;
-    }
-  };
+  const optionsDossiers = dossiers.map((d) => ({
+    label: `${d.dossierNo} — ${d.client ? `${d.client.firstName} ${d.client.lastName}` : 'Client'} (${formatMontantXAF(parseInt(d.dailyAmountXaf, 10))})`,
+    value: d.id,
+  }));
 
   return (
     <AppScreen>
@@ -152,125 +169,140 @@ export default function CollectesScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heading}>
-          <Text style={styles.eyebrow}>COOPECA · COLLECTES</Text>
+          <Text style={styles.eyebrow}>COOPECA · ESPACE AGENT</Text>
           <Text accessibilityRole="header" style={styles.title}>
-            Collectes
+            Enregistrement Collecte
           </Text>
           <Text style={styles.subtitle}>
-            Enregistrer une collecte journalière rattachée à un dossier
+            Saisie des versements de cycle avec validation serveur et reçu traçable.
           </Text>
         </View>
-
-        {chargement ? (
-          <View style={styles.chargement}>
-            <Text style={styles.texteChargement}>Chargement…</Text>
-          </View>
-        ) : null}
 
         {erreur ? (
           <AppNotice title="Erreur" body={erreur} kind="error" />
         ) : null}
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Nouvelle collecte</Text>
-          <SelecteurDossier
-            label="Dossier"
-            value={dossierId}
-            options={dossiers}
-            onValueChange={(v) => {
-              setDossierId(v);
-              genererReferenceProvisoire();
-            }}
-            accessibilityLabel="Sélecteur de dossier"
-          />
-          <InputMontantXAF
-            label="Montant (XAF, entier)"
-            value={montant}
-            onChangeText={setMontant}
-            placeholder="0"
-          />
-          <InputTexte
-            label="Date/heure déclarée"
-            value={dateHeureDeclaree}
-            onChangeText={setDateHeureDeclaree}
-            placeholder="Ex. 2026-10-19T08:00:00Z"
-            required
-          />
-          <InputTexte
-            label="Référence provisoire"
-            value={referenceProvisoire}
-            onChangeText={setReferenceProvisoire}
-            required
-          />
-          <Pressable
-            style={styles.boutonCreer}
-            onPress={creerCollecte}
-            disabled={!dossierId || !montant || !referenceProvisoire}
-          >
-            <Text style={styles.texteBoutonCreer}>
-              Enregistrer la collecte (local, en attente de sync)
+        {chargement ? (
+          <View style={styles.chargement}>
+            <ActivityIndicator color={colors.primary} size="small" />
+            <Text style={styles.texteChargement}>Chargement des dossiers ouverts…</Text>
+          </View>
+        ) : dossiers.length === 0 ? (
+          <View style={styles.card}>
+            <Text style={styles.texteVide}>
+              Aucun dossier de tontine ouvert n'est disponible pour collecter.
             </Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Collectes enregistrées ({collectes.length})
-          </Text>
-          {collectes.length === 0 ? (
-            <View style={styles.vide}>
-              <Text style={styles.texteVide}>
-                Aucune collecte pour le moment. Saisissez-en une ci-dessus.
-              </Text>
+            <Pressable
+              style={styles.boutonNouveau}
+              onPress={() => router.push('/(tabs)/dossiers')}
+            >
+              <FolderPlus size={16} color={colors.surface} />
+              <Text style={styles.texteBoutonNouveau}>Ouvrir un dossier</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Receipt size={20} color={colors.primary} />
+              <Text style={styles.cardTitle}>Nouvelle collecte</Text>
             </View>
-          ) : (
-            collectes.map((c) => (
-              <View key={c.id} style={styles.ligneCollecte}>
-                <View style={styles.infosCollecte}>
-                  <Text style={styles.refCollecte}>
-                    {c.reference_provisoire}
-                  </Text>
-                  <Text style={styles.montantCollecte}>
-                    {formatMontantXAF(c.montant_xaf)}
-                  </Text>
-                </View>
-                <View style={styles.badgesCollecte}>
-                  <StatusPill kind={statutPillKind(c.statut)} label={c.statut} />
-                  <StatusPill
-                    kind={c.sync_status === 'SYNCED' ? 'online' : 'pending'}
-                    label={c.sync_status}
-                  />
-                  <StatusPill
-                    kind={c.print_status === 'IMPRIMÉ' ? 'online' : 'pending'}
-                    label={c.print_status}
-                  />
-                </View>
-              </View>
-            ))
-          )}
-        </View>
 
-        <View style={styles.noteBas}>
-          <Text style={styles.texteNote}>
-            Le montant est stocké en entier XAF. La référence provisoire est
-            générée localement ; le numéro officiel sera alloué par le serveur
-            à l'acceptation.
-          </Text>
-        </View>
+            <SelecteurSimple
+              label="Sélectionner le dossier client"
+              value={dossierIdChoisi}
+              options={optionsDossiers}
+              onValueChange={(val) => setDossierIdChoisi(val)}
+              accessibilityLabel="Dossier à collecter"
+            />
+
+            {chargementCycle ? (
+              <View style={styles.chargement}>
+                <ActivityIndicator color={colors.primary} size="small" />
+                <Text style={styles.texteChargement}>Lecture du cycle…</Text>
+              </View>
+            ) : cycleActif ? (
+              <>
+                <View style={styles.recapitulatifBox}>
+                  <View style={styles.ligneRecap}>
+                    <Text style={styles.recapLabel}>Compteur :</Text>
+                    <Text style={styles.recapValeur}>
+                      {cycleActif.installmentCount} / 31 versements
+                    </Text>
+                  </View>
+                  <View style={styles.ligneRecap}>
+                    <Text style={styles.recapLabel}>Cumul encaissé :</Text>
+                    <Text style={styles.recapValeur}>
+                      {formatMontantXAF(parseInt(cycleActif.totalCollectedXaf, 10))}
+                    </Text>
+                  </View>
+                  <View style={styles.ligneRecap}>
+                    <Text style={styles.recapLabel}>Solde net disponible :</Text>
+                    <Text style={styles.recapValeurPositive}>
+                      {formatMontantXAF(parseInt(cycleActif.availableBalanceXaf, 10))}
+                    </Text>
+                  </View>
+                </View>
+
+                {cycleActif.status === 'ACTIVE' && cycleActif.installmentCount < 31 ? (
+                  <>
+                    <InputTexte
+                      label="Montant reçu (FCFA)"
+                      value={montant}
+                      onChangeText={setMontant}
+                      placeholder={cycleActif.fixedAmountXaf}
+                      keyboardType="numeric"
+                      required
+                      disabled={soumissionEnCours}
+                    />
+
+                    <Pressable
+                      style={[
+                        styles.boutonValider,
+                        (!montant || soumissionEnCours) && styles.boutonDesactive,
+                      ]}
+                      onPress={handleEnregistrerVersement}
+                      disabled={!montant || soumissionEnCours}
+                    >
+                      {soumissionEnCours ? (
+                        <ActivityIndicator color={colors.surface} size="small" />
+                      ) : (
+                        <Text style={styles.texteBoutonValider}>
+                          Enregistrer versement #{cycleActif.installmentCount + 1}
+                        </Text>
+                      )}
+                    </Pressable>
+                  </>
+                ) : (
+                  <AppNotice
+                    title="Cycle terminé"
+                    body="Ce cycle a atteint ses 31 versements réglementaires. Aucun versement supplémentaire n'est autorisé."
+                    kind="info"
+                  />
+                )}
+              </>
+            ) : (
+              <AppNotice
+                title="Pas de cycle actif"
+                body="Ce dossier ne possède aucun cycle de tontine actif."
+                kind="warning"
+              />
+            )}
+          </View>
+        )}
       </ScrollView>
 
       <DialogConfirmation
         visible={dialogVisible}
-        title="Collecte enregistrée"
+        title="Collecte confirmée"
         message={
-          collecteACréer
-            ? `La collecte ${collecteACréer.reference_provisoire} de ${formatMontantXAF(collecteACréer.montant_xaf)} a été enregistrée localement (en attente de synchronisation).`
+          recuOperation
+            ? `Versement #${recuOperation.numero} de ${formatMontantXAF(recuOperation.montant)} validé par le serveur COOPECA.\n\nRéférence de transaction :\n${recuOperation.transactionId}`
             : ''
         }
-        confirmLabel="OK"
+        confirmLabel="Terminer"
         cancelLabel=""
-        onConfirm={confirmerCreation}
-        onCancel={annulerCreation}
+        onConfirm={() => setDialogVisible(false)}
+        onCancel={() => setDialogVisible(false)}
       />
     </AppScreen>
   );
@@ -279,11 +311,11 @@ export default function CollectesScreen() {
 const styles = StyleSheet.create({
   content: {
     padding: 16,
-    paddingBottom: 32,
+    paddingBottom: 40,
   },
   heading: {
-    gap: 8,
-    paddingTop: 4,
+    gap: 6,
+    marginBottom: 16,
   },
   eyebrow: {
     color: colors.primary,
@@ -293,13 +325,13 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '800',
   },
   subtitle: {
     color: colors.muted,
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
   },
   card: {
     backgroundColor: colors.surface,
@@ -307,94 +339,86 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 16,
     padding: 18,
-    marginBottom: 16,
+    gap: 12,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   cardTitle: {
     color: colors.text,
     fontSize: 18,
     fontWeight: '800',
-    marginBottom: 12,
   },
-  boutonCreer: {
-    backgroundColor: colors.accent,
+  recapitulatifBox: {
+    backgroundColor: colors.primarySoft,
     borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 8,
+    padding: 14,
+    gap: 8,
   },
-  texteBoutonCreer: {
+  ligneRecap: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  recapLabel: {
+    color: colors.muted,
+    fontSize: 13,
+  },
+  recapValeur: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  recapValeurPositive: {
+    color: colors.success,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  boutonValider: {
+    backgroundColor: colors.success,
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  boutonDesactive: {
+    opacity: 0.5,
+  },
+  texteBoutonValider: {
     color: colors.surface,
     fontSize: 14,
     fontWeight: '700',
   },
-  section: {
-    marginTop: 20,
-    gap: 8,
-  },
-  sectionTitle: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  ligneCollecte: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
-  },
-  infosCollecte: {
-    flex: 1,
-    gap: 2,
-  },
-  refCollecte: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  montantCollecte: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  badgesCollecte: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  vide: {
+  chargement: {
     padding: 24,
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 14,
+    gap: 8,
+  },
+  texteChargement: {
+    color: colors.muted,
+    fontSize: 14,
   },
   texteVide: {
     color: colors.muted,
     fontSize: 14,
     textAlign: 'center',
   },
-  chargement: {
-    padding: 24,
+  boutonNouveau: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingVertical: 12,
+    marginTop: 8,
   },
-  texteChargement: {
-    color: colors.muted,
+  texteBoutonNouveau: {
+    color: colors.surface,
     fontSize: 14,
-  },
-  noteBas: {
-    marginTop: 16,
-    padding: 14,
-    backgroundColor: colors.accentSoft,
-    borderRadius: 10,
-  },
-  texteNote: {
-    color: colors.accent,
-    fontSize: 12,
-    lineHeight: 18,
+    fontWeight: '700',
   },
 });

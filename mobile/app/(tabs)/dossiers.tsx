@@ -1,136 +1,273 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import {
+  FolderPlus,
+  FolderOpen,
+  Receipt,
+  Wallet,
+  CheckCircle,
+  Clock,
+  ArrowRight,
+  RefreshCw,
+} from 'lucide-react-native';
 import { AppScreen } from '../../src/components/AppScreen';
 import { InputTexte } from '../../src/components/InputTexte';
+import { InputMontantXAF } from '../../src/components/InputMontantXAF';
 import { SelecteurSimple } from '../../src/components/SelecteurSimple';
 import { StatusPill } from '../../src/components/StatusPill';
 import { DialogConfirmation } from '../../src/components/DialogConfirmation';
 import { AppNotice } from '../../src/components/AppNotice';
 import { colors } from '../../src/components/theme';
+import { formatMontantXAF } from '../../src/utils/montants';
 import {
-  dossierRepository,
-  clientRepository,
-} from '../../src/database/repositories';
-import { StatutDossier, SyncStatus } from '../../src/database/schema';
+  ApiError,
+  createDossier,
+  createCycle,
+  depositToCycle,
+  getDossier,
+  getCycle,
+  listClients,
+  listDossiers,
+  listMarkets,
+  type ClientListItem,
+  type CycleSummary,
+  type DossierDetail,
+  type DossierListItem,
+  type MarketRef,
+} from '../../src/services/api';
+import { authenticationService } from '../../src/features/auth';
 
-/**
- * Écran Dossiers COOPECA.
- *
- * Permet de consulter les dossiers de l'agence et d'en créer un nouveau.
- *
- * Règles métier appliquées :
- * - Un dossier appartient à un client et une agence.
- * - Un seul dossier ouvert par client et par agence.
- * - Un dossier créé hors ligne a le statut OUVERT, en attente d'acceptation serveur.
- * - La référence provisoire est générée localement (DOSS-YYYYMMDD-seq).
- */
 export default function DossiersScreen() {
-  const [dossiers, setDossiers] = useState<any[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
+  const params = useLocalSearchParams<{ clientId?: string; clientName?: string; marketId?: string }>();
+
+  // État de vue : 'liste' | 'nouveau' | 'detail'
+  const [vueCourante, setVueCourante] = useState<'liste' | 'nouveau' | 'detail'>('liste');
+
+  // Données globales
+  const [dossiers, setDossiers] = useState<DossierListItem[]>([]);
+  const [clients, setClients] = useState<ClientListItem[]>([]);
+  const [marches, setMarches] = useState<MarketRef[]>([]);
   const [chargement, setChargement] = useState(true);
-  const [agenceId, setAgenceId] = useState('agence-centre');
-  const [clientId, setClientId] = useState<string | null>(null);
-  const [reference, setReference] = useState('');
-  const [dateCreation, setDateCreation] = useState(new Date().toISOString());
-  const [dossierACréer, setDossierACréer] = useState<any | null>(null);
-  const [dialogVisible, setDialogVisible] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
-  useEffect(() => {
-    chargerDonnees();
-  }, []);
+  // Formulaire nouveau dossier
+  const [clientIdChoisi, setClientIdChoisi] = useState<string | null>(null);
+  const [marcheIdChoisi, setMarcheIdChoisi] = useState<string | null>(null);
+  const [montantFixe, setMontantFixe] = useState('1000');
+  const [soumissionDossier, setSoumissionDossier] = useState(false);
 
-  async function chargerDonnees() {
+  // Fiche dossier sélectionné et son cycle actif
+  const [dossierSelectionne, setDossierSelectionne] = useState<DossierDetail | null>(null);
+  const [cycleActif, setCycleActif] = useState<CycleSummary | null>(null);
+  const [chargementDetail, setChargementDetail] = useState(false);
+
+  // Formulaire de collecte (versement)
+  const [montantCollecte, setMontantCollecte] = useState('');
+  const [soumissionCollecte, setSoumissionCollecte] = useState(false);
+  const [dialogCollecteVisible, setDialogCollecteVisible] = useState(false);
+  const [recuCollecte, setRecuCollecte] = useState<{ transactionId: string; montant: number; numero: number } | null>(null);
+
+  // Session
+  const [agentId, setAgentId] = useState<string | null>(null);
+
+  const initialiserDonnees = useCallback(async () => {
+    setChargement(true);
+    setErreur(null);
     try {
-      setChargement(true);
-      const [listeDossiers, listeClients] = await Promise.all([
-        dossierRepository.findByAgence(agenceId),
-        clientRepository.findByAgence(agenceId),
+      const session = await authenticationService.getCurrentSession();
+      if (session?.user) {
+        setAgentId(session.user.id);
+      }
+
+      const [listeD, listeC, listeM] = await Promise.all([
+        listDossiers({ limit: 50 }),
+        listClients({ limit: 100 }),
+        listMarkets(),
       ]);
-      setDossiers(listeDossiers);
-      setClients(listeClients);
-    } catch (e) {
-      setDossiers([]);
-      setClients([]);
+
+      setDossiers(listeD.items);
+      setClients(listeC.items);
+      setMarches(listeM);
+
+      // Si des paramètres client ont été transmis depuis l'écran Clients
+      if (params.clientId) {
+        setClientIdChoisi(params.clientId);
+        if (params.marketId) {
+          setMarcheIdChoisi(params.marketId);
+        } else if (listeM.length > 0) {
+          setMarcheIdChoisi(listeM[0].id);
+        }
+        setVueCourante('nouveau');
+      }
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setErreur(err.message);
+      } else {
+        setErreur('Impossible de charger les dossiers.');
+      }
     } finally {
       setChargement(false);
     }
+  }, [params.clientId, params.marketId]);
+
+  useEffect(() => {
+    void initialiserDonnees();
+  }, [initialiserDonnees]);
+
+  async function chargerDetailDossier(dossierId: string) {
+    setChargementDetail(true);
+    setErreur(null);
+    try {
+      const dossier = await getDossier(dossierId);
+      setDossierSelectionne(dossier);
+
+      // S'il possède un cycle, charger les détails du cycle
+      if (dossier.cycles && dossier.cycles.length > 0) {
+        const premierCycle = dossier.cycles[0];
+        const cycleComplet = await getCycle(premierCycle.id);
+        setCycleActif(cycleComplet);
+        setMontantCollecte(cycleComplet.fixedAmountXaf);
+      } else {
+        setCycleActif(null);
+        setMontantCollecte('');
+      }
+
+      setVueCourante('detail');
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setErreur(err.message);
+      } else {
+        setErreur('Impossible de charger les détails du dossier.');
+      }
+    } finally {
+      setChargementDetail(false);
+    }
   }
 
-  async function verifierDossierOuvert() {
-    if (!clientId) return;
-    const ouverts = await dossierRepository.findOuvertsByClientEtAgence(
-      clientId,
-      agenceId,
-    );
-    return ouverts.length > 0;
-  }
-
-  async function creerDossier() {
-    if (!clientId || !reference) return;
-
-    const dejaOuvert = await verifierDossierOuvert();
-    if (dejaOuvert) {
-      setErreur(
-        'Un dossier est déjà ouvert pour ce client dans cette agence.',
-      );
+  async function handleCreerDossierEtCycle() {
+    if (!clientIdChoisi) {
+      setErreur('Veuillez sélectionner un client.');
       return;
     }
 
-    const cleIdempotence = `dossier-${Date.now()}`;
-    const nouveauDossier = {
-      id: cleIdempotence,
-      reference_provisoire: reference,
-      client_id: clientId,
-      agence_id: agenceId,
-      statut: StatutDossier.OUVERT,
-      date_creation_declaree: dateCreation,
-      cle_idempotence: cleIdempotence,
-      sync_status: SyncStatus.DRAFT,
-      date_maj: new Date().toISOString(),
-    };
+    const clientObj = clients.find((c) => c.id === clientIdChoisi);
+    const marcheId = marcheIdChoisi || clientObj?.marketId || (marches[0]?.id ?? '');
+
+    if (!marcheId) {
+      setErreur('Un marché valide est requis pour ouvrir le dossier.');
+      return;
+    }
+
+    const montantInt = parseInt(montantFixe.replace(/\s/g, ''), 10);
+    if (isNaN(montantInt) || montantInt <= 0) {
+      setErreur('Le montant fixe par versement doit être un entier supérieur à 0.');
+      return;
+    }
+
+    setSoumissionDossier(true);
+    setErreur(null);
 
     try {
-      await dossierRepository.create(nouveauDossier);
-      setDossierACréer(nouveauDossier);
-      setDialogVisible(true);
-      setReference('');
-      setErreur(null);
-      await chargerDonnees();
-    } catch (e) {
-      setErreur("Impossible de créer le dossier.");
+      const nouveauDossier = await createDossier({
+        clientId: clientIdChoisi,
+        agentId: agentId || '00000000-0000-0000-0000-000000000000',
+        marketId: marcheId,
+        dailyAmountXaf: String(montantInt),
+        deviceId: 'mobile-agent-app',
+      });
+
+      // Ouvrir immédiatement le cycle à 31 versements sur ce dossier
+      try {
+        await createCycle(nouveauDossier.id, montantInt);
+      } catch (errCycle: unknown) {
+        // Le cycle a peut-être échoué si le client est inactif
+        if (errCycle instanceof ApiError) {
+          setErreur(`Dossier créé mais cycle non ouvert : ${errCycle.message}`);
+        }
+      }
+
+      // Recharger et afficher le dossier
+      await initialiserDonnees();
+      await chargerDetailDossier(nouveauDossier.id);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setErreur(err.message);
+      } else if (err instanceof Error) {
+        setErreur(err.message);
+      } else {
+        setErreur('Erreur lors de la création du dossier.');
+      }
+    } finally {
+      setSoumissionDossier(false);
     }
   }
 
-  function confirmerCreation() {
-    setDialogVisible(false);
-    setDossierACréer(null);
-  }
-
-  function annulerCreation() {
-    setDialogVisible(false);
-    setDossierACréer(null);
-  }
-
-  const statutPillKind = (s: string) => {
-    switch (s) {
-      case 'OUVERT':
-        return 'pending' as const;
-      case 'FERME':
-        return 'online' as const;
-      case 'REJETE':
-        return 'error' as const;
-      default:
-        return 'unknown' as const;
+  async function handleEnregistrerCollecte() {
+    if (!cycleActif) {
+      setErreur('Aucun cycle actif pour enregistrer un versement.');
+      return;
     }
-  };
+
+    const montantInt = parseInt(montantCollecte.replace(/\s/g, ''), 10);
+    const montantAttendu = parseInt(cycleActif.fixedAmountXaf, 10);
+
+    if (montantInt !== montantAttendu) {
+      setErreur(`Le montant du versement doit être exactement de ${formatMontantXAF(montantAttendu)}.`);
+      return;
+    }
+
+    setSoumissionCollecte(true);
+    setErreur(null);
+
+    try {
+      const resultat = await depositToCycle(cycleActif.id, montantInt);
+      const prochainNumero = cycleActif.installmentCount + 1;
+
+      setRecuCollecte({
+        transactionId: resultat.transactionId,
+        montant: montantInt,
+        numero: prochainNumero,
+      });
+      setDialogCollecteVisible(true);
+
+      // Rafraîchir les informations du cycle et du dossier
+      const cycleMaj = await getCycle(cycleActif.id);
+      setCycleActif(cycleMaj);
+
+      if (dossierSelectionne) {
+        const dossierMaj = await getDossier(dossierSelectionne.id);
+        setDossierSelectionne(dossierMaj);
+      }
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setErreur(err.message);
+      } else if (err instanceof Error) {
+        setErreur(err.message);
+      } else {
+        setErreur('Erreur lors de l’enregistrement de la collecte.');
+      }
+    } finally {
+      setSoumissionCollecte(false);
+    }
+  }
+
+  const optionsClients = clients.map((c) => ({
+    label: `${c.fullName} (${c.clientCode}) — ${c.status === 'ACTIVE' ? 'ACTIF' : 'PROVISOIRE'}`,
+    value: c.id,
+  }));
+
+  const optionsMarches = marches.map((m) => ({
+    label: `${m.code} — ${m.name}`,
+    value: m.id,
+  }));
 
   return (
     <AppScreen>
@@ -140,117 +277,406 @@ export default function DossiersScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heading}>
-          <Text style={styles.eyebrow}>COOPECA · DOSSIERS</Text>
+          <Text style={styles.eyebrow}>COOPECA · ESPACE AGENT</Text>
           <Text accessibilityRole="header" style={styles.title}>
-            Dossiers
+            Dossiers & Collectes
           </Text>
           <Text style={styles.subtitle}>
-            Consulter et créer des dossiers (agence : {agenceId})
+            Cycles d'épargne à 31 versements et enregistrement des collectes.
           </Text>
         </View>
 
-        {chargement ? (
-          <View style={styles.chargement}>
-            <Text style={styles.texteChargement}>Chargement…</Text>
-          </View>
-        ) : null}
-
-        {erreur ? (
-          <AppNotice title="Erreur" body={erreur} kind="error" />
-        ) : null}
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Créer un dossier</Text>
-          <SelecteurSimple
-            label="Client"
-            value={clientId}
-            options={clients.map((c) => ({
-              label: `${c.prenom} ${c.nom}`,
-              value: c.id,
-            }))}
-            onValueChange={(v) => setClientId(v)}
-            accessibilityLabel="Sélecteur de client"
-          />
-          <InputTexte
-            label="Référence provisoire"
-            value={reference}
-            onChangeText={setReference}
-            placeholder="Ex. DOSS-20261019-001"
-            required
-          />
-          <InputTexte
-            label="Date de création (déclarée)"
-            value={dateCreation}
-            onChangeText={setDateCreation}
-            placeholder="Ex. 2026-10-19T08:00:00Z"
-            required
-          />
-          {erreur ? (
-            <AppNotice title="Erreur" body={erreur} kind="error" />
-          ) : null}
+        {/* Barre de navigation d'onglets */}
+        <View style={styles.ongletsBarre}>
           <Pressable
-            style={styles.boutonCreer}
-            onPress={creerDossier}
-            disabled={!clientId || !reference}
+            style={[styles.ongletBouton, vueCourante === 'liste' && styles.ongletActif]}
+            onPress={() => setVueCourante('liste')}
           >
-            <Text style={styles.texteBoutonCreer}>
-              Créer le dossier (statut : OUVERT)
+            <FolderOpen size={16} color={vueCourante === 'liste' ? colors.primary : colors.muted} />
+            <Text style={[styles.ongletTexte, vueCourante === 'liste' && styles.ongletTexteActif]}>
+              Dossiers ({dossiers.length})
             </Text>
           </Pressable>
+
+          <Pressable
+            style={[styles.ongletBouton, vueCourante === 'nouveau' && styles.ongletActif]}
+            onPress={() => setVueCourante('nouveau')}
+          >
+            <FolderPlus size={16} color={vueCourante === 'nouveau' ? colors.primary : colors.muted} />
+            <Text style={[styles.ongletTexte, vueCourante === 'nouveau' && styles.ongletTexteActif]}>
+              Ouvrir un dossier
+            </Text>
+          </Pressable>
+
+          {dossierSelectionne ? (
+            <Pressable
+              style={[styles.ongletBouton, vueCourante === 'detail' && styles.ongletActif]}
+              onPress={() => setVueCourante('detail')}
+            >
+              <Wallet size={16} color={vueCourante === 'detail' ? colors.primary : colors.muted} />
+              <Text style={[styles.ongletTexte, vueCourante === 'detail' && styles.ongletTexteActif]}>
+                Fiche & Collecte
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Dossiers de l'agence ({dossiers.length})
-          </Text>
-          {dossiers.length === 0 ? (
-            <View style={styles.vide}>
-              <Text style={styles.texteVide}>
-                Aucun dossier pour le moment. Créez-en un ci-dessus.
+        {erreur ? (
+          <AppNotice title="Information" body={erreur} kind="error" />
+        ) : null}
+
+        {/* VUE 1 : LISTE DES DOSSIERS */}
+        {vueCourante === 'liste' && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Dossiers de tontine</Text>
+              <Pressable
+                onPress={() => void initialiserDonnees()}
+                style={styles.boutonActualiser}
+              >
+                <RefreshCw size={16} color={colors.primary} />
+              </Pressable>
+            </View>
+
+            {chargement ? (
+              <View style={styles.chargement}>
+                <ActivityIndicator color={colors.primary} size="small" />
+                <Text style={styles.texteChargement}>Chargement des dossiers…</Text>
+              </View>
+            ) : dossiers.length === 0 ? (
+              <View style={styles.vide}>
+                <Text style={styles.texteVide}>
+                  Aucun dossier ouvert pour le moment.
+                </Text>
+                <Pressable
+                  style={styles.boutonActionSimple}
+                  onPress={() => setVueCourante('nouveau')}
+                >
+                  <Text style={styles.texteBoutonActionSimple}>
+                    Ouvrir un premier dossier
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
+              dossiers.map((d) => (
+                <Pressable
+                  key={d.id}
+                  style={styles.carteDossier}
+                  onPress={() => void chargerDetailDossier(d.id)}
+                >
+                  <View style={styles.enteteCarteDossier}>
+                    <View style={styles.infosDossier}>
+                      <Text style={styles.numeroDossier}>{d.dossierNo}</Text>
+                      <Text style={styles.nomClientDossier}>
+                        {d.client ? `${d.client.firstName} ${d.client.lastName}` : 'Client'}
+                      </Text>
+                    </View>
+                    <StatusPill
+                      kind={d.status === 'OPEN' ? 'online' : 'offline'}
+                      label={d.status === 'OPEN' ? 'OUVERT' : 'CLÔTURÉ'}
+                    />
+                  </View>
+
+                  <View style={styles.ligneDetailDossier}>
+                    <Text style={styles.labelDetail}>Versement prévu :</Text>
+                    <Text style={styles.valeurDetailGras}>
+                      {formatMontantXAF(parseInt(d.dailyAmountXaf, 10))}
+                    </Text>
+                  </View>
+
+                  <View style={styles.piedCarteDossier}>
+                    <Text style={styles.texteDate}>
+                      Créé le {new Date(d.createdAt).toLocaleDateString('fr-FR')}
+                    </Text>
+                    <View style={styles.lienVoir}>
+                      <Text style={styles.texteLienVoir}>Consulter / Collecter</Text>
+                      <ArrowRight size={14} color={colors.primary} />
+                    </View>
+                  </View>
+                </Pressable>
+              ))
+            )}
+          </View>
+        )}
+
+        {/* VUE 2 : NOUVEAU DOSSIER */}
+        {vueCourante === 'nouveau' && (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <FolderPlus size={20} color={colors.primary} />
+              <Text style={styles.cardTitle}>Ouvrir un dossier de tontine</Text>
+            </View>
+
+            <AppNotice
+              title="Règles du cycle à 31 versements"
+              body="Un dossier porte des cycles successifs de 31 versements fixes. Le montant choisi à l'ouverture reste fixe tout au long du cycle."
+              kind="info"
+            />
+
+            {optionsClients.length > 0 ? (
+              <SelecteurSimple
+                label="Client bénéficiaire"
+                value={clientIdChoisi}
+                options={optionsClients}
+                onValueChange={(val) => setClientIdChoisi(val)}
+                accessibilityLabel="Client du dossier"
+              />
+            ) : (
+              <Text style={styles.texteAttention}>
+                Aucun client disponible. Veuillez d'abord créer un client.
+              </Text>
+            )}
+
+            {optionsMarches.length > 0 ? (
+              <SelecteurSimple
+                label="Marché de rattachement"
+                value={marcheIdChoisi}
+                options={optionsMarches}
+                onValueChange={(val) => setMarcheIdChoisi(val)}
+                accessibilityLabel="Marché du dossier"
+              />
+            ) : null}
+
+            <InputTexte
+              label="Montant fixe du versement (FCFA)"
+              value={montantFixe}
+              onChangeText={setMontantFixe}
+              placeholder="Ex. 1000, 2000, 5000"
+              keyboardType="numeric"
+              required
+              disabled={soumissionDossier}
+            />
+
+            <View style={styles.recapitulatifBox}>
+              <Text style={styles.recapTitre}>Récapitulatif du cycle</Text>
+              <Text style={styles.recapLigne}>
+                Nombre de versements cible : <Text style={styles.recapValeur}>31 versements</Text>
+              </Text>
+              <Text style={styles.recapLigne}>
+                Total cible de collecte :{' '}
+                <Text style={styles.recapValeur}>
+                  {formatMontantXAF(parseInt(montantFixe || '0', 10) * 31)}
+                </Text>
+              </Text>
+              <Text style={styles.recapLigne}>
+                Commission retenue au 1er retrait :{' '}
+                <Text style={styles.recapValeur}>
+                  {formatMontantXAF(parseInt(montantFixe || '0', 10))} (1 versement)
+                </Text>
               </Text>
             </View>
-          ) : (
-            dossiers.map((d) => (
-              <View key={d.id} style={styles.ligneDossier}>
-                <View style={styles.infosDossier}>
-                  <Text style={styles.refDossier}>{d.reference_provisoire}</Text>
-                  <Text style={styles.clientDossier}>
-                    Client : {d.client_id}
-                  </Text>
-                </View>
-                <View style={styles.badgesDossier}>
-                  <StatusPill kind={statutPillKind(d.statut)} label={d.statut} />
-                  <StatusPill
-                    kind={d.sync_status === 'SYNCED' ? 'online' : 'pending'}
-                    label={d.sync_status}
-                  />
-                </View>
-              </View>
-            ))
-          )}
-        </View>
 
-        <View style={styles.noteBas}>
-          <Text style={styles.texteNote}>
-            Un seul dossier ouvert est autorisé par client et par agence. Un
-            dossier créé hors ligne reste en attente d'acceptation par le
-            serveur.
-          </Text>
-        </View>
+            <Pressable
+              style={[
+                styles.boutonCreer,
+                (!clientIdChoisi || !montantFixe || soumissionDossier) && styles.boutonDesactive,
+              ]}
+              onPress={handleCreerDossierEtCycle}
+              disabled={!clientIdChoisi || !montantFixe || soumissionDossier}
+            >
+              {soumissionDossier ? (
+                <ActivityIndicator color={colors.surface} size="small" />
+              ) : (
+                <Text style={styles.texteBoutonCreer}>
+                  Ouvrir le dossier et démarrer le cycle
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        )}
+
+        {/* VUE 3 : FICHE DU DOSSIER ET ENREGISTREMENT DE COLLECTE */}
+        {vueCourante === 'detail' && dossierSelectionne && (
+          <View style={styles.section}>
+            {chargementDetail ? (
+              <View style={styles.chargement}>
+                <ActivityIndicator color={colors.primary} size="small" />
+                <Text style={styles.texteChargement}>Chargement des données du cycle…</Text>
+              </View>
+            ) : (
+              <>
+                {/* Carte récapitulative du dossier */}
+                <View style={styles.carteFicheDossier}>
+                  <View style={styles.enteteFiche}>
+                    <View>
+                      <Text style={styles.ficheNumero}>{dossierSelectionne.dossierNo}</Text>
+                      <Text style={styles.ficheClient}>
+                        {dossierSelectionne.client
+                          ? `${dossierSelectionne.client.firstName} ${dossierSelectionne.client.lastName}`
+                          : 'Client'}
+                      </Text>
+                    </View>
+                    <StatusPill
+                      kind={dossierSelectionne.status === 'OPEN' ? 'online' : 'offline'}
+                      label={dossierSelectionne.status === 'OPEN' ? 'OUVERT' : 'CLÔTURÉ'}
+                    />
+                  </View>
+
+                  {cycleActif ? (
+                    <View style={styles.blocCycle}>
+                      <View style={styles.enteteCycle}>
+                        <Text style={styles.cycleTitre}>Cycle à 31 versements</Text>
+                        <StatusPill
+                          kind={cycleActif.status === 'ACTIVE' ? 'online' : 'pending'}
+                          label={cycleActif.status === 'ACTIVE' ? 'ACTIF' : cycleActif.status}
+                        />
+                      </View>
+
+                      {/* Progression visuelle */}
+                      <View style={styles.progressionContainer}>
+                        <View style={styles.progressionLabels}>
+                          <Text style={styles.progressionTexte}>
+                            Progression : {cycleActif.installmentCount} / 31 versements
+                          </Text>
+                          <Text style={styles.progressionPourcentage}>
+                            {Math.round((cycleActif.installmentCount / 31) * 100)} %
+                          </Text>
+                        </View>
+                        <View style={styles.barreFond}>
+                          <View
+                            style={[
+                              styles.barreRemplie,
+                              { width: `${Math.min(100, (cycleActif.installmentCount / 31) * 100)}%` },
+                            ]}
+                          />
+                        </View>
+                      </View>
+
+                      {/* Métriques financières */}
+                      <View style={styles.grilleMetriques}>
+                        <View style={styles.metriqueCase}>
+                          <Text style={styles.metriqueLabel}>Montant fixe</Text>
+                          <Text style={styles.metriqueValeur}>
+                            {formatMontantXAF(parseInt(cycleActif.fixedAmountXaf, 10))}
+                          </Text>
+                        </View>
+                        <View style={styles.metriqueCase}>
+                          <Text style={styles.metriqueLabel}>Cumul collecté</Text>
+                          <Text style={styles.metriqueValeur}>
+                            {formatMontantXAF(parseInt(cycleActif.totalCollectedXaf, 10))}
+                          </Text>
+                        </View>
+                        <View style={styles.metriqueCase}>
+                          <Text style={styles.metriqueLabel}>Solde disponible</Text>
+                          <Text style={styles.metriqueValeurPositive}>
+                            {formatMontantXAF(parseInt(cycleActif.availableBalanceXaf, 10))}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  ) : (
+                    <AppNotice
+                      title="Aucun cycle ouvert"
+                      body="Ce dossier ne possède actuellement aucun cycle actif."
+                      kind="warning"
+                    />
+                  )}
+                </View>
+
+                {/* FORMULAIRE D'ENREGISTREMENT DE COLLECTE */}
+                {cycleActif && cycleActif.status === 'ACTIVE' && cycleActif.installmentCount < 31 ? (
+                  <View style={styles.card}>
+                    <View style={styles.cardHeader}>
+                      <Receipt size={20} color={colors.primary} />
+                      <Text style={styles.cardTitle}>Enregistrer une collecte</Text>
+                    </View>
+
+                    <Text style={styles.infoVersementFixe}>
+                      Versement #{cycleActif.installmentCount + 1} sur 31 : montant fixe obligatoire de{' '}
+                      <Text style={styles.texteGras}>
+                        {formatMontantXAF(parseInt(cycleActif.fixedAmountXaf, 10))}
+                      </Text>
+                    </Text>
+
+                    <InputTexte
+                      label="Montant reçu (FCFA)"
+                      value={montantCollecte}
+                      onChangeText={setMontantCollecte}
+                      placeholder={cycleActif.fixedAmountXaf}
+                      keyboardType="numeric"
+                      required
+                      disabled={soumissionCollecte}
+                    />
+
+                    <Pressable
+                      style={[
+                        styles.boutonCollecter,
+                        (!montantCollecte || soumissionCollecte) && styles.boutonDesactive,
+                      ]}
+                      onPress={handleEnregistrerCollecte}
+                      disabled={!montantCollecte || soumissionCollecte}
+                    >
+                      {soumissionCollecte ? (
+                        <ActivityIndicator color={colors.surface} size="small" />
+                      ) : (
+                        <Text style={styles.texteBoutonCollecter}>
+                          Valider le versement de {formatMontantXAF(parseInt(montantCollecte || '0', 10))}
+                        </Text>
+                      )}
+                    </Pressable>
+                  </View>
+                ) : cycleActif && cycleActif.installmentCount >= 31 ? (
+                  <AppNotice
+                    title="Cycle complet (31/31)"
+                    body="Les 31 versements de ce cycle ont été atteints. Le client peut désormais solliciter un retrait."
+                    kind="success"
+                  />
+                ) : null}
+
+                {/* HISTORIQUE DES TRANSACTIONS DU CYCLE */}
+                <View style={styles.sectionHistorique}>
+                  <Text style={styles.sectionTitle}>
+                    Historique des versements ({cycleActif?.transactions?.length ?? 0})
+                  </Text>
+
+                  {(!cycleActif?.transactions || cycleActif.transactions.length === 0) ? (
+                    <View style={styles.vide}>
+                      <Text style={styles.texteVide}>
+                        Aucun versement enregistré pour le moment sur ce cycle.
+                      </Text>
+                    </View>
+                  ) : (
+                    cycleActif.transactions.map((tx, idx) => (
+                      <View key={tx.id || idx} style={styles.ligneTransaction}>
+                        <View style={styles.txIcone}>
+                          <CheckCircle size={18} color={colors.success} />
+                        </View>
+                        <View style={styles.txInfos}>
+                          <Text style={styles.txType}>
+                            {tx.type === 'DEPOSIT' ? `Versement #${idx + 1}` : tx.type}
+                          </Text>
+                          <Text style={styles.txDate}>
+                            {tx.occurredAt
+                              ? new Date(tx.occurredAt).toLocaleString('fr-FR')
+                              : 'Enregistré'}
+                          </Text>
+                        </View>
+                        <Text style={styles.txMontant}>
+                          +{formatMontantXAF(parseInt(tx.amountXaf, 10))}
+                        </Text>
+                      </View>
+                    ))
+                  )}
+                </View>
+              </>
+            )}
+          </View>
+        )}
       </ScrollView>
 
+      {/* Boîte de dialogue de reçu de collecte */}
       <DialogConfirmation
-        visible={dialogVisible}
-        title="Dossier créé"
+        visible={dialogCollecteVisible}
+        title="Collecte enregistrée"
         message={
-          dossierACréer
-            ? `Le dossier ${dossierACréer.reference_provisoire} a été enregistré localement (statut OUVERT).`
+          recuCollecte
+            ? `Versement #${recuCollecte.numero} de ${formatMontantXAF(recuCollecte.montant)} validé avec succès par le serveur.\n\nRéférence d'opération :\n${recuCollecte.transactionId}`
             : ''
         }
-        confirmLabel="OK"
+        confirmLabel="Terminer"
         cancelLabel=""
-        onConfirm={confirmerCreation}
-        onCancel={annulerCreation}
+        onConfirm={() => setDialogCollecteVisible(false)}
+        onCancel={() => setDialogCollecteVisible(false)}
       />
     </AppScreen>
   );
@@ -259,11 +685,11 @@ export default function DossiersScreen() {
 const styles = StyleSheet.create({
   content: {
     padding: 16,
-    paddingBottom: 32,
+    paddingBottom: 40,
   },
   heading: {
-    gap: 8,
-    paddingTop: 4,
+    gap: 6,
+    marginBottom: 16,
   },
   eyebrow: {
     color: colors.primary,
@@ -273,13 +699,44 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '800',
   },
   subtitle: {
     color: colors.muted,
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  ongletsBarre: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 16,
+    gap: 4,
+  },
+  ongletBouton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  ongletActif: {
+    backgroundColor: colors.primarySoft,
+  },
+  ongletTexte: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  ongletTexteActif: {
+    color: colors.primary,
+    fontWeight: '700',
   },
   card: {
     backgroundColor: colors.surface,
@@ -288,61 +745,301 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 18,
     marginBottom: 16,
+    gap: 10,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
   },
   cardTitle: {
     color: colors.text,
     fontSize: 18,
     fontWeight: '800',
-    marginBottom: 12,
-  },
-  boutonCreer: {
-    backgroundColor: colors.accent,
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  texteBoutonCreer: {
-    color: colors.surface,
-    fontSize: 14,
-    fontWeight: '700',
   },
   section: {
-    marginTop: 20,
-    gap: 8,
+    gap: 12,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   sectionTitle: {
     color: colors.text,
     fontSize: 18,
     fontWeight: '800',
   },
-  ligneDossier: {
+  boutonActualiser: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+  },
+  carteDossier: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    gap: 8,
+  },
+  enteteCarteDossier: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  infosDossier: {
+    flex: 1,
+    gap: 2,
+  },
+  numeroDossier: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  nomClientDossier: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  ligneDetailDossier: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    paddingTop: 8,
+  },
+  labelDetail: {
+    color: colors.muted,
+    fontSize: 13,
+  },
+  valeurDetailGras: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  piedCarteDossier: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 4,
+  },
+  texteDate: {
+    color: colors.muted,
+    fontSize: 11,
+  },
+  lienVoir: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  texteLienVoir: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  recapitulatifBox: {
+    backgroundColor: colors.actionSoft,
+    borderRadius: 10,
+    padding: 12,
+    gap: 4,
+  },
+  recapTitre: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  recapLigne: {
+    color: colors.text,
+    fontSize: 12,
+  },
+  recapValeur: {
+    fontWeight: '700',
+  },
+  boutonCreer: {
+    backgroundColor: colors.accent,
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  boutonDesactive: {
+    opacity: 0.5,
+  },
+  texteBoutonCreer: {
+    color: colors.surface,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  texteAttention: {
+    color: colors.muted,
+    fontSize: 13,
+    fontStyle: 'italic',
+  },
+  carteFicheDossier: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    gap: 14,
+  },
+  enteteFiche: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    paddingBottom: 12,
+  },
+  ficheNumero: {
+    color: colors.primary,
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  ficheClient: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  blocCycle: {
+    gap: 12,
+  },
+  enteteCycle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cycleTitre: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  progressionContainer: {
+    gap: 6,
+  },
+  progressionLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  progressionTexte: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  progressionPourcentage: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  barreFond: {
+    height: 10,
+    backgroundColor: colors.border,
+    borderRadius: 5,
+    overflow: 'hidden',
+  },
+  barreRemplie: {
+    height: '100%',
+    backgroundColor: colors.accent,
+    borderRadius: 5,
+  },
+  grilleMetriques: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  metriqueCase: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderRadius: 10,
+    padding: 10,
+    gap: 4,
+  },
+  metriqueLabel: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  metriqueValeur: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  metriqueValeurPositive: {
+    color: colors.success,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  infoVersementFixe: {
+    color: colors.text,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  texteGras: {
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  boutonCollecter: {
+    backgroundColor: colors.success,
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+  },
+  texteBoutonCollecter: {
+    color: colors.surface,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  sectionHistorique: {
+    marginTop: 8,
+    gap: 8,
+  },
+  ligneTransaction: {
+    flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderWidth: 1,
     borderRadius: 10,
     padding: 12,
-    marginBottom: 8,
+    gap: 10,
   },
-  infosDossier: {
+  txIcone: {
+    padding: 4,
+  },
+  txInfos: {
     flex: 1,
     gap: 2,
   },
-  refDossier: {
+  txType: {
     color: colors.text,
-    fontSize: 15,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  txDate: {
+    color: colors.muted,
+    fontSize: 11,
+  },
+  txMontant: {
+    color: colors.success,
+    fontSize: 14,
     fontWeight: '700',
   },
-  clientDossier: {
-    color: colors.muted,
-    fontSize: 13,
+  chargement: {
+    padding: 24,
+    alignItems: 'center',
+    gap: 8,
   },
-  badgesDossier: {
-    flexDirection: 'row',
-    gap: 6,
+  texteChargement: {
+    color: colors.muted,
+    fontSize: 14,
   },
   vide: {
     padding: 24,
@@ -351,29 +1048,22 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderWidth: 1,
     borderRadius: 14,
+    gap: 12,
   },
   texteVide: {
     color: colors.muted,
     fontSize: 14,
     textAlign: 'center',
   },
-  chargement: {
-    padding: 24,
-    alignItems: 'center',
+  boutonActionSimple: {
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
-  texteChargement: {
-    color: colors.muted,
-    fontSize: 14,
-  },
-  noteBas: {
-    marginTop: 16,
-    padding: 14,
-    backgroundColor: colors.accentSoft,
-    borderRadius: 10,
-  },
-  texteNote: {
-    color: colors.accent,
-    fontSize: 12,
-    lineHeight: 18,
+  texteBoutonActionSimple: {
+    color: colors.surface,
+    fontSize: 13,
+    fontWeight: '700',
   },
 });
