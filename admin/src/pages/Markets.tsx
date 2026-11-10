@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { api, apiErrorToMessage } from '../services/api'
 import { getProfile } from '../services/auth'
 import { Market } from '../types/api'
+import { Button, Modal, Input } from '../components/ui'
 
 export default function Markets() {
   const [markets, setMarkets] = useState<Market[]>([])
@@ -12,6 +13,8 @@ export default function Markets() {
   const [canManageMarkets, setCanManageMarkets] = useState(false)
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
+
+  const [createOpen, setCreateOpen] = useState(false)
 
   async function loadMarkets() {
     const response = await api.get<Market[]>('/markets/admin')
@@ -49,12 +52,23 @@ export default function Markets() {
       setCode('')
       setName('')
       setNotice('Le marché a été créé.')
+      setCreateOpen(false)
       await loadMarkets()
     } catch (cause) {
       setError(apiErrorToMessage(cause))
     } finally {
       setIsSaving(false)
     }
+  }
+
+  function openCreate() {
+    setCode('')
+    setName('')
+    setCreateOpen(true)
+  }
+
+  function closeCreate() {
+    setCreateOpen(false)
   }
 
   if (isLoading) {
@@ -65,28 +79,64 @@ export default function Markets() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>Marchés</h1>
-        <p>Gestion des marchés autonomes</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+          <div>
+            <h1>Marchés</h1>
+            <p>Gestion des marchés autonomes</p>
+          </div>
+          {canManageMarkets && (
+            <Button onClick={openCreate} variant="primary">
+              Ajouter un marché
+            </Button>
+          )}
+        </div>
       </div>
       {error && <div className="alert alert-error" role="alert">{error}</div>}
       {notice && <div className="alert alert-success" role="status">{notice}</div>}
-      {canManageMarkets && (
-        <section className="card market-create-section">
-          <h2>Nouveau marché</h2>
+      {canManageMarkets && createOpen && (
+        <Modal isOpen={createOpen} onClose={closeCreate} title="Nouveau marché">
           <form className="market-create-form" onSubmit={createMarket}>
             <label className="form-group">
               <span className="form-label">Code marché</span>
-              <input className="form-input" value={code} onChange={(event) => setCode(event.target.value)} required maxLength={40} />
+              <Input
+                label="Code marché"
+                value={code}
+                onChange={(value) => setCode(value)}
+                required
+                maxLength={40}
+                accessibilityLabel="Code marché"
+              />
             </label>
             <label className="form-group">
               <span className="form-label">Nom</span>
-              <input className="form-input" value={name} onChange={(event) => setName(event.target.value)} required maxLength={160} />
+              <Input
+                label="Nom"
+                value={name}
+                onChange={(value) => setName(value)}
+                required
+                maxLength={160}
+                accessibilityLabel="Nom"
+              />
             </label>
-            <button className="btn-primary" type="submit" disabled={isSaving}>
-              {isSaving ? 'Enregistrement…' : 'Créer le marché'}
-            </button>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+              <button
+                className="btn-secondary"
+                type="button"
+                disabled={isSaving}
+                onClick={closeCreate}
+              >
+                Annuler
+              </button>
+              <button
+                className="btn-primary"
+                type="submit"
+                disabled={isSaving}
+              >
+                {isSaving ? 'Enregistrement…' : 'Créer le marché'}
+              </button>
+            </div>
           </form>
-        </section>
+        </Modal>
       )}
       <div className="table-container">
         <table className="table">

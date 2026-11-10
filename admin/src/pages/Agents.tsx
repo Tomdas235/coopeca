@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api, apiErrorToMessage } from '../services/api'
 import { getBranches } from '../services/auth'
 import type { AgentAccount, PaginatedResponse } from '../types/api'
+import { Button, Modal, Input } from '../components/ui'
 
 type Branch = { id: string; code: string; name: string }
 
@@ -20,6 +21,8 @@ export default function Agents() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editFullName, setEditFullName] = useState('')
   const [editPhone, setEditPhone] = useState('')
+
+  const [createOpen, setCreateOpen] = useState(false)
 
   async function loadAgents() {
     const response = await api.get<PaginatedResponse<AgentAccount>>('/users?role=AGENT&limit=50')
@@ -67,12 +70,27 @@ export default function Agents() {
       setPhone('')
       setPassword('')
       setNotice('Le compte agent a été créé.')
+      setCreateOpen(false)
       await loadAgents()
     } catch (cause) {
       setError(apiErrorToMessage(cause))
     } finally {
       setIsSaving(false)
     }
+  }
+
+  function openCreate() {
+    setError('')
+    setUsername('')
+    setFullName('')
+    setPhone('')
+    setPassword('')
+    setBranchId(branches.length > 0 ? branches[0].id : '')
+    setCreateOpen(true)
+  }
+
+  function closeCreate() {
+    setCreateOpen(false)
   }
 
   function beginEdit(agent: AgentAccount) {
@@ -122,44 +140,103 @@ export default function Agents() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>Agents</h1>
-        <p>Comptes, coordonnées et accès aux agences</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+          <div>
+            <h1>Agents</h1>
+            <p>Comptes, coordonnées et accès aux agences</p>
+          </div>
+          <Button onClick={openCreate} variant="primary">
+            Créer un agent
+          </Button>
+        </div>
       </div>
 
       {error && <div className="alert alert-error" role="alert">{error}</div>}
       {notice && <div className="alert alert-success" role="status">{notice}</div>}
 
-      <section className="card agent-create-section">
-        <h2>Créer un agent</h2>
-        <form className="agent-create-form" onSubmit={createAgent}>
-          <label className="form-group">
-            <span className="form-label">Identifiant</span>
-            <input className="form-input" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="off" required maxLength={80} />
-          </label>
-          <label className="form-group">
-            <span className="form-label">Nom complet</span>
-            <input className="form-input" value={fullName} onChange={(event) => setFullName(event.target.value)} required maxLength={180} />
-          </label>
-          <label className="form-group">
-            <span className="form-label">Téléphone</span>
-            <input className="form-input" value={phone} onChange={(event) => setPhone(event.target.value)} maxLength={40} />
-          </label>
-          <label className="form-group">
-            <span className="form-label">Agence principale</span>
-            <select className="form-select" value={branchId} onChange={(event) => setBranchId(event.target.value)} required>
-              {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.code} — {branch.name}</option>)}
-            </select>
-          </label>
-          <label className="form-group">
-            <span className="form-label">Mot de passe initial</span>
-            <input className="form-input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" required minLength={8} maxLength={256} />
-          </label>
-          <button className="btn-primary" type="submit" disabled={isSaving || branches.length === 0}>
-            {isSaving ? 'Enregistrement…' : 'Créer le compte'}
-          </button>
-        </form>
-        {branches.length === 0 && <p className="form-text">Aucune agence autorisée n’est disponible pour l’affectation.</p>}
-      </section>
+      {createOpen && (
+        <Modal isOpen={createOpen} onClose={closeCreate} title="Nouveau compte agent">
+          <form className="agent-create-form" onSubmit={createAgent}>
+            <label className="form-group">
+              <span className="form-label">Identifiant</span>
+              <Input
+                label="Identifiant"
+                value={username}
+                onChange={(value) => setUsername(value)}
+                required
+                maxLength={80}
+                accessibilityLabel="Identifiant"
+              />
+            </label>
+            <label className="form-group">
+              <span className="form-label">Nom complet</span>
+              <Input
+                label="Nom complet"
+                value={fullName}
+                onChange={(value) => setFullName(value)}
+                required
+                maxLength={180}
+                accessibilityLabel="Nom complet"
+              />
+            </label>
+            <label className="form-group">
+              <span className="form-label">Téléphone</span>
+              <Input
+                label="Téléphone"
+                value={phone}
+                onChange={(value) => setPhone(value)}
+                maxLength={40}
+                accessibilityLabel="Téléphone"
+              />
+            </label>
+            <label className="form-group">
+              <span className="form-label">Agence principale</span>
+              <select
+                className="form-input"
+                value={branchId}
+                onChange={(event) => setBranchId(event.target.value)}
+                required
+              >
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.code} — {branch.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="form-group">
+              <span className="form-label">Mot de passe initial</span>
+              <Input
+                label="Mot de passe initial"
+                type="password"
+                value={password}
+                onChange={(value) => setPassword(value)}
+                required
+                maxLength={256}
+                accessibilityLabel="Mot de passe initial"
+              />
+            </label>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+              <button
+                className="btn-secondary"
+                type="button"
+                disabled={isSaving || branches.length === 0}
+                onClick={closeCreate}
+              >
+                Annuler
+              </button>
+              <button
+                className="btn-primary"
+                type="submit"
+                disabled={isSaving || branches.length === 0}
+              >
+                {isSaving ? 'Enregistrement…' : 'Créer le compte'}
+              </button>
+            </div>
+            {branches.length === 0 && <p className="form-text">Aucune agence autorisée n’est disponible pour l’affectation.</p>}
+          </form>
+        </Modal>
+      )}
 
       <section className="agent-list-section">
         <div className="section-heading">

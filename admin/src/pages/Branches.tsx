@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, apiErrorToMessage } from '../services/api'
 import type { BranchAccount, Market } from '../types/api'
+import { Button, Modal, Input } from '../components/ui'
 
 export default function Branches() {
   const [branches, setBranches] = useState<BranchAccount[]>([])
@@ -18,6 +19,8 @@ export default function Branches() {
   const [editName, setEditName] = useState('')
   const [editAddress, setEditAddress] = useState('')
   const [editPhone, setEditPhone] = useState('')
+
+  const [createOpen, setCreateOpen] = useState(false)
 
   async function loadBranches() {
     const response = await api.get<BranchAccount[]>('/branches')
@@ -65,12 +68,27 @@ export default function Branches() {
       setAddress('')
       setPhone('')
       setNotice('L’agence a été créée.')
+      setCreateOpen(false)
       await loadBranches()
     } catch (cause) {
       setError(apiErrorToMessage(cause))
     } finally {
       setIsSaving(false)
     }
+  }
+
+  function openCreate() {
+    setError('')
+    setCode('')
+    setName('')
+    setAddress('')
+    setPhone('')
+    setMarketId(markets.length > 0 ? markets[0].id : '')
+    setCreateOpen(true)
+  }
+
+  function closeCreate() {
+    setCreateOpen(false)
   }
 
   function beginEdit(branch: BranchAccount) {
@@ -122,44 +140,101 @@ export default function Branches() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>Agences</h1>
-        <p>Coordonnées, rattachement au marché et état opérationnel</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+          <div>
+            <h1>Agences</h1>
+            <p>Coordonnées, rattachement au marché et état opérationnel</p>
+          </div>
+          <Button onClick={openCreate} variant="primary">
+            Ajouter une agence
+          </Button>
+        </div>
       </div>
 
       {error && <div className="alert alert-error" role="alert">{error}</div>}
       {notice && <div className="alert alert-success" role="status">{notice}</div>}
 
-      <section className="card branch-create-section">
-        <h2>Créer une agence</h2>
-        <form className="branch-create-form" onSubmit={createBranch}>
-          <label className="form-group">
-            <span className="form-label">Code agence</span>
-            <input className="form-input" value={code} onChange={(event) => setCode(event.target.value)} required maxLength={30} />
-          </label>
-          <label className="form-group">
-            <span className="form-label">Nom</span>
-            <input className="form-input" value={name} onChange={(event) => setName(event.target.value)} required maxLength={160} />
-          </label>
-          <label className="form-group">
-            <span className="form-label">Marché</span>
-            <select className="form-select" value={marketId} onChange={(event) => setMarketId(event.target.value)} required>
-              {markets.map((market) => <option key={market.id} value={market.id}>{market.code} — {market.name}</option>)}
-            </select>
-          </label>
-          <label className="form-group">
-            <span className="form-label">Téléphone</span>
-            <input className="form-input" value={phone} onChange={(event) => setPhone(event.target.value)} maxLength={40} />
-          </label>
-          <label className="form-group branch-address-field">
-            <span className="form-label">Adresse</span>
-            <input className="form-input" value={address} onChange={(event) => setAddress(event.target.value)} maxLength={500} />
-          </label>
-          <button className="btn-primary" type="submit" disabled={isSaving || markets.length === 0}>
-            {isSaving ? 'Enregistrement…' : 'Créer l’agence'}
-          </button>
-        </form>
-        {markets.length === 0 && <p className="form-text">Créez ou activez un marché avant d’ajouter une agence.</p>}
-      </section>
+      {createOpen && (
+        <Modal isOpen={createOpen} onClose={closeCreate} title="Nouvelle agence">
+          <form className="branch-create-form" onSubmit={createBranch}>
+            <label className="form-group">
+              <span className="form-label">Code agence</span>
+              <Input
+                label="Code agence"
+                value={code}
+                onChange={(value) => setCode(value)}
+                required
+                maxLength={30}
+                accessibilityLabel="Code agence"
+              />
+            </label>
+            <label className="form-group">
+              <span className="form-label">Nom</span>
+              <Input
+                label="Nom"
+                value={name}
+                onChange={(value) => setName(value)}
+                required
+                maxLength={160}
+                accessibilityLabel="Nom"
+              />
+            </label>
+            <label className="form-group">
+              <span className="form-label">Marché</span>
+              <select
+                className="form-input"
+                value={marketId}
+                onChange={(event) => setMarketId(event.target.value)}
+                required
+              >
+                {markets.map((market) => (
+                  <option key={market.id} value={market.id}>
+                    {market.code} — {market.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="form-group">
+              <span className="form-label">Téléphone</span>
+              <Input
+                label="Téléphone"
+                value={phone}
+                onChange={(value) => setPhone(value)}
+                maxLength={40}
+                accessibilityLabel="Téléphone"
+              />
+            </label>
+            <label className="form-group branch-address-field">
+              <span className="form-label">Adresse</span>
+              <Input
+                label="Adresse"
+                value={address}
+                onChange={(value) => setAddress(value)}
+                maxLength={500}
+                accessibilityLabel="Adresse"
+              />
+            </label>
+            {markets.length === 0 && <p className="form-text">Créez ou activez un marché avant d’ajouter une agence.</p>}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+              <button
+                className="btn-secondary"
+                type="button"
+                disabled={isSaving || markets.length === 0}
+                onClick={closeCreate}
+              >
+                Annuler
+              </button>
+              <button
+                className="btn-primary"
+                type="submit"
+                disabled={isSaving || markets.length === 0}
+              >
+                {isSaving ? 'Enregistrement…' : 'Créer l’agence'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       <section className="branch-list-section">
         <div className="section-heading">
