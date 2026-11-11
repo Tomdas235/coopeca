@@ -8,7 +8,15 @@ import {
   AgentAccount,
   PaginatedResponse,
 } from '../types/api'
-import { Button, Modal, Input } from '../components/ui'
+import {
+  Button,
+  Modal,
+  Input,
+  Select,
+  FormField,
+  FormSection,
+  FormError,
+} from '../components/ui'
 
 export default function Clients() {
   const [clients, setClients] = useState<ClientListItem[]>([])
@@ -22,10 +30,11 @@ export default function Clients() {
   const [createOpen, setCreateOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState('')
-  const [clientCode, setClientCode] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
+  const [neighborhood, setNeighborhood] = useState('')
+  const [addressDetails, setAddressDetails] = useState('')
   const [branchId, setBranchId] = useState('')
   const [marketId, setMarketId] = useState('')
   const [collectionAgentId, setCollectionAgentId] = useState('')
@@ -70,10 +79,11 @@ export default function Clients() {
 
   function openCreate() {
     setCreateError('')
-    setClientCode('')
     setFirstName('')
     setLastName('')
     setPhone('')
+    setNeighborhood('')
+    setAddressDetails('')
     setBranchId('')
     setMarketId('')
     setCollectionAgentId('')
@@ -91,10 +101,11 @@ export default function Clients() {
     setIsCreating(true)
     try {
       const payload: ClientCreateInput = {
-        clientCode: clientCode.trim(),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         phone: phone.trim() || null,
+        neighborhood: neighborhood.trim() || null,
+        addressDetails: addressDetails.trim() || null,
         branchId,
         marketId: marketId || undefined,
         collectionAgentId,
@@ -136,109 +147,96 @@ export default function Clients() {
       {createOpen && (
         <Modal isOpen={createOpen} onClose={closeCreate} title="Nouveau client">
           <form className="client-create-form" onSubmit={createClient}>
-            {createError && <div className="alert alert-error" role="alert">{createError}</div>}
-            <label className="form-group">
-              <span className="form-label">Code client</span>
-              <Input
-                label="Code client"
-                value={clientCode}
-                onChange={(value) => setClientCode(value)}
-                required
-                maxLength={30}
-                accessibilityLabel="Code client"
-              />
-            </label>
-            <label className="form-group">
-              <span className="form-label">Prénom</span>
-              <Input
-                label="Prénom"
-                value={firstName}
-                onChange={(value) => setFirstName(value)}
-                required
-                maxLength={180}
-                accessibilityLabel="Prénom"
-              />
-            </label>
-            <label className="form-group">
-              <span className="form-label">Nom</span>
-              <Input
-                label="Nom"
-                value={lastName}
-                onChange={(value) => setLastName(value)}
-                required
-                maxLength={180}
-                accessibilityLabel="Nom"
-              />
-            </label>
-            <label className="form-group">
-              <span className="form-label">Téléphone</span>
-              <Input
-                label="Téléphone"
-                value={phone}
-                onChange={(value) => setPhone(value)}
-                maxLength={40}
-                accessibilityLabel="Téléphone"
-              />
-            </label>
-            <label className="form-group">
-              <span className="form-label">Agence</span>
-              <select
-                className="form-input"
-                value={branchId}
-                onChange={(event) => setBranchId(event.target.value)}
-                required
-              >
-                <option value="">— Sélectionner —</option>
-                {branches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.code} — {branch.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="form-group">
-              <span className="form-label">Marché</span>
-              <select
-                className="form-input"
-                value={marketId}
-                onChange={(event) => setMarketId(event.target.value)}
-              >
-                <option value="">— Aucun —</option>
-                {markets.map((market) => (
-                  <option key={market.id} value={market.id}>
-                    {market.code} — {market.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="form-group">
-              <span className="form-label">Agent collecteur</span>
-              <select
-                className="form-input"
-                value={collectionAgentId}
-                onChange={(event) => setCollectionAgentId(event.target.value)}
-                required
-              >
-                <option value="">— Sélectionner —</option>
-                {agents.map((agent) => (
-                  <option key={agent.id} value={agent.id}>
-                    {agent.fullName} ({agent.username})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+            {createError && <FormError message={createError} />}
+            <FormSection title="Informations client">
+              <FormField label="Prénom" required error={!firstName ? 'Ce champ est requis.' : null}>
+                <Input
+                  label="Prénom"
+                  value={firstName}
+                  onChange={(value) => setFirstName(value)}
+                  required
+                  maxLength={100}
+                  accessibilityLabel="Prénom"
+                />
+              </FormField>
+              <FormField label="Nom" required error={!lastName ? 'Ce champ est requis.' : null}>
+                <Input
+                  label="Nom"
+                  value={lastName}
+                  onChange={(value) => setLastName(value)}
+                  required
+                  maxLength={100}
+                  accessibilityLabel="Nom"
+                />
+              </FormField>
+              <FormField label="Téléphone">
+                <Input
+                  label="Téléphone"
+                  value={phone}
+                  onChange={(value) => setPhone(value)}
+                  maxLength={40}
+                  accessibilityLabel="Téléphone"
+                />
+              </FormField>
+              <FormField label="Quartier">
+                <Input
+                  label="Quartier"
+                  value={neighborhood}
+                  onChange={(value) => setNeighborhood(value)}
+                  maxLength={160}
+                  accessibilityLabel="Quartier"
+                />
+              </FormField>
+              <FormField label="Adresse">
+                <Input
+                  label="Adresse"
+                  value={addressDetails}
+                  onChange={(value) => setAddressDetails(value)}
+                  maxLength={500}
+                  accessibilityLabel="Adresse"
+                />
+              </FormField>
+            </FormSection>
+            <FormSection title="Rattachement">
+              <FormField label="Agence" required error={!branchId ? 'Ce champ est requis.' : null}>
+                <Select
+                  label="Agence"
+                  value={branchId}
+                  onChange={(value) => setBranchId(value)}
+                  required
+                  options={branches.map((b) => ({ label: `${b.code} — ${b.name}`, value: b.id }))}
+                />
+              </FormField>
+              <FormField label="Marché">
+                <Select
+                  label="Marché"
+                  value={marketId}
+                  onChange={(value) => setMarketId(value)}
+                  options={markets.map((m) => ({ label: `${m.code} — ${m.name}`, value: m.id }))}
+                />
+              </FormField>
+              <FormField label="Agent collecteur" required error={!collectionAgentId ? 'Ce champ est requis.' : null}>
+                <Select
+                  label="Agent collecteur"
+                  value={collectionAgentId}
+                  onChange={(value) => setCollectionAgentId(value)}
+                  required
+                  options={agents.map((a) => ({ label: `${a.fullName} (${a.username})`, value: a.id }))}
+                />
+              </FormField>
+            </FormSection>
+            <div className="form-actions">
               <button
-                className="btn-secondary"
                 type="button"
+                className="btn btn-secondary"
                 disabled={isCreating}
                 onClick={closeCreate}
               >
                 Annuler
               </button>
               <button
-                className="btn-primary"
                 type="submit"
+                className="btn btn-primary"
                 disabled={isCreating}
               >
                 {isCreating ? 'Enregistrement…' : 'Créer le client'}

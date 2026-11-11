@@ -27,7 +27,7 @@ const limitSchema = z.object({
 
 
 const marketSchema = z.object({
-  code: z.string().trim().min(1).max(40),
+  code: z.string().trim().min(1).max(40).optional(),
   name: z.string().trim().min(1).max(160),
 }).strict();
 

@@ -2,10 +2,14 @@ import { ConflictException, ForbiddenException, Injectable, NotFoundException } 
 import { randomUUID } from 'node:crypto';
 import { AuthenticatedPrincipal } from '../auth/auth.types';
 import { PrismaService } from '../database/prisma.service';
+import { ReferenceService } from '../common/reference.service';
 
 @Injectable()
 export class BranchesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly referenceService: ReferenceService,
+  ) {}
 
   async findAll(actor: AuthenticatedPrincipal) {
     this.requireAdmin(actor);
@@ -20,7 +24,7 @@ export class BranchesService {
 
   async create(
     actor: AuthenticatedPrincipal,
-    input: { code: string; name: string; address?: string | null; phone?: string | null; marketId: string },
+    input: { name: string; address?: string | null; phone?: string | null; marketId: string },
   ) {
     this.requireAdmin(actor);
     const market = await this.prisma.market.findUnique({
@@ -29,11 +33,17 @@ export class BranchesService {
     });
     if (!market?.isActive) throw new NotFoundException('Marché actif introuvable.');
 
+    // Génération automatique du code agence (côté serveur uniquement)
+    const code = await this.referenceService.generateReference({
+      entity: 'Branch',
+      field: 'code',
+    });
+
     try {
       return await this.prisma.$transaction(async (tx) => {
         const branch = await tx.branch.create({
           data: {
-            code: input.code,
+            code,
             name: input.name,
             address: input.address || null,
             phone: input.phone || null,

@@ -2,11 +2,13 @@ import { ForbiddenException } from '@nestjs/common';
 import { AuthenticatedPrincipal } from '../auth/auth.types';
 import { PrismaService } from '../database/prisma.service';
 import { BranchesService } from './branches.service';
+import { ReferenceService } from '../common/reference.service';
 
 describe('BranchesService administration', () => {
   it('refuses full branch listing to non-admin roles before querying the database', async () => {
     const prisma = { branch: { findMany: jest.fn() } } as unknown as PrismaService;
-    const service = new BranchesService(prisma);
+    const referenceService = { generateReference: jest.fn() } as unknown as ReferenceService;
+    const service = new BranchesService(prisma, referenceService);
     const supervisor: AuthenticatedPrincipal = {
       id: 'supervisor-id',
       username: 'supervisor1',

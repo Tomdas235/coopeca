@@ -16,7 +16,7 @@ import { AuthenticatedPrincipal } from '../auth/auth.types';
 import { ClientsService, ClientFilters } from './clients.service';
 import { ClientStatus } from '@prisma/client';
 const createSchema = z.object({
-  clientCode: z.string().min(1).max(40),
+  clientCode: z.string().min(1).max(40).optional(),
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
   phone: z.string().max(40).nullable().optional(),

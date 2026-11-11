@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react'
 import { api, apiErrorToMessage } from '../services/api'
 import type { BranchAccount, Market } from '../types/api'
-import { Button, Modal, Input } from '../components/ui'
+import {
+  Button,
+  Modal,
+  Input,
+  Select,
+  FormField,
+  FormSection,
+} from '../components/ui'
 
 export default function Branches() {
   const [branches, setBranches] = useState<BranchAccount[]>([])
@@ -10,7 +17,6 @@ export default function Branches() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const [code, setCode] = useState('')
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
   const [phone, setPhone] = useState('')
@@ -57,13 +63,11 @@ export default function Branches() {
     setIsSaving(true)
     try {
       await api.post<BranchAccount>('/branches', {
-        code: code.trim(),
         name: name.trim(),
         address: address.trim() || null,
         phone: phone.trim() || null,
         marketId,
       })
-      setCode('')
       setName('')
       setAddress('')
       setPhone('')
@@ -79,7 +83,6 @@ export default function Branches() {
 
   function openCreate() {
     setError('')
-    setCode('')
     setName('')
     setAddress('')
     setPhone('')
@@ -157,80 +160,61 @@ export default function Branches() {
       {createOpen && (
         <Modal isOpen={createOpen} onClose={closeCreate} title="Nouvelle agence">
           <form className="branch-create-form" onSubmit={createBranch}>
-            <label className="form-group">
-              <span className="form-label">Code agence</span>
-              <Input
-                label="Code agence"
-                value={code}
-                onChange={(value) => setCode(value)}
-                required
-                maxLength={30}
-                accessibilityLabel="Code agence"
-              />
-            </label>
-            <label className="form-group">
-              <span className="form-label">Nom</span>
-              <Input
-                label="Nom"
-                value={name}
-                onChange={(value) => setName(value)}
-                required
-                maxLength={160}
-                accessibilityLabel="Nom"
-              />
-            </label>
-            <label className="form-group">
-              <span className="form-label">Marché</span>
-              <select
-                className="form-input"
-                value={marketId}
-                onChange={(event) => setMarketId(event.target.value)}
-                required
-              >
-                {markets.map((market) => (
-                  <option key={market.id} value={market.id}>
-                    {market.code} — {market.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="form-group">
-              <span className="form-label">Téléphone</span>
-              <Input
-                label="Téléphone"
-                value={phone}
-                onChange={(value) => setPhone(value)}
-                maxLength={40}
-                accessibilityLabel="Téléphone"
-              />
-            </label>
-            <label className="form-group branch-address-field">
-              <span className="form-label">Adresse</span>
-              <Input
-                label="Adresse"
-                value={address}
-                onChange={(value) => setAddress(value)}
-                maxLength={500}
-                accessibilityLabel="Adresse"
-              />
-            </label>
-            {markets.length === 0 && <p className="form-text">Créez ou activez un marché avant d’ajouter une agence.</p>}
+            <FormSection title="Informations de l’agence">
+              <FormField label="Nom" required error={!name ? 'Ce champ est requis.' : null}>
+                <Input
+                  label="Nom"
+                  value={name}
+                  onChange={(value) => setName(value)}
+                  required
+                  maxLength={160}
+                  accessibilityLabel="Nom"
+                />
+              </FormField>
+              <FormField label="Marché" required error={!marketId ? 'Ce champ est requis.' : null}>
+                <Select
+                  label="Marché"
+                  value={marketId}
+                  onChange={(value) => setMarketId(value)}
+                  required
+                  options={markets.map((m) => ({ label: `${m.code} — ${m.name}`, value: m.id }))}
+                />
+              </FormField>
+              <FormField label="Téléphone">
+                <Input
+                  label="Téléphone"
+                  value={phone}
+                  onChange={(value) => setPhone(value)}
+                  maxLength={40}
+                  accessibilityLabel="Téléphone"
+                />
+              </FormField>
+              <FormField label="Adresse">
+                <Input
+                  label="Adresse"
+                  value={address}
+                  onChange={(value) => setAddress(value)}
+                  maxLength={500}
+                  accessibilityLabel="Adresse"
+                />
+              </FormField>
+              {markets.length === 0 && <p className="form-text">Créez ou activez un marché avant d’ajouter une agence.</p>}
+            </FormSection>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
-              <button
-                className="btn-secondary"
-                type="button"
-                disabled={isSaving || markets.length === 0}
+              <Button
+                variant="secondary"
                 onClick={closeCreate}
+                disabled={isSaving || markets.length === 0}
               >
                 Annuler
-              </button>
-              <button
-                className="btn-primary"
+              </Button>
+              <Button
+                variant="primary"
                 type="submit"
                 disabled={isSaving || markets.length === 0}
               >
                 {isSaving ? 'Enregistrement…' : 'Créer l’agence'}
-              </button>
+              </Button>
             </div>
           </form>
         </Modal>
@@ -260,13 +244,21 @@ export default function Branches() {
                   <td className="branch-actions">
                     {editingId === branch.id ? (
                       <>
-                        <button className="btn-secondary" type="button" disabled={isSaving} onClick={() => void saveEdit(branch)}>Enregistrer</button>
-                        <button className="text-button" type="button" onClick={() => setEditingId(null)}>Annuler</button>
+                        <Button variant="secondary" type="button" disabled={isSaving} onClick={() => void saveEdit(branch)}>
+                          Enregistrer
+                        </Button>
+                        <button className="text-button" type="button" onClick={() => setEditingId(null)}>
+                          Annuler
+                        </button>
                       </>
                     ) : (
                       <>
-                        <button className="text-button" type="button" disabled={isSaving} onClick={() => beginEdit(branch)}>Modifier</button>
-                        <button className="text-button" type="button" disabled={isSaving} onClick={() => void toggleActive(branch)}>{branch.isActive ? 'Désactiver' : 'Réactiver'}</button>
+                        <button className="text-button" type="button" disabled={isSaving} onClick={() => beginEdit(branch)}>
+                          Modifier
+                        </button>
+                        <button className="text-button" type="button" disabled={isSaving} onClick={() => void toggleActive(branch)}>
+                          {branch.isActive ? 'Désactiver' : 'Réactiver'}
+                        </button>
                       </>
                     )}
                   </td>

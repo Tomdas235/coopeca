@@ -7,7 +7,7 @@ import { BranchesService } from './branches.service';
 
 const uuidSchema = z.string().uuid();
 const createBranchSchema = z.object({
-  code: z.string().trim().min(1).max(30),
+  code: z.string().trim().min(1).max(30).optional(),
   name: z.string().trim().min(1).max(160),
   address: z.string().trim().max(500).optional().nullable(),
   phone: z.string().trim().max(40).optional().nullable(),

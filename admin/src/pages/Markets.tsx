@@ -2,7 +2,13 @@ import { useState, useEffect } from 'react'
 import { api, apiErrorToMessage } from '../services/api'
 import { getProfile } from '../services/auth'
 import { Market } from '../types/api'
-import { Button, Modal, Input } from '../components/ui'
+import {
+  Button,
+  Modal,
+  Input,
+  FormField,
+  FormSection,
+} from '../components/ui'
 
 export default function Markets() {
   const [markets, setMarkets] = useState<Market[]>([])
@@ -11,7 +17,6 @@ export default function Markets() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [canManageMarkets, setCanManageMarkets] = useState(false)
-  const [code, setCode] = useState('')
   const [name, setName] = useState('')
 
   const [createOpen, setCreateOpen] = useState(false)
@@ -48,8 +53,7 @@ export default function Markets() {
     setNotice('')
     setIsSaving(true)
     try {
-      await api.post<Market>('/markets', { code: code.trim(), name: name.trim() })
-      setCode('')
+      await api.post<Market>('/markets', { name: name.trim() })
       setName('')
       setNotice('Le marché a été créé.')
       setCreateOpen(false)
@@ -62,7 +66,6 @@ export default function Markets() {
   }
 
   function openCreate() {
-    setCode('')
     setName('')
     setCreateOpen(true)
   }
@@ -96,44 +99,25 @@ export default function Markets() {
       {canManageMarkets && createOpen && (
         <Modal isOpen={createOpen} onClose={closeCreate} title="Nouveau marché">
           <form className="market-create-form" onSubmit={createMarket}>
-            <label className="form-group">
-              <span className="form-label">Code marché</span>
-              <Input
-                label="Code marché"
-                value={code}
-                onChange={(value) => setCode(value)}
-                required
-                maxLength={40}
-                accessibilityLabel="Code marché"
-              />
-            </label>
-            <label className="form-group">
-              <span className="form-label">Nom</span>
-              <Input
-                label="Nom"
-                value={name}
-                onChange={(value) => setName(value)}
-                required
-                maxLength={160}
-                accessibilityLabel="Nom"
-              />
-            </label>
+            <FormSection title="Informations du marché">
+              <FormField label="Nom" required error={!name ? 'Ce champ est requis.' : null}>
+                <Input
+                  label="Nom"
+                  value={name}
+                  onChange={(value) => setName(value)}
+                  required
+                  maxLength={160}
+                  accessibilityLabel="Nom"
+                />
+              </FormField>
+            </FormSection>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
-              <button
-                className="btn-secondary"
-                type="button"
-                disabled={isSaving}
-                onClick={closeCreate}
-              >
+              <Button variant="secondary" onClick={closeCreate} disabled={isSaving}>
                 Annuler
-              </button>
-              <button
-                className="btn-primary"
-                type="submit"
-                disabled={isSaving}
-              >
+              </Button>
+              <Button variant="primary" type="submit" disabled={isSaving}>
                 {isSaving ? 'Enregistrement…' : 'Créer le marché'}
-              </button>
+              </Button>
             </div>
           </form>
         </Modal>

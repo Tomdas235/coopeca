@@ -76,7 +76,7 @@ export interface ClientDetail {
 }
 
 export interface CreateClientInput {
-  clientCode: string;
+  clientCode?: string;
   firstName: string;
   lastName: string;
   phone?: string | null;

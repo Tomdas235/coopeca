@@ -1,0 +1,9 @@
+env: load .env
+env: export CORS_ORIGINS EXPO_PUBLIC_API_BASE_URL EXPO_PUBLIC_DEMO_MODE
+Starting project at C:\Users\DATOM\OneDrive\Desktop\Tontine Project\coopeca\mobile
+Metro is running in CI mode, reloads are disabled. Remove CI=true to enable watch mode.
+Starting Metro Bundler
+
+Waiting on http://localhost:19006
+
+Logs for your project will appear below.

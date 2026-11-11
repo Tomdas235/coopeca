@@ -41,7 +41,7 @@ export interface ClientDetail {
 }
 
 export interface ClientCreateInput {
-  clientCode: string
+  clientCode?: string
   firstName: string
   lastName: string
   phone?: string | null

@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react'
 import { api, apiErrorToMessage } from '../services/api'
 import { getBranches } from '../services/auth'
 import type { AgentAccount, PaginatedResponse } from '../types/api'
-import { Button, Modal, Input } from '../components/ui'
+import {
+  Button,
+  Modal,
+  Input,
+  Select,
+  FormField,
+  FormSection,
+} from '../components/ui'
 
 type Branch = { id: string; code: string; name: string }
 
@@ -157,65 +164,58 @@ export default function Agents() {
       {createOpen && (
         <Modal isOpen={createOpen} onClose={closeCreate} title="Nouveau compte agent">
           <form className="agent-create-form" onSubmit={createAgent}>
-            <label className="form-group">
-              <span className="form-label">Identifiant</span>
-              <Input
-                label="Identifiant"
-                value={username}
-                onChange={(value) => setUsername(value)}
-                required
-                maxLength={80}
-                accessibilityLabel="Identifiant"
-              />
-            </label>
-            <label className="form-group">
-              <span className="form-label">Nom complet</span>
-              <Input
-                label="Nom complet"
-                value={fullName}
-                onChange={(value) => setFullName(value)}
-                required
-                maxLength={180}
-                accessibilityLabel="Nom complet"
-              />
-            </label>
-            <label className="form-group">
-              <span className="form-label">Téléphone</span>
-              <Input
-                label="Téléphone"
-                value={phone}
-                onChange={(value) => setPhone(value)}
-                maxLength={40}
-                accessibilityLabel="Téléphone"
-              />
-            </label>
-            <label className="form-group">
-              <span className="form-label">Agence principale</span>
-              <select
-                className="form-input"
-                value={branchId}
-                onChange={(event) => setBranchId(event.target.value)}
-                required
-              >
-                {branches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.code} — {branch.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="form-group">
-              <span className="form-label">Mot de passe initial</span>
-              <Input
-                label="Mot de passe initial"
-                type="password"
-                value={password}
-                onChange={(value) => setPassword(value)}
-                required
-                maxLength={256}
-                accessibilityLabel="Mot de passe initial"
-              />
-            </label>
+            <FormSection title="Informations du compte">
+              <FormField label="Identifiant" required error={!username ? 'Ce champ est requis.' : null}>
+                <Input
+                  label="Identifiant"
+                  value={username}
+                  onChange={(value) => setUsername(value)}
+                  required
+                  maxLength={80}
+                  accessibilityLabel="Identifiant"
+                />
+              </FormField>
+              <FormField label="Nom complet" required error={!fullName ? 'Ce champ est requis.' : null}>
+                <Input
+                  label="Nom complet"
+                  value={fullName}
+                  onChange={(value) => setFullName(value)}
+                  required
+                  maxLength={180}
+                  accessibilityLabel="Nom complet"
+                />
+              </FormField>
+              <FormField label="Téléphone">
+                <Input
+                  label="Téléphone"
+                  value={phone}
+                  onChange={(value) => setPhone(value)}
+                  maxLength={40}
+                  accessibilityLabel="Téléphone"
+                />
+              </FormField>
+              <FormField label="Mot de passe initial" required error={!password ? 'Ce champ est requis.' : null}>
+                <Input
+                  label="Mot de passe initial"
+                  type="password"
+                  value={password}
+                  onChange={(value) => setPassword(value)}
+                  required
+                  maxLength={256}
+                  accessibilityLabel="Mot de passe initial"
+                />
+              </FormField>
+              <FormField label="Agence principale" required error={!branchId ? 'Ce champ est requis.' : null}>
+                <Select
+                  label="Agence principale"
+                  value={branchId}
+                  onChange={(value) => setBranchId(value)}
+                  required
+                  options={branches.map((b) => ({ label: `${b.code} — ${b.name}`, value: b.id }))}
+                />
+              </FormField>
+              {branches.length === 0 && <p className="form-text">Aucune agence autorisée n’est disponible pour l’affectation.</p>}
+            </FormSection>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
               <button
                 className="btn-secondary"
@@ -233,7 +233,6 @@ export default function Agents() {
                 {isSaving ? 'Enregistrement…' : 'Créer le compte'}
               </button>
             </div>
-            {branches.length === 0 && <p className="form-text">Aucune agence autorisée n’est disponible pour l’affectation.</p>}
           </form>
         </Modal>
       )}

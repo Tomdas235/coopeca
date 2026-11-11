@@ -4,15 +4,14 @@ import {
   FlatList,
   ScrollView,
   Pressable,
-  TextInput,
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
 } from 'react-native';
-import { Badge, Button, EmptyState, LoadingState } from '../../../src/components/ui';
+import { Badge, Button, EmptyState, FormError, FormSuccess, Input, LoadingState } from '../../../src/components/ui';
 import { colors, radius } from '../../../src/components/ui/colors';
-import { getDossier, listDossierCycles } from '../../../src/services/api';
+import { getDossier, listDossierCycles, requestWithdrawal } from '../../../src/services/api';
 import { authenticationService } from '../../../src/features/auth';
 
 export default function DossierDetailScreen({
@@ -30,6 +29,8 @@ export default function DossierDetailScreen({
   const [erreur, setErreur] = useState<string | null>(null);
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
   const [montantRetrait, setMontantRetrait] = useState('');
+  const [withdrawalError, setWithdrawalError] = useState<string | null>(null);
+  const [withdrawalSuccess, setWithdrawalSuccess] = useState<string | null>(null);
 
   const chargerDossier = useCallback(async () => {
     setChargement(true);
@@ -89,6 +90,24 @@ export default function DossierDetailScreen({
   const pourcentageCompletion = (totalVersements / 31) * 100;
   const peutPrendreRetrait = totalVersements > 0;
   const statutDossier = dossier.status === 'OPEN' ? 'Ouvert' : 'Clôturé';
+
+  async function validerRetrait() {
+    setWithdrawalError(null);
+    setWithdrawalSuccess(null);
+    if (!dossierId || !montantRetrait) return;
+    const amount = parseInt(montantRetrait, 10);
+    if (!Number.isInteger(amount) || amount <= 0) {
+      setWithdrawalError('Le montant doit être un entier positif.');
+      return;
+    }
+    try {
+      await requestWithdrawal(dossierId, amount);
+      setWithdrawalSuccess('Demande de retrait envoyée pour validation.');
+      setMontantRetrait('');
+    } catch (err: unknown) {
+      setWithdrawalError(err instanceof Error ? err.message : 'Impossible de demander le retrait.');
+    }
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -194,22 +213,22 @@ export default function DossierDetailScreen({
               Montant du retrait + commission (1 versement) ne doit pas dépasser le solde.
             </Text>
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Montant du retrait (FCFA)</Text>
-              <TextInput
+              <Input
+                label="Montant du retrait (FCFA)"
                 value={montantRetrait}
                 onChangeText={setMontantRetrait}
                 keyboardType="numeric"
-                style={styles.input}
+                placeholder="0"
+                accessibilityLabel="Montant du retrait"
               />
+              {withdrawalError && <FormError message={withdrawalError} />}
+              {withdrawalSuccess && <FormSuccess message={withdrawalSuccess} />}
             </View>
             <View style={styles.modalActions}>
               <Button label="Annuler" onPress={() => setShowWithdrawalModal(false)} variant="secondary" />
               <Button
                 label="Valider retrait"
-                onPress={() => {
-                  setShowWithdrawalModal(false);
-                  alert('Demande soumise (validation serveur)');
-                }}
+                onPress={validerRetrait}
                 variant="primary"
               />
             </View>

@@ -855,3 +855,187 @@ input, select, textarea {
   .quick-actions { grid-template-columns: minmax(0, 1fr); }
   .login-card { padding: 24px 20px; }
 }
+
+/* ============================================================================
+   Composants de formulaire unifiés (Admin Web)
+   Source : Design System §formulaires
+   ============================================================================ */
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.form-field-checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.form-field-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.form-field-required {
+  color: var(--color-danger);
+  font-weight: 700;
+}
+
+.form-field-error {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-danger);
+}
+
+.form-field-helper {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.form-field-counter {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  text-align: right;
+}
+
+.form-input,
+.form-select,
+.form-textarea,
+.form-datepicker {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus,
+.form-datepicker:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  ring-color: var(--color-primary);
+}
+
+.form-select-error,
+.form-textarea-error,
+.form-datepicker-error {
+  border-color: var(--color-danger);
+}
+
+.form-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.form-field-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.form-field-checkbox-text {
+  user-select: none;
+}
+
+.form-field-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-field-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.form-section {
+  margin-bottom: 24px;
+}
+
+.form-section-title {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.form-section-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.form-section-body > * {
+  margin-bottom: 0;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.form-actions > button {
+  min-height: 44px;
+  min-width: 110px;
+}
+
+.form-error {
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background-color: var(--color-danger-soft);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  color: var(--color-danger);
+  font-size: 0.9rem;
+}
+
+.form-success {
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background-color: var(--color-success-soft);
+  border: 1px solid var(--color-success);
+  border-radius: var(--radius-md);
+  color: var(--color-success);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 760px) {
+  .form-section-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .form-field {
+    margin-bottom: 12px;
+  }
+  .form-actions {
+    flex-direction: column;
+  }
+  .form-actions > button {
+    width: 100%;
+  }
+}

@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { ClientStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { AuthenticatedPrincipal } from '../auth/auth.types';
+import { ReferenceService } from '../common/reference.service';
 
 export interface ClientListItem {
   id: string;
@@ -39,7 +40,10 @@ export interface ClientUpdateInput {
 
 @Injectable()
 export class ClientsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly referenceService: ReferenceService,
+  ) {}
 
   async findAll(params: {
     page?: number;
@@ -157,11 +161,17 @@ export class ClientsService {
     };
   }
 
-  async create(actor: AuthenticatedPrincipal, input: { clientCode: string; firstName: string; lastName: string; phone?: string | null; neighborhood?: string | null; addressDetails?: string | null; branchId: string; marketId?: string | null; collectionAgentId?: string | null }) {
+  async create(actor: AuthenticatedPrincipal, input: { firstName: string; lastName: string; phone?: string | null; neighborhood?: string | null; addressDetails?: string | null; branchId: string; marketId?: string | null; collectionAgentId?: string | null }) {
+    // Génération automatique de la référence client (côté serveur uniquement)
+    const clientCode = await this.referenceService.generateReference({
+      entity: 'Client',
+      field: 'clientCode',
+    });
+
     // Vérifier si un client avec ce code existe déjà dans la même agence
     const existingClient = await this.prisma.client.findFirst({
       where: {
-        clientCode: input.clientCode,
+        clientCode,
         branchId: input.branchId,
       },
     });
@@ -186,7 +196,7 @@ export class ClientsService {
 
     const client = await this.prisma.client.create({
       data: {
-        clientCode: input.clientCode,
+        clientCode,
         firstName: input.firstName,
         lastName: input.lastName,
         phone: input.phone,

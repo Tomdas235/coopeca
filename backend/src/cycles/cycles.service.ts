@@ -9,6 +9,7 @@ import { Prisma } from '@prisma/client';
 import { createHash, randomUUID } from 'node:crypto';
 import { PrismaService } from '../database/prisma.service';
 import { AuthenticatedPrincipal } from '../auth/auth.types';
+import { ReferenceService } from '../common/reference.service';
 import {
   calculateAvailableBalance,
   calculateWithdrawal,
@@ -41,7 +42,10 @@ type WithdrawalInput = {
 
 @Injectable()
 export class CyclesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly referenceService: ReferenceService,
+  ) {}
 
   async listMarkets() {
     return this.prisma.market.findMany({
@@ -68,13 +72,18 @@ export class CyclesService {
 
   async createMarket(
     actor: AuthenticatedPrincipal,
-    input: { code: string; name: string },
+    input: { name: string },
   ) {
     this.requireRole(actor, ['ADMIN', 'SUPERVISOR']);
+    // Génération automatique du code marché (côté serveur uniquement)
+    const code = await this.referenceService.generateReference({
+      entity: 'Market',
+      field: 'code',
+    });
     try {
       return await this.serializableTransaction(async (tx) => {
         const market = await tx.market.create({
-          data: { code: input.code, name: input.name },
+          data: { code, name: input.name },
           select: { id: true, code: true, name: true, isActive: true, createdAt: true },
         });
         await this.writeAudit(tx, actor.id, null, 'MARKET_CREATED', 'markets', market.id, {
@@ -85,7 +94,7 @@ export class CyclesService {
       });
     } catch (error) {
       if (this.isPrismaCode(error, 'P2002')) {
-        throw new ConflictException({ code: 'MARCHE_CODE_DEJA_UTILISE', message: 'Ce code marché existe déjÃ .' });
+        throw new ConflictException({ code: 'MARCHE_CODE_DEJA_UTILISE', message: 'Ce code marché existe déjà.' });
       }
       throw error;
     }

@@ -9,6 +9,7 @@ import * as path from 'path';
 const racineMobile = path.join(__dirname, '..');
 
 const routesRequises = [
+  'app/index.tsx',
   'app/_layout.tsx',
   'app/(auth)/login.tsx',
   'app/(auth)/session.tsx',
