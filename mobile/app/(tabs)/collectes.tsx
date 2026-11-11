@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
-import { Badge, Button, Card, EmptyState, Input, LoadingState } from '../../src/components/ui';
+import { Badge, Button, EmptyState, FormError, FormField, FormSuccess, Input, LoadingState } from '../../src/components/ui';
 import { colors } from '../../src/components/ui/colors';
 import { listDossiers, listDossierCycles, depositToCycle } from '../../src/services/api';
 import { authenticationService } from '../../src/features/auth';
@@ -86,7 +86,6 @@ export default function CollectesScreen() {
     );
   }
 
-  // Charger le cycle actif du dossier si pas encore chargé
   useEffect(() => {
     let active = true;
     async function chargerCycle() {
@@ -94,8 +93,8 @@ export default function CollectesScreen() {
       if (!dossierCourant.id) return;
       setChargementCycle(true);
       try {
-        const cycles = await listDossierCycles(dossierCourant!.id);
-        const actif = cycles.find((c) => c.status === 'ACTIVE');
+        const cycles = await listDossierCycles(dossierCourant.id);
+        const actif = cycles.find((c: { status: string }) => c.status === 'ACTIVE');
         if (active) {
           setCycle(
             actif
@@ -204,15 +203,16 @@ export default function CollectesScreen() {
       )}
 
       <View style={styles.saisieMontant}>
-        <Text style={styles.label}>Montant du versement (XAF)</Text>
-        <Input
-          label="Montant"
-          value={montant}
-          onChangeText={setMontant}
-          keyboardType="numeric"
-          placeholder="0"
-          accessibilityLabel="Montant du versement"
-        />
+        <FormField label="Montant du versement (XAF)" required error={!montant || parseInt(montant, 10) <= 0 ? 'Montant requis et positif.' : null}>
+          <Input
+            label="Montant"
+            value={montant}
+            onChangeText={setMontant}
+            keyboardType="numeric"
+            placeholder="0"
+            accessibilityLabel="Montant du versement"
+          />
+        </FormField>
         {cycle && (
           <Text style={styles.montantRef}>
             Montant attendu du cycle : {formatMontantXAF(Number.parseInt(cycle.fixedAmountXaf, 10))}
@@ -231,10 +231,7 @@ export default function CollectesScreen() {
 
       {recuOperation && (
         <View style={styles.resultat}>
-          <Text style={styles.resultatTitre}>Versement enregistré</Text>
-          <Text style={styles.resultatDetails}>
-            {formatMontantXAF(recuOperation.montant)} versés sur le cycle.
-          </Text>
+          <FormSuccess message={`Versement de ${formatMontantXAF(recuOperation.montant)} enregistré.`} />
           <Text style={styles.resultatReference}>
             Transaction : {recuOperation.transactionId}
           </Text>
