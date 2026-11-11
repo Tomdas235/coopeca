@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { ScreenPlaceholder } from '../../../src/components/ScreenPlaceholder.tsx';
+import { ScreenPlaceholder } from '../../src/components/ScreenPlaceholder';
 
 /**
  * Détail d'un reçu numérique — squelette uniquement.

@@ -5,10 +5,10 @@
 // états pressé/focus/disabled, contraste texte sur fond.
 // ============================================================================
 
-import { useState } from 'react';
+import { type ReactNode } from 'react';
 
 interface ButtonProps {
-  children: React.ReactNode;
+  children: ReactNode;
   onClick?: () => void;
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   size?: 'md' | 'lg';
