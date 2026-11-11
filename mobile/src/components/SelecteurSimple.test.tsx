@@ -8,8 +8,8 @@ const options = [
 ];
 
 describe('SelecteurSimple (sélecteur déroulant COOPECA)', () => {
-  it('render sans crash avec une valeur null', () => {
-    const { getByText } = render(
+  it('render sans crash avec une valeur null', async () => {
+    const { getByText } = await render(
       <SelecteurSimple
         label="Client"
         value={null}
@@ -20,8 +20,8 @@ describe('SelecteurSimple (sélecteur déroulant COOPECA)', () => {
     expect(getByText('Sélectionner…')).toBeTruthy();
   });
 
-  it('affiche le libellé de l’option sélectionnée', () => {
-    const { getByText } = render(
+  it('affiche le libellé de l’option sélectionnée', async () => {
+    const { getByText } = await render(
       <SelecteurSimple
         label="Client"
         value="b"
@@ -32,9 +32,9 @@ describe('SelecteurSimple (sélecteur déroulant COOPECA)', () => {
     expect(getByText('Client B')).toBeTruthy();
   });
 
-  it('appelle onValueChange quand une option est sélectionnée', () => {
+  it('appelle onValueChange quand une option est sélectionnée', async () => {
     const onValueChange = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <SelecteurSimple
         label="Client"
         value={null}
@@ -49,8 +49,8 @@ describe('SelecteurSimple (sélecteur déroulant COOPECA)', () => {
     expect(onValueChange).toHaveBeenCalledWith('b');
   });
 
-  it('affiche un message d’erreur quand la prop error est fournie', () => {
-    const { getByText } = render(
+  it('affiche un message d’erreur quand la prop error est fournie', async () => {
+    const { getByText } = await render(
       <SelecteurSimple
         label="Client"
         value={null}
@@ -62,9 +62,9 @@ describe('SelecteurSimple (sélecteur déroulant COOPECA)', () => {
     expect(getByText('Sélection obligatoire.')).toBeTruthy();
   });
 
-  it('n’appelle pas onValueChange quand disabled est vrai', () => {
+  it('n’appelle pas onValueChange quand disabled est vrai', async () => {
     const onValueChange = jest.fn();
-    const { getByText, queryByText } = render(
+    const { getByText, queryByText } = await render(
       <SelecteurSimple
         label="Client"
         value={null}
@@ -78,8 +78,8 @@ describe('SelecteurSimple (sélecteur déroulant COOPECA)', () => {
     expect(onValueChange).not.toHaveBeenCalled();
   });
 
-  it('utilise le placeholder personnalisé lorsqu’il est fourni', () => {
-    const { getByText } = render(
+  it('utilise le placeholder personnalisé lorsqu’il est fourni', async () => {
+    const { getByText } = await render(
       <SelecteurSimple
         label="Dossier"
         value={null}
@@ -91,8 +91,8 @@ describe('SelecteurSimple (sélecteur déroulant COOPECA)', () => {
     expect(getByText('Choisir un dossier…')).toBeTruthy();
   });
 
-  it('affiche le libellé au-dessus du champ', () => {
-    const { getByText } = render(
+  it('affiche le libellé au-dessus du champ', async () => {
+    const { getByText } = await render(
       <SelecteurSimple
         label="Agence"
         value={null}
@@ -103,3 +103,4 @@ describe('SelecteurSimple (sélecteur déroulant COOPECA)', () => {
     expect(getByText('Agence')).toBeTruthy();
   });
 });
+

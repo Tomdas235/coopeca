@@ -61,7 +61,8 @@ export default function DossiersScreen() {
     return (
       d.dossierNo.toLowerCase().includes(terme) ||
       (d.client?.clientCode?.toLowerCase().includes(terme) ?? false) ||
-      (d.client?.fullName?.toLowerCase().includes(terme) ?? false)
+      (d.client?.firstName?.toLowerCase().includes(terme) ?? false) ||
+      (d.client?.lastName?.toLowerCase().includes(terme) ?? false)
     );
   });
 
@@ -156,7 +157,7 @@ function DossierCard({
         <View style={styles.cardContent}>
           <View style={styles.cardInfos}>
             <View style={styles.cardNom}>
-              <Text style={styles.cardNomTexte}>{item.client?.fullName || 'Client'}</Text>
+              <Text style={styles.cardNomTexte}>{item.client ? `${item.client.firstName} ${item.client.lastName}` : 'Client'}</Text>
               <Badge
                 kind={item.status === 'OPEN' ? 'confirme' : 'erreur'}
                 label={statutLabel}

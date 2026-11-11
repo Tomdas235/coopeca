@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { loadToken, clearToken, getProfile } from './services/auth'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { loadToken, clearToken } from './services/auth'
 import MainLayout from './layouts/MainLayout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -15,6 +15,22 @@ import CashierDashboard from './pages/CashierDashboard'
 import AuditorDashboard from './pages/AuditorDashboard'
 import Agents from './pages/Agents'
 import Branches from './pages/Branches'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { AdminPage } from './config/permissions'
+
+function RequireRole({ page, children }: { page: AdminPage; children: JSX.Element }) {
+  const { isLoading, isAuthenticated, hasPermission } = useAuth()
+  const navigate = useNavigate()
+
+  if (isLoading || !isAuthenticated) {
+    return null
+  }
+  if (!hasPermission(page)) {
+    navigate('/', { replace: true })
+    return null
+  }
+  return children
+}
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(true)
@@ -25,7 +41,10 @@ function AppContent() {
       try {
         const token = loadToken()
         if (token) {
-          await getProfile()
+          // Valide le token côté serveur ; le profil est rechargé dans AuthProvider.
+          await fetch(`${import.meta.env.BASE_URL}api/v1/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }).catch(() => { clearToken() })
         }
       } catch {
         clearToken()
@@ -48,35 +67,37 @@ function AppContent() {
   }
 
   return (
-    <Routes>
-      <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" replace />} />
-      <Route
-        path="/*"
-        element={
-          isAuthenticated ? (
-            <MainLayout>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="clients" element={<Clients />} />
-                <Route path="agents" element={<Agents />} />
-                <Route path="branches" element={<Branches />} />
-                <Route path="cycles" element={<Cycles />} />
-                <Route path="remittances" element={<Remittances />} />
-                <Route path="markets" element={<Markets />} />
-                <Route path="health" element={<Health />} />
-                <Route path="withdrawals" element={<WithdrawalsPending />} />
-                <Route path="accountant" element={<AccountantDashboard />} />
-                <Route path="cashier" element={<CashierDashboard />} />
-                <Route path="auditor" element={<AuditorDashboard />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </MainLayout>
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      />
-    </Routes>
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" replace />} />
+        <Route
+          path="/*"
+          element={
+            isAuthenticated ? (
+              <MainLayout>
+                <Routes>
+                  <Route path="/" element={<RequireRole page="" children={<Dashboard />} />} />
+                  <Route path="clients" element={<RequireRole page="clients" children={<Clients />} />} />
+                  <Route path="agents" element={<RequireRole page="agents" children={<Agents />} />} />
+                  <Route path="branches" element={<RequireRole page="branches" children={<Branches />} />} />
+                  <Route path="cycles" element={<RequireRole page="cycles" children={<Cycles />} />} />
+                  <Route path="remittances" element={<RequireRole page="remittances" children={<Remittances />} />} />
+                  <Route path="markets" element={<RequireRole page="markets" children={<Markets />} />} />
+                  <Route path="health" element={<RequireRole page="health" children={<Health />} />} />
+                  <Route path="withdrawals" element={<RequireRole page="withdrawals" children={<WithdrawalsPending />} />} />
+                  <Route path="accountant" element={<RequireRole page="accountant" children={<AccountantDashboard />} />} />
+                  <Route path="cashier" element={<RequireRole page="cashier" children={<CashierDashboard />} />} />
+                  <Route path="auditor" element={<RequireRole page="auditor" children={<AuditorDashboard />} />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </MainLayout>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+      </Routes>
+    </AuthProvider>
   )
 }
 

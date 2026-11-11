@@ -64,7 +64,7 @@ export default function ClientDetailScreen({
     return (
       <View style={styles.container}>
         <Text style={styles.titre}>Client introuvable</Text>
-        <Text style={styles.sousTitre} clientId={clientId} />
+        <Text style={styles.sousTitre}>{clientId}</Text>
         <Button label="Retour" onPress={() => router.back()} variant="secondary" />
       </View>
     );
@@ -232,5 +232,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 8,
+  },
+  errorContainer: {
+    padding: 24,
+    gap: 12,
+    alignItems: 'center',
+  },
+  errorTitle: {
+    color: colors.danger,
+    fontSize: 16,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  errorMessage: {
+    color: colors.text,
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  titre: {
+    color: colors.text,
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  sousTitre: {
+    color: colors.muted,
+    fontSize: 14,
   },
 });

@@ -5,7 +5,7 @@
 // message d'erreur sous le champ, préservation de la saisie.
 // ============================================================================
 
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View, type KeyboardTypeOptions } from 'react-native';
 import { colors, radius, space } from './colors';
 
 interface InputProps {
@@ -17,7 +17,7 @@ interface InputProps {
   required?: boolean;
   maxLength?: number;
   disabled?: boolean;
-  keyboardType?: string;
+  keyboardType?: KeyboardTypeOptions;
   accessibilityLabel?: string;
   onBlur?: () => void;
   secureTextEntry?: boolean;

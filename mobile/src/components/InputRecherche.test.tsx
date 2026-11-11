@@ -2,8 +2,8 @@ import { render, fireEvent } from '@testing-library/react-native';
 import { InputRecherche } from './InputRecherche';
 
 describe('InputRecherche (champ de recherche COOPECA)', () => {
-  it('render sans crash avec une valeur vide', () => {
-    const { getByPlaceholderText } = render(
+  it('render sans crash avec une valeur vide', async () => {
+    const { getByPlaceholderText } = await render(
       <InputRecherche
         value=""
         onChangeText={jest.fn()}
@@ -12,39 +12,39 @@ describe('InputRecherche (champ de recherche COOPECA)', () => {
     expect(getByPlaceholderText('Rechercher…')).toBeTruthy();
   });
 
-  it('affiche l’icône de recherche', () => {
-    const { getByText } = render(
+  it('affiche l’icône de recherche', async () => {
+    const { getByText } = await render(
       <InputRecherche value="" onChangeText={jest.fn()} />,
     );
     expect(getByText('🔍')).toBeTruthy();
   });
 
-  it('n’affiche pas le bouton effacer quand le champ est vide', () => {
-    const { queryByText } = render(
+  it('n’affiche pas le bouton effacer quand le champ est vide', async () => {
+    const { queryByText } = await render(
       <InputRecherche value="" onChangeText={jest.fn()} />,
     );
     expect(queryByText('✕')).toBeNull();
   });
 
-  it('affiche le bouton effacer quand il y a du texte', () => {
-    const { getByText } = render(
+  it('affiche le bouton effacer quand il y a du texte', async () => {
+    const { getByText } = await render(
       <InputRecherche value="Dupont" onChangeText={jest.fn()} />,
     );
     expect(getByText('✕')).toBeTruthy();
   });
 
-  it('efface le texte quand on clique sur le bouton effacer', () => {
+  it('efface le texte quand on clique sur le bouton effacer', async () => {
     const onChangeText = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <InputRecherche value="Dupont" onChangeText={onChangeText} />,
     );
     fireEvent.press(getByText('✕'));
     expect(onChangeText).toHaveBeenCalledWith('');
   });
 
-  it('appelle onChangeText à la saisie', () => {
+  it('appelle onChangeText à la saisie', async () => {
     const onChangeText = jest.fn();
-    const { getByPlaceholderText } = render(
+    const { getByPlaceholderText } = await render(
       <InputRecherche value="" onChangeText={onChangeText} />,
     );
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -52,16 +52,16 @@ describe('InputRecherche (champ de recherche COOPECA)', () => {
     expect(onChangeText).toHaveBeenCalledWith('toto');
   });
 
-  it('désactive la saisie quand disabled est vrai', () => {
-    const { getByPlaceholderText } = render(
+  it('désactive la saisie quand disabled est vrai', async () => {
+    const { getByPlaceholderText } = await render(
       <InputRecherche value="" onChangeText={jest.fn()} disabled />,
     );
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((getByPlaceholderText('Rechercher…') as any).props.disabled).toBe(true);
   });
 
-  it('utilise le placeholder personnalisé lorsqu’il est fourni', () => {
-    const { getByPlaceholderText } = render(
+  it('utilise le placeholder personnalisé lorsqu’il est fourni', async () => {
+    const { getByPlaceholderText } = await render(
       <InputRecherche
         value=""
         onChangeText={jest.fn()}
@@ -71,3 +71,4 @@ describe('InputRecherche (champ de recherche COOPECA)', () => {
     expect(getByPlaceholderText('Chercher un client…')).toBeTruthy();
   });
 });
+

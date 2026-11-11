@@ -25,8 +25,8 @@ const clientsMock = [
 ];
 
 describe('SelecteurClient (sélecteur de client COOPECA)', () => {
-  it('render sans crash avec une valeur null', () => {
-    const { getByText } = render(
+  it('render sans crash avec une valeur null', async () => {
+    const { getByText } = await render(
       <SelecteurClient
         label="Client"
         value={null}
@@ -37,8 +37,8 @@ describe('SelecteurClient (sélecteur de client COOPECA)', () => {
     expect(getByText('Sélectionner un client…')).toBeTruthy();
   });
 
-  it('affiche le nom et le statut du client sélectionné', () => {
-    const { getByText } = render(
+  it('affiche le nom et le statut du client sélectionné', async () => {
+    const { getByText } = await render(
       <SelecteurClient
         label="Client"
         value="client-1"
@@ -49,8 +49,8 @@ describe('SelecteurClient (sélecteur de client COOPECA)', () => {
     expect(getByText('Jean Dupont')).toBeTruthy();
   });
 
-  it('affiche un badge statut CONFIRME en vert', () => {
-    const { getByText } = render(
+  it('affiche un badge statut CONFIRME en vert', async () => {
+    const { getByText } = await render(
       <SelecteurClient
         label="Client"
         value="client-1"
@@ -63,8 +63,8 @@ describe('SelecteurClient (sélecteur de client COOPECA)', () => {
     expect(getByText('CONFIRME')).toBeTruthy();
   });
 
-  it('affiche un badge statut PROVISOIRE en orange', () => {
-    const { getByText } = render(
+  it('affiche un badge statut PROVISOIRE en orange', async () => {
+    const { getByText } = await render(
       <SelecteurClient
         label="Client"
         value="client-2"
@@ -76,8 +76,8 @@ describe('SelecteurClient (sélecteur de client COOPECA)', () => {
     expect(getByText('PROVISOIRE')).toBeTruthy();
   });
 
-  it('affiche une bannière doublon potentiel quand le client sélectionné en a un', () => {
-    const { getByText } = render(
+  it('affiche une bannière doublon potentiel quand le client sélectionné en a un', async () => {
+    const { getByText } = await render(
       <SelecteurClient
         label="Client"
         value="client-2"
@@ -93,9 +93,9 @@ describe('SelecteurClient (sélecteur de client COOPECA)', () => {
     ).toBeTruthy();
   });
 
-  it('appelle onValueChange quand un client est sélectionné', () => {
+  it('appelle onValueChange quand un client est sélectionné', async () => {
     const onValueChange = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <SelecteurClient
         label="Client"
         value={null}
@@ -108,9 +108,9 @@ describe('SelecteurClient (sélecteur de client COOPECA)', () => {
     expect(onValueChange).toHaveBeenCalledWith('client-1');
   });
 
-  it('n’appelle pas onValueChange quand disabled est vrai', () => {
+  it('n’appelle pas onValueChange quand disabled est vrai', async () => {
     const onValueChange = jest.fn();
-    const { getByText, queryByText } = render(
+    const { getByText, queryByText } = await render(
       <SelecteurClient
         label="Client"
         value={null}
@@ -124,8 +124,8 @@ describe('SelecteurClient (sélecteur de client COOPECA)', () => {
     expect(onValueChange).not.toHaveBeenCalled();
   });
 
-  it('affiche un message d’erreur quand la prop error est fournie', () => {
-    const { getByText } = render(
+  it('affiche un message d’erreur quand la prop error est fournie', async () => {
+    const { getByText } = await render(
       <SelecteurClient
         label="Client"
         value={null}
@@ -137,8 +137,8 @@ describe('SelecteurClient (sélecteur de client COOPECA)', () => {
     expect(getByText('Sélection obligatoire.')).toBeTruthy();
   });
 
-  it('utilise le libellé au-dessus du champ', () => {
-    const { getByText } = render(
+  it('utilise le libellé au-dessus du champ', async () => {
+    const { getByText } = await render(
       <SelecteurClient
         label="Client / bénéficiaire"
         value={null}
@@ -149,9 +149,9 @@ describe('SelecteurClient (sélecteur de client COOPECA)', () => {
     expect(getByText('Client / bénéficiaire')).toBeTruthy();
   });
 
-  it('ferme la liste après sélection d’un client', () => {
+  it('ferme la liste après sélection d’un client', async () => {
     const onValueChange = jest.fn();
-    const { getByText, queryByText } = render(
+    const { getByText, queryByText } = await render(
       <SelecteurClient
         label="Client"
         value={null}
@@ -165,8 +165,8 @@ describe('SelecteurClient (sélecteur de client COOPECA)', () => {
     expect(queryByText('Marie Martin')).toBeNull();
   });
 
-  it('affiche le téléphone normalisé dans chaque option', () => {
-    const { getByText } = render(
+  it('affiche le téléphone normalisé dans chaque option', async () => {
+    const { getByText } = await render(
       <SelecteurClient
         label="Client"
         value={null}
@@ -179,3 +179,4 @@ describe('SelecteurClient (sélecteur de client COOPECA)', () => {
     expect(getByText('+23566123457')).toBeTruthy();
   });
 });
+

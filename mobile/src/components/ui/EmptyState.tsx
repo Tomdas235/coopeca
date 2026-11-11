@@ -6,7 +6,7 @@
 
 import { StyleSheet, Text, View } from 'react-native';
 import { Button } from './Button';
-import { colors, space } from './colors';
+import { colors, radius, space } from './colors';
 
 interface EmptyStateProps {
   title: string;

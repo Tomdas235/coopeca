@@ -4,8 +4,8 @@ import { Modal } from 'react-native';
 import { DialogConfirmation } from './DialogConfirmation';
 
 describe('DialogConfirmation (confirmation explicite des actions sensibles)', () => {
-  it('ne rend rien quand visible est faux', () => {
-    const { queryByText } = render(
+  it('ne rend rien quand visible est faux', async () => {
+    const { queryByText } = await render(
       <DialogConfirmation
         visible={false}
         title="Confirmer ?"
@@ -18,8 +18,8 @@ describe('DialogConfirmation (confirmation explicite des actions sensibles)', ()
     expect(queryByText('Voulez-vous continuer ?')).toBeNull();
   });
 
-  it('affiche le titre, le message et les deux boutons quand visible est vrai', () => {
-    const { getByText } = render(
+  it('affiche le titre, le message et les deux boutons quand visible est vrai', async () => {
+    const { getByText } = await render(
       <DialogConfirmation
         visible={true}
         title="Clôturer la journée ?"
@@ -34,10 +34,10 @@ describe('DialogConfirmation (confirmation explicite des actions sensibles)', ()
     expect(getByText('Annuler')).toBeTruthy();
   });
 
-  it('appelle onConfirm quand on clique sur Confirmer', () => {
+  it('appelle onConfirm quand on clique sur Confirmer', async () => {
     const onConfirm = jest.fn();
     const onCancel = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <DialogConfirmation
         visible={true}
         title="Confirmer ?"
@@ -51,10 +51,10 @@ describe('DialogConfirmation (confirmation explicite des actions sensibles)', ()
     expect(onCancel).not.toHaveBeenCalled();
   });
 
-  it('appelle onCancel quand on clique sur Annuler', () => {
+  it('appelle onCancel quand on clique sur Annuler', async () => {
     const onConfirm = jest.fn();
     const onCancel = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <DialogConfirmation
         visible={true}
         title="Confirmer ?"
@@ -68,9 +68,9 @@ describe('DialogConfirmation (confirmation explicite des actions sensibles)', ()
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
-  it('désactive le bouton Confirmer quand loading est vrai', () => {
+  it('désactive le bouton Confirmer quand loading est vrai', async () => {
     const onConfirm = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <DialogConfirmation
         visible={true}
         title="Confirmer ?"
@@ -87,8 +87,8 @@ describe('DialogConfirmation (confirmation explicite des actions sensibles)', ()
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
-  it('utilise les libellés personnalisés lorsqu’ils sont fournis', () => {
-    const { getByText } = render(
+  it('utilise les libellés personnalisés lorsqu’ils sont fournis', async () => {
+    const { getByText } = await render(
       <DialogConfirmation
         visible={true}
         title="Supprimer ?"
@@ -104,3 +104,4 @@ describe('DialogConfirmation (confirmation explicite des actions sensibles)', ()
     expect(getByText('Non, garder')).toBeTruthy();
   });
 });
+

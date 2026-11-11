@@ -2,9 +2,9 @@ import { render } from '@testing-library/react-native';
 import { InputMontantXAF } from './InputMontantXAF';
 
 describe('InputMontantXAF (règle COOPECA : entiers XAF, jamais de flottants)', () => {
-  it('render sans crash avec une valeur valide', () => {
+  it('render sans crash avec une valeur valide', async () => {
     const onChangeText = jest.fn();
-    const { getByLabelText, getByText } = render(
+    const { getByLabelText, getByText } = await render(
       <InputMontantXAF
         label="Montant collecté"
         value="1500"
@@ -16,31 +16,31 @@ describe('InputMontantXAF (règle COOPECA : entiers XAF, jamais de flottants)', 
     expect(getByText('1 500 XAF')).toBeTruthy();
   });
 
-  it('n’affiche pas d’erreur quand le champ est vide', () => {
-    const { queryByText } = render(
+  it('n’affiche pas d’erreur quand le champ est vide', async () => {
+    const { queryByText } = await render(
       <InputMontantXAF label="Montant" value="" onChangeText={jest.fn()} />,
     );
     expect(queryByText('Le montant doit être un nombre entier de XAF.')).toBeNull();
     expect(queryByText(/XAF/)).toBeNull();
   });
 
-  it('affiche une erreur quand la valeur est un flottant', () => {
-    const { getByText } = render(
+  it('affiche une erreur quand la valeur est un flottant', async () => {
+    const { getByText } = await render(
       <InputMontantXAF label="Montant" value="1.5" onChangeText={jest.fn()} />,
     );
     expect(getByText('Le montant doit être un nombre entier de XAF.')).toBeTruthy();
   });
 
-  it('affiche une erreur quand la valeur est NaN', () => {
-    const { getByText } = render(
+  it('affiche une erreur quand la valeur est NaN', async () => {
+    const { getByText } = await render(
       <InputMontantXAF label="Montant" value="abc" onChangeText={jest.fn()} />,
     );
     expect(getByText('Le montant doit être un nombre entier de XAF.')).toBeTruthy();
   });
 
-  it('appelle onChangeText à la saisie', () => {
+  it('appelle onChangeText à la saisie', async () => {
     const onChangeText = jest.fn();
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <InputMontantXAF label="Montant" value="" onChangeText={onChangeText} />,
     );
     // simulate user input via React Native TextInput prop
@@ -51,8 +51,8 @@ describe('InputMontantXAF (règle COOPECA : entiers XAF, jamais de flottants)', 
     expect(onChangeText).toHaveBeenCalledWith('2500');
   });
 
-  it('utilise le message d’erreur personnalisé lorsqu’il est fourni', () => {
-    const { getByText } = render(
+  it('utilise le message d’erreur personnalisé lorsqu’il est fourni', async () => {
+    const { getByText } = await render(
       <InputMontantXAF
         label="Montant"
         value="2.5"
@@ -63,10 +63,11 @@ describe('InputMontantXAF (règle COOPECA : entiers XAF, jamais de flottants)', 
     expect(getByText('Saisir un montant entier sans virgule.')).toBeTruthy();
   });
 
-  it('formate les milliers avec une espace dans le hint', () => {
-    const { getByText } = render(
+  it('formate les milliers avec une espace dans le hint', async () => {
+    const { getByText } = await render(
       <InputMontantXAF label="Montant" value="1234567" onChangeText={jest.fn()} />,
     );
     expect(getByText('1 234 567 XAF')).toBeTruthy();
   });
 });
+

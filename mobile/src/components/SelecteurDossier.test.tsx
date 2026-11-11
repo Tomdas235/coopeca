@@ -23,8 +23,8 @@ const dossiersMock = [
 ];
 
 describe('SelecteurDossier (sélecteur de dossier COOPECA)', () => {
-  it('render sans crash avec une valeur null', () => {
-    const { getByText } = render(
+  it('render sans crash avec une valeur null', async () => {
+    const { getByText } = await render(
       <SelecteurDossier
         label="Dossier"
         value={null}
@@ -35,8 +35,8 @@ describe('SelecteurDossier (sélecteur de dossier COOPECA)', () => {
     expect(getByText('Sélectionner un dossier…')).toBeTruthy();
   });
 
-  it('affiche la référence provisoire du dossier sélectionné', () => {
-    const { getByText } = render(
+  it('affiche la référence provisoire du dossier sélectionné', async () => {
+    const { getByText } = await render(
       <SelecteurDossier
         label="Dossier"
         value="dossier-1"
@@ -47,9 +47,9 @@ describe('SelecteurDossier (sélecteur de dossier COOPECA)', () => {
     expect(getByText('DOSS-20261019-001')).toBeTruthy();
   });
 
-  it('appelle onValueChange quand un dossier est sélectionné', () => {
+  it('appelle onValueChange quand un dossier est sélectionné', async () => {
     const onValueChange = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <SelecteurDossier
         label="Dossier"
         value={null}
@@ -62,9 +62,9 @@ describe('SelecteurDossier (sélecteur de dossier COOPECA)', () => {
     expect(onValueChange).toHaveBeenCalledWith('dossier-1');
   });
 
-  it('n’appelle pas onValueChange quand disabled est vrai', () => {
+  it('n’appelle pas onValueChange quand disabled est vrai', async () => {
     const onValueChange = jest.fn();
-    const { getByText, queryByText } = render(
+    const { getByText, queryByText } = await render(
       <SelecteurDossier
         label="Dossier"
         value={null}
@@ -78,8 +78,8 @@ describe('SelecteurDossier (sélecteur de dossier COOPECA)', () => {
     expect(onValueChange).not.toHaveBeenCalled();
   });
 
-  it('affiche un message d’erreur quand la prop error est fournie', () => {
-    const { getByText } = render(
+  it('affiche un message d’erreur quand la prop error est fournie', async () => {
+    const { getByText } = await render(
       <SelecteurDossier
         label="Dossier"
         value={null}
@@ -91,8 +91,8 @@ describe('SelecteurDossier (sélecteur de dossier COOPECA)', () => {
     expect(getByText('Sélection obligatoire.')).toBeTruthy();
   });
 
-  it('utilise le libellé au-dessus du champ', () => {
-    const { getByText } = render(
+  it('utilise le libellé au-dessus du champ', async () => {
+    const { getByText } = await render(
       <SelecteurDossier
         label="Agence / Dossier"
         value={null}
@@ -103,9 +103,9 @@ describe('SelecteurDossier (sélecteur de dossier COOPECA)', () => {
     expect(getByText('Agence / Dossier')).toBeTruthy();
   });
 
-  it('ferme la liste après sélection d’un dossier', () => {
+  it('ferme la liste après sélection d’un dossier', async () => {
     const onValueChange = jest.fn();
-    const { getByText, queryByText } = render(
+    const { getByText, queryByText } = await render(
       <SelecteurDossier
         label="Dossier"
         value={null}
@@ -119,3 +119,4 @@ describe('SelecteurDossier (sélecteur de dossier COOPECA)', () => {
     expect(queryByText('DOSS-20261019-002')).toBeNull();
   });
 });
+
